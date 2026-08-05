@@ -64,17 +64,26 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="flex items-center gap-2 mt-1">
                 <Building2 className="w-4 h-4 text-slate-400" />
                 <span className="text-xs text-slate-400 font-semibold">현장명:</span>
-                <select
-                  value={selectedSiteId}
-                  onChange={(e) => onSelectSite(e.target.value)}
-                  className="bg-slate-800 border border-slate-700 text-amber-300 text-xs rounded-md px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
-                >
-                  {sites.map((site) => (
-                    <option key={site.id} value={site.id}>
-                      {site.name} {site.code ? `(${site.code})` : ''}
-                    </option>
-                  ))}
-                </select>
+                {sites.length > 0 ? (
+                  <select
+                    value={selectedSiteId}
+                    onChange={(e) => onSelectSite(e.target.value)}
+                    className="bg-slate-800 border border-slate-700 text-amber-300 text-xs rounded-md px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+                  >
+                    {sites.map((site) => (
+                      <option key={site.id} value={site.id}>
+                        {site.name} {site.code ? `(${site.code})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <button
+                    onClick={onOpenAddSite}
+                    className="text-xs text-amber-400 bg-amber-950/60 border border-amber-800/80 px-2.5 py-1 rounded-md hover:bg-amber-900/60 transition"
+                  >
+                    + 첫 현장 등록하기
+                  </button>
+                )}
                 <button
                   onClick={onOpenAddSite}
                   title="현장 추가 및 관리"

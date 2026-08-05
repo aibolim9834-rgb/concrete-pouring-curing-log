@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Site, PouringLog, PouringLogInput } from '@/lib/types';
-import { INITIAL_SITES, INITIAL_LOGS } from '@/lib/mockData';
 import { supabase, isSupabaseConnected } from '@/lib/supabase';
 import { Header } from '@/components/Header';
 import { SummaryCards } from '@/components/SummaryCards';
@@ -12,9 +11,9 @@ import { SiteModal } from '@/components/SiteModal';
 import { PrintView } from '@/components/PrintView';
 
 export default function Home() {
-  const [sites, setSites] = useState<Site[]>(INITIAL_SITES);
-  const [selectedSiteId, setSelectedSiteId] = useState<string>('site-1');
-  const [logs, setLogs] = useState<PouringLog[]>(INITIAL_LOGS);
+  const [sites, setSites] = useState<Site[]>([]);
+  const [selectedSiteId, setSelectedSiteId] = useState<string>('');
+  const [logs, setLogs] = useState<PouringLog[]>([]);
   
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [isSiteModalOpen, setIsSiteModalOpen] = useState(false);
@@ -24,7 +23,7 @@ export default function Home() {
   const [isSupabase, setIsSupabase] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Initialize and check Supabase / LocalStorage
+  // Initialize and fetch exclusively from Supabase / LocalStorage (No hardcoded dummy data)
   useEffect(() => {
     const initData = async () => {
       const connected = isSupabaseConnected();
@@ -32,18 +31,20 @@ export default function Home() {
 
       if (connected && supabase) {
         try {
-          // Fetch sites from Supabase
+          // Fetch sites directly from Supabase DB
           const { data: dbSites, error: sitesError } = await supabase
             .from('sites')
             .select('*')
             .order('name');
           
-          if (!sitesError && dbSites && dbSites.length > 0) {
+          if (!sitesError && dbSites) {
             setSites(dbSites);
-            setSelectedSiteId(dbSites[0].id);
+            if (dbSites.length > 0) {
+              setSelectedSiteId(dbSites[0].id);
+            }
           }
 
-          // Fetch pouring logs from Supabase
+          // Fetch pouring logs directly from Supabase DB
           const { data: dbLogs, error: logsError } = await supabase
             .from('pouring_logs')
             .select('*')
@@ -53,15 +54,19 @@ export default function Home() {
             setLogs(dbLogs);
           }
         } catch (e) {
-          console.warn('Supabase fetch failed, fallback to local data:', e);
+          console.warn('Supabase fetch error:', e);
         }
       } else {
-        // Load from LocalStorage if available
+        // Load from LocalStorage if offline / local mode
         const savedSites = localStorage.getItem('cp_sites');
         const savedLogs = localStorage.getItem('cp_logs');
 
         if (savedSites) {
-          try { setSites(JSON.parse(savedSites)); } catch (e) {}
+          try { 
+            const parsedSites = JSON.parse(savedSites);
+            setSites(parsedSites);
+            if (parsedSites.length > 0) setSelectedSiteId(parsedSites[0].id);
+          } catch (e) {}
         }
         if (savedLogs) {
           try { setLogs(JSON.parse(savedLogs)); } catch (e) {}
@@ -73,7 +78,7 @@ export default function Home() {
     initData();
   }, []);
 
-  // Save to LocalStorage whenever sites or logs change
+  // Save to LocalStorage whenever sites or logs change in local mode
   useEffect(() => {
     if (!loading && !isSupabase) {
       localStorage.setItem('cp_sites', JSON.stringify(sites));
@@ -81,20 +86,27 @@ export default function Home() {
     }
   }, [sites, logs, isSupabase, loading]);
 
-  const currentSite = sites.find((s) => s.id === selectedSiteId) || sites[0];
+  const currentSite = sites.find((s) => s.id === selectedSiteId) || (sites.length > 0 ? sites[0] : undefined);
 
   // Logs filtered by selected site
-  const siteLogs = logs.filter((log) => log.site_id === selectedSiteId);
+  const siteLogs = selectedSiteId ? logs.filter((log) => log.site_id === selectedSiteId) : [];
 
   // Add / Edit Log Handler
   const handleSaveLog = async (data: PouringLogInput, id?: string) => {
+    if (!selectedSiteId && !data.site_id) {
+      alert('등록할 현장을 먼저 선택하거나 추가해주세요.');
+      return;
+    }
+
+    const activeSiteId = selectedSiteId || data.site_id;
+
     if (id) {
       // Edit existing log
       if (isSupabase && supabase) {
         await supabase.from('pouring_logs').update(data).eq('id', id);
       }
       setLogs((prev) =>
-        prev.map((log) => (log.id === id ? { ...data, id } : log))
+        prev.map((log) => (log.id === id ? { ...data, id, site_id: activeSiteId } : log))
       );
     } else {
       // Add new log
@@ -102,14 +114,14 @@ export default function Home() {
       const newLog: PouringLog = {
         ...data,
         id: newId,
-        site_id: selectedSiteId,
+        site_id: activeSiteId,
       };
 
       if (isSupabase && supabase) {
         const { data: inserted, error } = await supabase
           .from('pouring_logs')
           .insert({
-            site_id: selectedSiteId,
+            site_id: activeSiteId,
             category: data.category,
             date: data.date,
             building: data.building,
@@ -169,11 +181,7 @@ export default function Home() {
 
   // Delete Site Handler
   const handleDeleteSite = async (id: string) => {
-    if (sites.length <= 1) {
-      alert('최소 1개 이상의 현장이 등록되어 있어야 합니다.');
-      return;
-    }
-    if (!confirm('현장을 삭제하면 해당 현장의 타설/양생 기록도 삭제됩니다. 계속하시겠습니까?')) return;
+    if (!confirm('현장을 삭제하면 해당 현장의 타설/양생 기록도 함께 삭제됩니다. 계속하시겠습니까?')) return;
 
     if (isSupabase && supabase) {
       await supabase.from('sites').delete().eq('id', id);
@@ -184,12 +192,16 @@ export default function Home() {
     
     if (selectedSiteId === id) {
       const remaining = sites.filter((s) => s.id !== id);
-      if (remaining.length > 0) setSelectedSiteId(remaining[0].id);
+      setSelectedSiteId(remaining.length > 0 ? remaining[0].id : '');
     }
   };
 
   // Export to CSV
   const handleExportCSV = () => {
+    if (!currentSite) {
+      alert('내보낼 현장을 선택해주세요.');
+      return;
+    }
     const headers = ['구분', '일자', '동(구역)', '층', '벽/슬라브', '최저온도(°C)', '최고온도(°C)', '기상', '레미콘사', '타설강도', '타설물량(m³)', '양생-살수', '양생-보양', '비고'];
     
     const rows = siteLogs.map((log) => [
