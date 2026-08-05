@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Site, PouringLog, PouringLogInput } from '@/lib/types';
-import { supabase, isSupabaseConnected } from '@/lib/supabase';
+import { supabase, checkSupabaseHealth } from '@/lib/supabase';
 import { Header } from '@/components/Header';
 import { SummaryCards } from '@/components/SummaryCards';
 import { RecordTable } from '@/components/RecordTable';
@@ -23,13 +23,13 @@ export default function Home() {
   const [isSupabase, setIsSupabase] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Initialize and fetch exclusively from Supabase / LocalStorage (No hardcoded dummy data)
+  // Initialize and check live Supabase connection health
   useEffect(() => {
     const initData = async () => {
-      const connected = isSupabaseConnected();
-      setIsSupabase(connected);
+      const isHealthy = await checkSupabaseHealth();
+      setIsSupabase(isHealthy);
 
-      if (connected && supabase) {
+      if (isHealthy && supabase) {
         try {
           // Fetch sites directly from Supabase DB
           const { data: dbSites, error: sitesError } = await supabase
@@ -57,7 +57,7 @@ export default function Home() {
           console.warn('Supabase fetch error:', e);
         }
       } else {
-        // Load from LocalStorage if offline / local mode
+        // Fallback to LocalStorage if offline / local mode
         const savedSites = localStorage.getItem('cp_sites');
         const savedLogs = localStorage.getItem('cp_logs');
 
