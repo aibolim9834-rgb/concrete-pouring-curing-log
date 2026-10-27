@@ -4,11 +4,10 @@ import React from 'react';
 import { Site } from '@/lib/types';
 import { 
   Building2, 
-  PlusCircle, 
   FileSpreadsheet, 
   Printer, 
-  Database, 
-  HardHat,
+  Database,
+  Table2,
   Plus
 } from 'lucide-react';
 
@@ -17,10 +16,14 @@ interface HeaderProps {
   selectedSiteId: string;
   onSelectSite: (siteId: string) => void;
   onOpenAddSite: () => void;
-  onOpenAddRecord: () => void;
   onOpenPrintView: () => void;
+  onOpenHome: () => void;
   onExportExcel: () => void;
   isSupabase: boolean;
+  isPhotos?: boolean;
+  onOpenPhotos?: () => void;
+  isProgress?: boolean;
+  onOpenProgress?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -28,27 +31,29 @@ export const Header: React.FC<HeaderProps> = ({
   selectedSiteId,
   onSelectSite,
   onOpenAddSite,
-  onOpenAddRecord,
   onOpenPrintView,
+  onOpenHome,
   onExportExcel,
   isSupabase,
+  isPhotos,
+  onOpenPhotos,
+  isProgress,
+  onOpenProgress,
 }) => {
-  const currentSite = sites.find(s => s.id === selectedSiteId);
+  const photosButton = onOpenPhotos && <button type="button" onClick={onOpenPhotos} className="ui-button app-progress-button">{isPhotos ? "일지로 돌아가기" : "알폼핀 체결 사진"}</button>;
 
   return (
     <header className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-30 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="app-header-layout">
           
           {/* Title and Site Picker */}
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
-              <HardHat className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
+          <div className="app-header-identity">
+            <img className="bolim-logo" src="https://cdn.imweb.me/thumbnail/20220701/9fa5f0628c150.png" width="42" height="30" alt="보림토건" />
+            <div className="app-header-copy">
+              <div className="app-header-title-row">
                 <h1 className="text-lg font-bold text-slate-100 tracking-tight">
-                  콘크리트 타설 및 양생 관리 시스템
+                  <button type="button" className="app-home-button" onClick={onOpenHome} title="타설 일지 첫 화면으로 이동">콘크리트 타설 및 양생 관리 시스템</button>
                 </h1>
                 <span className={`px-2 py-0.5 text-xs rounded-full font-medium flex items-center gap-1 border ${
                   isSupabase 
@@ -61,11 +66,11 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
               
               {/* Site selector dropdown */}
-              <div className="flex items-center gap-2 mt-1">
+              <div className="app-header-site-row">
                 <Building2 className="w-4 h-4 text-slate-400" />
                 <span className="text-xs text-slate-400 font-semibold">현장명:</span>
                 {sites.length > 0 ? (
-                  <select
+                  <select aria-label="현장 선택"
                     value={selectedSiteId}
                     onChange={(e) => onSelectSite(e.target.value)}
                     className="bg-slate-800 border border-slate-700 text-amber-300 text-xs rounded-md px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
@@ -96,14 +101,11 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center flex-wrap gap-2">
-            <button
-              onClick={onOpenAddRecord}
-              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 transition shadow-sm hover:shadow"
-            >
-              <PlusCircle className="w-4 h-4" />
-              타설 일지 등록
-            </button>
+          <div className="app-header-actions">
+            {isPhotos && photosButton}
+            {onOpenProgress && <button type="button" onClick={onOpenProgress} className={`ui-button ${isProgress ? 'app-return-button' : 'app-progress-button'}`}>{isProgress ? <span className="app-return-arrow" aria-hidden="true">←</span> : <Table2 size={18} aria-hidden="true" />}{isProgress ? '일지로 돌아가기' : '타설현황'}</button>}
+            {!isPhotos && photosButton}
+            {!isPhotos && <>
             <button
               onClick={onOpenPrintView}
               className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 transition"
@@ -117,7 +119,7 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
               CSV 내보내기
-            </button>
+            </button></>}
           </div>
 
         </div>

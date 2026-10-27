@@ -1,13 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { Modal } from './Modal';
+import React, { useState, useEffect, useRef } from 'react';
 import { PouringLog, PouringLogInput, Site } from '@/lib/types';
+import { newLog } from '@/lib/log-data';
 import { X, Save, Calendar, Thermometer, MapPin, Building, ShieldCheck } from 'lucide-react';
 
 interface RecordModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: PouringLogInput, id?: string) => void;
+  onSave: (data: PouringLogInput, id?: string) => Promise<void>;
+  blocked?: boolean;
   initialData?: PouringLog | null;
   currentSite: Site | undefined;
 }
@@ -17,25 +20,12 @@ export const RecordModal: React.FC<RecordModalProps> = ({
   onClose,
   onSave,
   initialData,
-  currentSite,
+  currentSite, blocked = false,
 }) => {
-  const [formData, setFormData] = useState<PouringLogInput>({
-    site_id: '',
-    category: '1',
-    date: new Date().toISOString().split('T')[0],
-    building: '',
-    floor: '',
-    member_type: '슬라브',
-    min_temp: 20,
-    max_temp: 28,
-    weather: '맑음',
-    remicon_company: '',
-    strength: '24MPa',
-    volume: '',
-    curing_watering: '',
-    curing_protection: '',
-    remarks: '',
-  });
+  const [formData, setFormData] = useState<PouringLogInput>(() => newLog());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const lock = useRef(false);
 
   useEffect(() => {
     if (initialData) {
@@ -56,43 +46,23 @@ export const RecordModal: React.FC<RecordModalProps> = ({
         curing_protection: initialData.curing_protection,
         remarks: initialData.remarks || '',
       });
-    } else {
-      setFormData({
-        site_id: currentSite?.id || '',
-        category: '1',
-        date: new Date().toISOString().split('T')[0],
-        building: '',
-        floor: '',
-        member_type: '슬라브',
-        min_temp: 20,
-        max_temp: 28,
-        weather: '맑음',
-        remicon_company: '',
-        strength: '24MPa',
-        volume: 150,
-        curing_watering: '1일 3회 살수 실시',
-        curing_protection: '양생시트 보양',
-        remarks: '',
-      });
-    }
+    } else setFormData(newLog(currentSite?.id));
+    setError('');
   }, [initialData, currentSite, isOpen]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(
-      {
-        ...formData,
-        site_id: currentSite?.id || formData.site_id,
-      },
-      initialData?.id
-    );
-    onClose();
+    if (lock.current) return;
+    lock.current = true; setBusy(true); setError('');
+    try { await onSave({ ...formData, site_id: currentSite?.id || formData.site_id }, initialData?.id); onClose(); }
+    catch (e) { setError(e instanceof Error ? e.message : '저장에 실패했습니다. 입력은 유지됩니다.'); }
+    finally { lock.current = false; setBusy(false); }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+    <Modal onClose={() => { if (!busy) onClose(); }} labelledBy="record-modal-title">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl">
         
         {/* Header */}
@@ -102,7 +72,7 @@ export const RecordModal: React.FC<RecordModalProps> = ({
               <Building className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-100">
+              <h2 id="record-modal-title" className="text-base font-bold text-slate-100">
                 {initialData ? '타설 및 양생 일지 수정' : '신규 타설 및 양생 일지 작성'}
               </h2>
               <p className="text-xs text-amber-400 font-medium mt-0.5">
@@ -112,6 +82,8 @@ export const RecordModal: React.FC<RecordModalProps> = ({
           </div>
           <button
             onClick={onClose}
+            disabled={busy}
+            aria-label="일지 닫기"
             className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition"
           >
             <X className="w-5 h-5" />
@@ -119,29 +91,19 @@ export const RecordModal: React.FC<RecordModalProps> = ({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} onInput={() => setError('')} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
           
-          {/* Row 1: 구분, 일자 */}
+          {error && <p className="progress-error" role="alert">{error}</p>}
+          {blocked && <p className="progress-error">자료 읽기 오류를 해결한 뒤 입력해주세요.</p>}
+          {!currentSite && <p className="progress-error">현장을 먼저 선택해주세요.</p>}
+          <fieldset disabled={busy || blocked || !currentSite} className="space-y-4">
+          {/* Row 1: 일자 (번호는 조회 순서에 따라 자동 표시) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                구분 (순번/종류)
-              </label>
-              <input
-                type="text"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                placeholder="예: 1, 2 또는 타설"
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1">
+              <label htmlFor="record-field-2" className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5 text-amber-400" /> 일자
               </label>
-              <input
+              <input id="record-field-2"
                 type="date"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
@@ -158,10 +120,10 @@ export const RecordModal: React.FC<RecordModalProps> = ({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                <label htmlFor="record-field-3" className="block text-[11px] font-medium text-slate-400 mb-1">
                   동 (구역)
                 </label>
-                <input
+                <input id="record-field-3"
                   type="text"
                   placeholder="예: 101동"
                   value={formData.building}
@@ -172,10 +134,10 @@ export const RecordModal: React.FC<RecordModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                <label htmlFor="record-field-4" className="block text-[11px] font-medium text-slate-400 mb-1">
                   층
                 </label>
-                <input
+                <input id="record-field-4"
                   type="text"
                   placeholder="예: 15층"
                   value={formData.floor}
@@ -186,10 +148,10 @@ export const RecordModal: React.FC<RecordModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                <label htmlFor="record-field-5" className="block text-[11px] font-medium text-slate-400 mb-1">
                   벽 / 슬라브 (구조부위)
                 </label>
-                <select
+                <select id="record-field-5"
                   value={formData.member_type}
                   onChange={(e) => setFormData({ ...formData, member_type: e.target.value })}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
@@ -207,10 +169,10 @@ export const RecordModal: React.FC<RecordModalProps> = ({
           {/* Row 3: 온도 & 기상 & 레미콘사 */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1">
+              <label htmlFor="record-field-6" className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1">
                 <Thermometer className="w-3.5 h-3.5 text-blue-400" /> 최저온도(°C)
               </label>
-              <input
+              <input id="record-field-6"
                 type="number"
                 step="0.1"
                 placeholder="20"
@@ -221,10 +183,10 @@ export const RecordModal: React.FC<RecordModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1">
+              <label htmlFor="record-field-7" className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1">
                 <Thermometer className="w-3.5 h-3.5 text-red-400" /> 최고온도(°C)
               </label>
-              <input
+              <input id="record-field-7"
                 type="number"
                 step="0.1"
                 placeholder="30"
@@ -235,14 +197,15 @@ export const RecordModal: React.FC<RecordModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
+              <label htmlFor="record-field-8" className="block text-xs font-medium text-slate-300 mb-1">
                 기상 (눈/비/맑음)
               </label>
-              <select
+              <select id="record-field-8"
                 value={formData.weather}
                 onChange={(e) => setFormData({ ...formData, weather: e.target.value })}
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
+                <option value="">기상 미입력</option>
                 <option value="맑음">맑음 ☀️</option>
                 <option value="흐림">흐림 ☁️</option>
                 <option value="비">비 🌧️</option>
@@ -251,10 +214,10 @@ export const RecordModal: React.FC<RecordModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
+              <label htmlFor="record-field-9" className="block text-xs font-medium text-slate-300 mb-1">
                 레미콘사
               </label>
-              <input
+              <input id="record-field-9"
                 type="text"
                 placeholder="예: 유진기업"
                 value={formData.remicon_company}
@@ -267,10 +230,10 @@ export const RecordModal: React.FC<RecordModalProps> = ({
           {/* Row 3.5: 타설강도 & 타설물량 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-950/40 p-3 rounded-xl border border-slate-800">
             <div>
-              <label className="block text-xs font-semibold text-amber-400 mb-1">
+              <label htmlFor="record-field-10" className="block text-xs font-semibold text-amber-400 mb-1">
                 타설강도 (규격/강도)
               </label>
-              <input
+              <input id="record-field-10"
                 type="text"
                 placeholder="예: 24MPa 또는 25-24-150"
                 value={formData.strength || ''}
@@ -280,10 +243,10 @@ export const RecordModal: React.FC<RecordModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-amber-400 mb-1">
+              <label htmlFor="record-field-11" className="block text-xs font-semibold text-amber-400 mb-1">
                 타설물량 (m³)
               </label>
-              <input
+              <input id="record-field-11"
                 type="number"
                 step="0.1"
                 placeholder="예: 150"
@@ -301,10 +264,10 @@ export const RecordModal: React.FC<RecordModalProps> = ({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                <label htmlFor="record-field-12" className="block text-[11px] font-medium text-slate-400 mb-1">
                   살수 (수분 공급 및 살수 양생)
                 </label>
-                <input
+                <input id="record-field-12"
                   type="text"
                   placeholder="예: 1일 3회 살수 실시"
                   value={formData.curing_watering}
@@ -314,10 +277,10 @@ export const RecordModal: React.FC<RecordModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                <label htmlFor="record-field-13" className="block text-[11px] font-medium text-slate-400 mb-1">
                   보양 (단열/열풍/시트/거푸집 보양)
                 </label>
-                <input
+                <input id="record-field-13"
                   type="text"
                   placeholder="예: 습윤양생포 피복 / 천막 방열"
                   value={formData.curing_protection}
@@ -330,10 +293,10 @@ export const RecordModal: React.FC<RecordModalProps> = ({
 
           {/* Row 5: 비고 */}
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
+            <label htmlFor="record-field-14" className="block text-xs font-medium text-slate-300 mb-1">
               비고 / 특이사항
             </label>
-            <input
+            <input id="record-field-14"
               type="text"
               placeholder="예: 서중 콘크리트 제어 조치, 균열 방지제 도포 등"
               value={formData.remarks}
@@ -347,6 +310,7 @@ export const RecordModal: React.FC<RecordModalProps> = ({
             <button
               type="button"
               onClick={onClose}
+            disabled={busy}
               className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg transition"
             >
               취소
@@ -356,12 +320,14 @@ export const RecordModal: React.FC<RecordModalProps> = ({
               className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-lg flex items-center gap-1.5 transition shadow"
             >
               <Save className="w-4 h-4" />
-              {initialData ? '수정 저장' : '새 일지 저장'}
+              {busy ? '저장 중…' : initialData ? '수정 저장' : '새 일지 저장'}
             </button>
           </div>
 
+          </fieldset>
+          <p role="status" className="ui-note">{busy ? '저장 중입니다.' : ''}</p>
         </form>
       </div>
-    </div>
+    </Modal>
   );
 };

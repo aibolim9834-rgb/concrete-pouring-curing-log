@@ -44,7 +44,7 @@ CREATE POLICY "Allow public insert for sites" ON sites FOR INSERT WITH CHECK (tr
 CREATE POLICY "Allow public update for sites" ON sites FOR UPDATE USING (true);
 CREATE POLICY "Allow public delete for sites" ON sites FOR DELETE USING (true);
 
-CREATE POLICY "Allow public read for pouring_logs" ON sites FOR SELECT USING (true);
+CREATE POLICY "Allow public read for pouring_logs" ON pouring_logs FOR SELECT USING (true);
 CREATE POLICY "Allow public all for pouring_logs" ON pouring_logs FOR ALL USING (true);
 
 -- 초기 샘플 현장 데이터 삽입

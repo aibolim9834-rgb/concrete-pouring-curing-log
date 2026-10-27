@@ -27,18 +27,20 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
   const maxTemp = validMaxTemps.length > 0 ? Math.max(...validMaxTemps) : null;
 
   // Check Curing alerts
-  const hasColdAlert = minTemp !== null && minTemp <= 4;
-  const hasHotAlert = maxTemp !== null && maxTemp >= 30;
+  const hasColdAlert = minTemp !== null && minTemp <= 0;
+  const hasHotAlert = maxTemp !== null && maxTemp > 30;
+  const noTemperature = minTemp === null && maxTemp === null;
+  const missingTemperatureCount = logs.filter(log => log.min_temp === null || log.max_temp === null).length;
 
   // Member types breakdown
   const memberCounts = logs.reduce((acc, log) => {
     const member = log.member_type || '기타';
     acc[member] = (acc[member] || 0) + 1;
     return acc;
-  }, {} as Record<string, number>);
+  }, Object.create(null) as Record<string, number>);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div className="summary-cards grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
       
       {/* 1. Selected Site & Total Records */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition">
@@ -53,57 +55,45 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
             {site?.name || '현장 미선택'}
           </h3>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-xs text-slate-400">총 타설/양생 기록</span>
+            <span className="text-xs text-slate-400">조회된 타설/양생 기록</span>
             <span className="text-xl font-extrabold text-slate-100">{totalCount} <span className="text-xs font-normal text-slate-400">건</span></span>
           </div>
         </div>
       </div>
 
-      {/* 2. Temperature Status */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition">
+      {/* 2. Temperature Range and Alerts */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition lg:col-span-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-400">기상/온도 범위</span>
-          <div className="p-2 bg-amber-500/10 text-amber-400 rounded-lg">
-            <Thermometer className="w-4 h-4" />
-          </div>
+          <span className="text-xs font-semibold text-slate-400">온도 범위·확인</span>
+          <div className="p-2 bg-amber-500/10 text-amber-400 rounded-lg"><Thermometer className="w-4 h-4" /></div>
         </div>
-        <div className="mt-3">
-          <div className="flex items-center justify-between text-xs mb-1">
-            <span className="text-slate-400">최저 온도</span>
-            <span className="font-bold text-blue-400">{minTemp !== null ? `${minTemp}°C` : '-'}</span>
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <div className="flex items-center justify-between text-xs mb-1"><span className="text-slate-400">최저 온도</span><span className="font-bold text-blue-400">{minTemp !== null ? `${minTemp}°C` : '-'}</span></div>
+            <div className="flex items-center justify-between text-xs"><span className="text-slate-400">최고 온도</span><span className="font-bold text-red-400">{maxTemp !== null ? `${maxTemp}°C` : '-'}</span></div>
           </div>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-400">최고 온도</span>
-            <span className="font-bold text-red-400">{maxTemp !== null ? `${maxTemp}°C` : '-'}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Special Curing Condition Alert */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-400">양생 관리 상태</span>
-          <div className={`p-2 rounded-lg ${hasHotAlert || hasColdAlert ? 'bg-amber-500/10 text-amber-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
-            {hasHotAlert || hasColdAlert ? <ShieldAlert className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-          </div>
-        </div>
-        <div className="mt-3">
-          {hasHotAlert ? (
-            <div className="text-xs text-amber-300 bg-amber-950/60 border border-amber-800/60 p-2 rounded-md flex items-center gap-1.5 font-medium">
-              <Sun className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-              서중 콘크리트 양생 (살수 피복 필수)
-            </div>
-          ) : hasColdAlert ? (
-            <div className="text-xs text-blue-300 bg-blue-950/60 border border-blue-800/60 p-2 rounded-md flex items-center gap-1.5 font-medium">
-              <ShieldAlert className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-              동절기 보양 양생 (방열/가온 필수)
+          <div>
+          {noTemperature ? <p className="text-xs text-slate-400">판단할 온도 자료 없음</p> : hasHotAlert || hasColdAlert ? (
+            <div className="space-y-2">
+              {hasHotAlert && <div className="temperature-alert is-hot text-xs border p-2 rounded-md flex items-center gap-1.5 font-medium">
+                <Sun className="w-3.5 h-3.5 flex-shrink-0" />
+                입력 온도 중 고온 확인 필요
+              </div>}
+              {hasColdAlert && <div className="temperature-alert is-cold text-xs border p-2 rounded-md flex items-center gap-1.5 font-medium">
+                <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" />
+                입력 온도 중 저온 확인 필요
+              </div>}
             </div>
           ) : (
             <div className="text-xs text-emerald-300 bg-emerald-950/60 border border-emerald-800/60 p-2 rounded-md flex items-center gap-1.5 font-medium">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-              표준 양생 기상 조건 충족
+              입력된 온도 중 설정 경고 없음
             </div>
           )}
+          <p className="ui-note mt-2">조회 기록 기준이며 양생 적합성 판정이 아닙니다.</p>
+          {missingTemperatureCount > 0 && <p className="ui-note">온도 미입력 {missingTemperatureCount}건 포함</p>}
+
+          </div>
         </div>
       </div>
 

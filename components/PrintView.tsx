@@ -9,6 +9,7 @@ interface PrintViewProps {
   sites: Site[];
   currentSite: Site | undefined;
   onBack: () => void;
+  description?: string;
 }
 
 export const PrintView: React.FC<PrintViewProps> = ({
@@ -16,6 +17,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
   sites,
   currentSite,
   onBack,
+  description,
 }) => {
   const handlePrint = () => {
     window.print();
@@ -43,7 +45,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-900 p-4 sm:p-8 print:p-0 print:bg-white">
+    <div className="log-print-page min-h-screen bg-slate-950 text-slate-900 p-4 sm:p-8 print:p-0 print:bg-white">
       
       {/* Top Toolbar (Hidden on Print) */}
       <div className="max-w-[1100px] mx-auto mb-6 flex items-center justify-between print:hidden">
@@ -65,7 +67,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
       <div className="max-w-[1100px] mx-auto bg-white p-6 sm:p-10 shadow-2xl border border-slate-300 print:shadow-none print:border-none print:w-full print:p-0">
         
         {/* Title */}
-        <div className="text-center mb-6 border-b-2 border-black pb-4">
+        <div className="log-print-title text-center mb-6 border-b-2 border-black pb-4">
           <h1 className="text-2xl font-black tracking-wider text-black">
             콘크리트 타설 및 양생 관리 일지
           </h1>
@@ -82,7 +84,11 @@ export const PrintView: React.FC<PrintViewProps> = ({
         </div>
 
         {/* Main Excel Sheet Table */}
-        <table className="w-full border-collapse border border-black text-xs text-center text-black mb-8">
+        <p className="text-xs mb-3">출력 범위: {description || '현장 전체'} · {logs.length}건</p>
+        <table className="log-print-table w-full border-collapse border border-black text-xs text-center text-black mb-8">
+          <colgroup>
+            {[2.5, 7.5, 21, 4.5, 6.5, 4.5, 4.5, 4.5, 6.5, 9.5, 6, 7, 10, 5.5].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}
+          </colgroup>
           <thead>
             {/* Header Row 1 */}
             <tr className="bg-gray-100 font-bold border-b border-black">
@@ -116,6 +122,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
               <th colSpan={2} className="border border-black px-2 py-1.5">
                 양생방법
               </th>
+              <th rowSpan={2} className="border border-black px-2 py-1.5">비고</th>
             </tr>
 
             {/* Header Row 2 */}
@@ -132,7 +139,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
             {filledLogs.map((log, index) => (
               <tr key={log.id} className="h-8 border-b border-black">
                 <td className="border border-black px-1 py-1 text-center font-medium">
-                  {log.category || (log.date ? index + 1 : '')}
+                  {log.date ? index + 1 : ''}
                 </td>
                 <td className="border border-black px-1 py-1 text-center">
                   {log.date}
@@ -155,7 +162,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
                 <td className="border border-black px-2 py-1 text-center">
                   {log.weather}
                 </td>
-                <td className="border border-black px-2 py-1 text-left truncate">
+                <td className="border border-black px-2 py-1 text-center">
                   {log.remicon_company}
                 </td>
                 <td className="border border-black px-1 py-1 text-center font-medium">
@@ -164,19 +171,20 @@ export const PrintView: React.FC<PrintViewProps> = ({
                 <td className="border border-black px-1 py-1 text-center font-medium">
                   {log.volume !== null && log.volume !== undefined && log.volume !== '' ? `${log.volume} m³` : ''}
                 </td>
-                <td className="border border-black px-2 py-1 text-left truncate">
+                <td className="border border-black px-2 py-1 text-center">
                   {log.curing_watering}
                 </td>
-                <td className="border border-black px-2 py-1 text-left truncate">
+                <td className="border border-black px-2 py-1 text-center">
                   {log.curing_protection}
                 </td>
+                <td className="border border-black px-2 py-1 text-left break-words">{log.remarks || ''}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
         {/* Bottom Section: 해당 현장명 목록 (Matching Excel sheet structure bottom section!) */}
-        <div className="border border-black p-4 mt-6">
+        <div className="log-print-sites border border-black p-4 mt-6">
           <div className="grid grid-cols-12 gap-2 text-xs">
             <div className="col-span-3 font-bold border-r border-black pr-2 flex items-center justify-center bg-gray-50">
               해당현장명
@@ -192,7 +200,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
         </div>
 
         {/* Footer Approval Signatures */}
-        <div className="mt-8 pt-4 flex justify-end gap-8 text-xs font-bold text-black border-t border-gray-300">
+        <div className="log-print-signatures mt-8 pt-4 flex justify-end gap-8 text-xs font-bold text-black border-t border-gray-300">
           <div>작성자: ________________ (인)</div>
           <div>검토자: ________________ (인)</div>
           <div>승인자: ________________ (인)</div>

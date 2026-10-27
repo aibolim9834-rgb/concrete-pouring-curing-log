@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./bolim-theme.css";
+import "./photos.css";
 
 export const metadata: Metadata = {
   title: "콘크리트 타설 및 양생 관리 시스템",
@@ -13,9 +15,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <head>
-        <script src="https://cdn.tailwindcss.com"></script>
-      </head>
       <body className="antialiased bg-slate-950 text-slate-100 min-h-screen">
         {children}
       </body>

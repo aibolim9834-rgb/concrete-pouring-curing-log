@@ -1,0 +1,23 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),ts=require('typescript'),vm=require('node:vm');
+function load(file,deps={}) { const module={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module,exports:module.exports,structuredClone,require:n=>deps[n]});return module.exports; }
+const model=load('lib/pouring-progress.ts'),{changeStage}=load('lib/progress-structure.ts',{'./pouring-progress':model});
+const record={date:'2026-07-24',plannedDate:'2026-07-23',status:'done',color:'#FF0000',entries:[{id:'e1',member:'슬라브',zone:'A구역',volume:12,remarks:'원본'}]};
+const doc={version:1,buildings:[{id:'a',name:'101동',stages:model.presetStages(2,1),records:{f1:record,f2:{date:'',status:'none',color:'#ffffff',comparisonStage:'f1'}}},{id:'b',name:'102동',stages:model.presetStages(2,1),records:{f1:structuredClone(record)}}]};
+const original=JSON.stringify(doc);
+let next=changeStage(doc,'a','rename','f1','기준층');
+assert.equal(JSON.stringify(next.buildings[0].records),JSON.stringify(doc.buildings[0].records));
+assert.equal(next.buildings[1].stages.find(s=>s.id==='f1').name,'지상 1층');
+next=changeStage(next,'a','add','pit','피트층','f1');
+assert(next.buildings[0].stages.find(s=>s.id==='pit').order>1);
+assert(next.buildings[0].stages.find(s=>s.id==='pit').order<2);
+assert.throws(()=>changeStage(next,'a','add','dup','피트층'));
+assert.throws(()=>changeStage(next,'a','add','x','층','missing'));
+next=changeStage(next,'a','delete','f1');
+assert(!next.buildings[0].records.f1);
+assert(!next.buildings[0].records.f2.comparisonStage);
+assert.equal(JSON.stringify(next.buildings[1]),JSON.stringify(doc.buildings[1]));
+assert.equal(JSON.stringify(doc),original,'source snapshot unchanged for undo');
+model.validateProgress(doc);model.validateProgress(next);
+const empty={version:1,buildings:[{id:'a',name:'101동',stages:[],records:{}}]};
+assert(Number.isFinite(changeStage(empty,'a','add','x','첫 단계').buildings[0].stages[0].order));
+console.log('PASS structure: insertion, rename preservation, delete cleanup, duplicates, empty building, undo snapshot');
