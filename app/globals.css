@@ -394,7 +394,7 @@ body {
 .progress-page .progress-selection-tools .progress-swatches button { inline-size: 28px; block-size: 28px; min-block-size: 28px; }
 .progress-page .progress-selection-tools .progress-recent-swatches { align-items: center; padding-inline-start: 8px; border-inline-start: 1px solid var(--progress-line); }
 .progress-recent-label { font-size: 11px; color: var(--progress-muted); }
-.progress-clear-record { margin-inline-start: auto; }
+.progress-add-trigger { margin-inline-start: auto; }
 .progress-selection-details { gap: 8px 24px; margin-block-start: 8px; align-items: start; }
 .progress-page .progress-selection-details :is(.inline-basis,.progress-details) { border: 0; padding: 0; margin: 0; min-inline-size: 0; }
 .progress-page .progress-selection-details details[open] { flex: 1 1 100%; }
@@ -405,7 +405,7 @@ body {
 .progress-selection-details .progress-entry-form { grid-template-columns: repeat(auto-fit,minmax(min(100%,180px),1fr)); align-items: start; }
 .progress-selection-details .progress-entry-form h4, .progress-selection-details .progress-entry-form .progress-actions { grid-column: 1 / -1; }
 @media(max-width:760px) {
-  .progress-clear-record { margin-inline-start: 0; }
+  .progress-add-trigger { margin-inline-start: 0; }
   .progress-color-tools { flex-basis: 100%; }
 }
 @media(pointer:coarse) {
