@@ -87,7 +87,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
         <p className="text-xs mb-3">출력 범위: {description || '현장 전체'} · {logs.length}건</p>
         <table className="log-print-table w-full border-collapse border border-black text-xs text-center text-black mb-8">
           <colgroup>
-            {[2.5, 7.5, 21, 4.5, 6.5, 4.5, 4.5, 4.5, 6.5, 9.5, 6, 7, 10, 5.5].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}
+            {[2.5, 7.5, 19, 6.5, 6.5, 4.5, 4.5, 4.5, 6.5, 9.5, 6, 7, 10, 5.5].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}
           </colgroup>
           <thead>
             {/* Header Row 1 */}

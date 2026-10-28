@@ -85,6 +85,7 @@
   .concrete-app .record-row-actions button { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0; }
   .concrete-app .record-log-table { table-layout:fixed; inline-size:100%; min-inline-size:1270px; }
   .concrete-app .record-log-table :is(th,td) { min-inline-size:0; padding-inline:4px; }
+  .concrete-app .record-log-table .record-display-row > td { padding-block:5px; }
   .concrete-app .record-log-table thead tr:first-child > th:first-child { white-space:nowrap; }
   .concrete-app .record-log-table tbody td:is(:nth-child(3),:nth-child(4),:nth-child(5),:nth-child(9),:nth-child(10)) { white-space:normal; word-break:keep-all; overflow-wrap:anywhere; }
   .concrete-app .record-log-table tbody td:nth-child(9) { max-inline-size:none; overflow:visible; text-overflow:clip; }

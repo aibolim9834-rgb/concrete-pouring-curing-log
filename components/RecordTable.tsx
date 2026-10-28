@@ -214,7 +214,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
           <caption className="sr-only">타설 일지. 열 제목을 누르면 오름차순 또는 내림차순으로 정렬합니다. 구분은 현재 조회 순서의 자동 번호입니다.</caption>
           <colgroup>
             {/* 번호, 일자, 동, 층, 부위, 최저·최고온도, 기상, 업체, 강도, 물량, 살수·보양, 관리 */}
-            {[2.5, 8.5, 18.5, 4.5, 6.5, 4.5, 4.5, 4.5, 6.5, 9.5, 6, 7, 10, 7].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}
+            {[2.5, 8.5, 16.5, 6.5, 6.5, 4.5, 4.5, 4.5, 6.5, 9.5, 6, 7, 10, 7].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}
           </colgroup>
           <thead>
             {/* Row 1 Headers */}
@@ -615,7 +615,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                     if (!cell || cell.cellIndex === 0 || cell.cellIndex === 13) return;
                     startInlineEdit(log);
                   }}
-                  className={`hover:bg-slate-800/60 transition group ${
+                  className={`record-display-row hover:bg-slate-800/60 transition group ${
                     index % 2 === 0 ? 'bg-slate-900/40' : 'bg-slate-900'
                   }`}
                 >
