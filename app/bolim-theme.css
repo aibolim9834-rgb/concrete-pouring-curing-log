@@ -103,6 +103,8 @@
   .concrete-app .summary-cards [class*="bg-amber-950"] [class*="text-amber-"] { color:var(--b-warning)!important; }
   .concrete-app .summary-cards [class*="bg-blue-950"] { background:var(--b-info-soft)!important; color:var(--b-info)!important; border-color:var(--b-info)!important; }
   .concrete-app :is(input:not([type=checkbox]):not([type=color]),select,textarea) { background:var(--b-surface)!important; color:var(--b-ink)!important; border-color:var(--b-control)!important; }
+  /* Fields share the 5px button radius; the 25px in-cell editors keep their tighter 3px corners. */
+  .concrete-app :is(input:not([type=checkbox]):not([type=color]),select,textarea):not(.inline-cell-edit *) { border-radius:5px; }
   .concrete-app :is(input,textarea)::placeholder { color:var(--b-muted)!important; }
   .concrete-app input[type=checkbox] { accent-color:var(--b-action); }
   .concrete-app input[type=color] { background:var(--b-surface)!important; border-color:var(--b-control)!important; color-scheme:light; }
