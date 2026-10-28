@@ -6,7 +6,6 @@ import { supabase, checkSupabaseHealth } from '@/lib/supabase';
 import { Header } from '@/components/Header';
 import { SummaryCards } from '@/components/SummaryCards';
 import { RecordTable } from '@/components/RecordTable';
-import { RecordModal } from '@/components/RecordModal';
 import { SiteModal } from '@/components/SiteModal';
 import { PrintView } from '@/components/PrintView';
 import { SitePhotos } from '@/components/SitePhotos';
@@ -27,11 +26,9 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
   const [selectedSiteId, setSelectedSiteId] = useState<string>('');
   const [logs, setLogs] = useState<PouringLog[]>([]);
   
-  const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [isSiteModalOpen, setIsSiteModalOpen] = useState(false);
   const [isPrintViewOpen, setIsPrintViewOpen] = useState(false);
   
-  const [editingLog, setEditingLog] = useState<PouringLog | null>(null);
   const [isSupabase, setIsSupabase] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dataIssue, setDataIssue] = useState('');
@@ -329,10 +326,6 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
           onWorkPending={value=>{logWorkPending.current=value;}}
           blocked={!ready || !!dataIssue}
           site={currentSite}
-          onEditLog={(log) => {
-            setEditingLog(log);
-            setIsRecordModalOpen(true);
-          }}
           onDeleteLog={handleDeleteLog}
           onQuickAddLog={(inputData) => handleSaveLog(inputData)}
           onQuickUpdateLog={(id, inputData) => handleSaveLog(inputData, id)}
@@ -341,15 +334,6 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       </main>
 
       {/* Modals */}
-      <RecordModal
-        isOpen={isRecordModalOpen}
-        onClose={() => setIsRecordModalOpen(false)}
-        onSave={handleSaveLog}
-        initialData={editingLog}
-        currentSite={currentSite}
-        blocked={!ready || !!dataIssue}
-      />
-
       <SiteModal
         isOpen={isSiteModalOpen}
         onClose={() => setIsSiteModalOpen(false)}

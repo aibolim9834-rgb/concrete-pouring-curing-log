@@ -23,7 +23,6 @@ import {
 interface RecordTableProps {
   logs: PouringLog[];
   site: Site | undefined;
-  onEditLog: (log: PouringLog) => void;
   onDeleteLog: (id: string) => void;
   onQuickAddLog?: (data: PouringLogInput) => Promise<void>;
   onQuickUpdateLog?: (id: string, data: PouringLogInput) => Promise<void>;
@@ -37,7 +36,6 @@ interface RecordTableProps {
 export const RecordTable: React.FC<RecordTableProps> = ({
   logs,
   site,
-  onEditLog,
   onDeleteLog,
   onQuickAddLog,
   onQuickUpdateLog, filters, onFiltersChange, outputScope, onOutputScopeChange, sort, onSortChange, busy = false, blocked = false, onWorkPending,

@@ -8,7 +8,7 @@
 .photo-drop.is-over{background:var(--b-selected);border-color:var(--b-action)}
 .photo-upload-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:12px}
 .photo-upload-actions .photo-camera-button{display:none}
-@media(max-width:1100px),(pointer:coarse){.photo-upload-actions .photo-camera-button{display:inline-flex}}
+@media(pointer:coarse){.photo-upload-actions .photo-camera-button{display:inline-flex}}
 .photo-drop strong{font-size:18px}.photo-drop p{margin:8px 0}.photo-status{grid-column:1/-1;overflow-wrap:anywhere}
 .site-photos .photo-file-input{position:absolute;width:1px;height:1px;min-height:0;opacity:0;clip-path:inset(50%);padding:0}
 .photo-heading,.photo-viewer-heading,.photo-viewer-footer{display:flex;justify-content:space-between;align-items:center;gap:16px}

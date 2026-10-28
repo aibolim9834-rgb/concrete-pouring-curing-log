@@ -48,7 +48,6 @@
 ├── components/
 │   ├── Header.tsx         # 네비게이션, 현장 선택, 액션 버튼
 │   ├── RecordTable.tsx    # 엑셀 스타일 일지 테이블 (직접 입력 빈칸 행 포함)
-│   ├── RecordModal.tsx    # 기록 추가/수정 모달 폼
 │   ├── SiteModal.tsx      # 현장 등록/삭제 관리 모달
 │   ├── SummaryCards.tsx   # 현장별 온도시스템 및 상태 카운터
 │   └── PrintView.tsx      # A4 공식 출력/PDF 서식 뷰
