@@ -256,7 +256,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
             </tr>
 
             {/* Row 2 Headers for Spanned Columns */}
-            <tr className="bg-slate-900 text-slate-400 font-semibold border-b border-slate-800 text-center text-[11px]">
+            <tr className="bg-slate-900 text-slate-400 font-bold border-b border-slate-800 text-center">
               <th scope="col" aria-sort={sortState('building')} className="px-2 py-2 border-r border-slate-800 min-w-[85px]">{sortButton('동(구역)', 'building')}</th>
               <th scope="col" aria-sort={sortState('floor')} className="px-2 py-2 border-r border-slate-800 min-w-[60px]">{sortButton('층', 'floor')}</th>
               <th scope="col" aria-sort={sortState('member_type')} className="px-2 py-2 border-r border-slate-800 min-w-[80px]">{sortButton('벽/슬라브', 'member_type')}</th>
