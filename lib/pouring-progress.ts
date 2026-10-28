@@ -1,6 +1,6 @@
 export interface ProgressStage { id: string; name: string; order: number }
 export interface ProgressEntry { id: string; member: string; zone: string; volume: number | null; remarks: string }
-export interface ProgressRecord { date: string; status: 'none' | 'partial' | 'done'; color: string; colorCleared?: boolean; plannedDate?: string; comparisonStage?: string; entries?: ProgressEntry[] }
+export interface ProgressRecord { date: string; status: 'none' | 'partial' | 'done'; color: string; colorCleared?: boolean; plannedDate?: string; comparisonStage?: string; entries?: ProgressEntry[]; dates?: string[] }
 export interface ProgressBuilding { id: string; name: string; stages: ProgressStage[]; records: Record<string, ProgressRecord> }
 export interface ProgressDocument { version: 1; buildings: ProgressBuilding[] }
 export const emptyProgress = (): ProgressDocument => ({ version: 1, buildings: [] });
@@ -32,6 +32,10 @@ export function validateProgressRecord(record: ProgressRecord) {
   if (record.colorCleared !== undefined && typeof record.colorCleared !== 'boolean') throw new Error('배경색 설정이 올바르지 않습니다.');
   if (record.plannedDate !== undefined && (typeof record.plannedDate !== 'string' || (record.plannedDate !== '' && (!validDate(record.plannedDate) || record.plannedDate.startsWith('0000-'))))) throw new Error('예정 타설일이 올바르지 않습니다.');
   if (record.comparisonStage !== undefined && (typeof record.comparisonStage !== 'string' || record.comparisonStage.length > 101)) throw new Error('작업일 비교 단계를 확인해주세요.');
+  // Multi-day pours keep every pour date; `date` stays the last one so completion and variance use it.
+  if (record.dates !== undefined && (!Array.isArray(record.dates) || record.dates.length < 2 || record.dates.length > 100
+    || record.dates.some((d, i) => typeof d !== 'string' || !validDate(d) || (i > 0 && d <= record.dates![i - 1]))
+    || record.dates[record.dates.length - 1] !== record.date)) throw new Error('여러 타설일은 날짜순으로, 마지막 날짜가 실시일과 같아야 합니다.');
   if (record.entries !== undefined) {
     if (!Array.isArray(record.entries) || record.entries.length > 200) throw new Error('한 층·단계의 구역 내역은 200건까지 기록할 수 있습니다.');
     const ids = new Set<string>();

@@ -2,6 +2,7 @@ import React from 'react';
 import { ProgressBuilding, buildingLabel } from '@/lib/pouring-progress';
 import { progressPrintPages } from '@/lib/progress-print';
 import { progressColor } from '@/lib/progress-color';
+import { pourDatesLabel } from '@/lib/progress-entries';
 import { difference, gap, shortDate } from '@/lib/date-only';
 
 export function ProgressPrint({ buildings, siteName, basis, ink }: {
@@ -24,7 +25,7 @@ export function ProgressPrint({ buildings, siteName, basis, ink }: {
           const style = background ? { backgroundColor: background, color: ink(background) } : undefined;
           return <React.Fragment key={b.id}>
             <td style={style}>{record?.plannedDate ? shortDate(record.plannedDate, '.') : '—'}</td>
-            <td style={style}>{record?.date ? shortDate(record.date, '.') : '—'}</td>
+            <td style={style}>{record?.date ? pourDatesLabel(record) : '—'}</td>
             <td>{!record?.date && !record?.plannedDate ? '—' : gap(difference(record?.plannedDate || '', record?.date || ''))}</td>
           </React.Fragment>;
         })}</tr>)}</tbody>

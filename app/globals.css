@@ -325,7 +325,7 @@ body {
   --progress-date-width:96px;
   --progress-gap-width:72px;
   --progress-edit-width:176px;
-  --progress-table-width:calc(var(--progress-stage-width) + var(--progress-building-count,1) * (2 * var(--progress-date-width) + var(--progress-gap-width)) + var(--progress-editor-count,0) * (var(--progress-edit-width) - var(--progress-date-width)));
+  --progress-table-width:calc(var(--progress-stage-width) + var(--progress-building-count,1) * (2 * var(--progress-date-width) + var(--progress-gap-width)) + var(--progress-editor-count,0) * (var(--progress-edit-width) - var(--progress-date-width)) + var(--progress-extra-width,0px));
   width:var(--progress-table-width); min-width:var(--progress-table-width);
 }
 .progress-comparison-table .comparison-stage-col { width:var(--progress-stage-width); }
@@ -394,6 +394,11 @@ body {
 .progress-recent-label { font-size: 11px; color: var(--progress-muted); }
 .progress-add-trigger { margin-inline-start: auto; }
 .progress-selection-details { gap: 8px 24px; margin-block-start: 8px; align-items: start; }
+.progress-pour-dates { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.progress-pour-chip { display: inline-flex; align-items: center; gap: 2px; padding: 2px 2px 2px 10px; border: 1px solid var(--progress-line); border-radius: 16px; font-variant-numeric: tabular-nums; }
+.progress-pour-chip button { min-block-size: 28px; padding: 0 8px; border: 0; border-radius: 12px; background: none; color: #b42534; cursor: pointer; }
+.progress-pour-chip button:focus-visible { outline: 2px solid var(--progress-accent); outline-offset: 1px; }
+.progress-pour-add { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .progress-page .progress-selection-details :is(.inline-basis,.progress-details) { border: 0; padding: 0; margin: 0; min-inline-size: 0; }
 .progress-page .progress-selection-details details[open] { flex: 1 1 100%; }
 .progress-page .progress-selection-details summary { margin: 0; cursor: pointer; }

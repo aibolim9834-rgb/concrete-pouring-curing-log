@@ -33,11 +33,11 @@ export function removeProgressEntry(record: ProgressRecord, id: string): Progres
 
 // Retain the basis argument for existing callers; exports display every recorded date.
 export function progressCsv(document: ProgressDocument, filter: string, _basis: string) {
-  const lines: (string | number)[][] = [['동', '층·단계', '타설일', '상태', '구조부위', '구역', '물량(m³)', '비고', '색상', '예정 타설일', '예정 작업일', '실시 작업일', '계획 대비 차이(일)']];
+  const lines: (string | number)[][] = [['동', '층·단계', '타설일', '타설일 목록', '상태', '구조부위', '구역', '물량(m³)', '비고', '색상', '예정 타설일', '예정 작업일', '실시 작업일', '계획 대비 차이(일)']];
   for (const b of document.buildings.filter(b => filter === 'all' || b.id === filter)) {
     for (const s of [...b.stages].sort((a, c) => c.order - a.order)) {
       const r = b.records[s.id];
-      const base = [buildingLabel(b.name), s.name, r?.date || '', r?.date ? '완료' : '미입력'];
+      const base = [buildingLabel(b.name), s.name, r?.date || '', pourDates(r).join(', '), r?.date ? '완료' : '미입력'];
       const metrics = scheduleMetrics(b,s.id,r);
       const schedule = [r?.plannedDate || '',metrics.plannedDays ?? '',metrics.actualDays ?? '',metrics.variance ?? ''];
       if (r?.entries?.length) for (const e of r.entries) lines.push([...base, e.member, e.zone, e.volume ?? '', e.remarks, progressColor(r) || '', ...schedule]);
@@ -45,4 +45,21 @@ export function progressCsv(document: ProgressDocument, filter: string, _basis: 
     }
   }
   return '\uFEFF' + lines.map(row => row.map(csvCell).join(',')).join('\r\n');
+}
+
+export const pourDates = (record: ProgressRecord | undefined) => record?.dates || (record?.date ? [record.date] : []);
+// A single date is stored as before (no `dates`), so older records and exports keep their shape.
+export function setPourDates(record: ProgressRecord | undefined, dates: string[], color: string): ProgressRecord {
+  const list = Array.from(new Set(dates)).sort();
+  if (list.some(d => !validDate(d))) throw new Error('올바른 날짜를 입력해주세요.');
+  if (!list.length && record?.entries?.length) throw new Error('구역 내역이 있는 실시일은 비울 수 없습니다.');
+  const next: ProgressRecord = { ...(record || { color }), date: list[list.length - 1] || '', status: list.length ? 'done' : 'none', color: record?.color || color };
+  if (list.length > 1) next.dates = list; else delete next.dates;
+  validateProgressRecord(next);
+  return next;
+}
+// First date in full, later dates in the same year as month.day: 25.04.01, 04.03, 04.05
+export function pourDatesLabel(record: ProgressRecord | undefined) {
+  const list = pourDates(record);
+  return list.map((d, i) => i && d.slice(0, 4) === list[0].slice(0, 4) ? d.slice(5).replace('-', '.') : d.slice(2).replaceAll('-', '.')).join(', ');
 }

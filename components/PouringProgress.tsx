@@ -12,7 +12,7 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Site } from '@/lib/types';
 import { buildingLabel, completedStages, downloadFile, emptyProgress, ProgressDocument, progressId, progressRows, validDate } from '@/lib/pouring-progress';
-import { EntryDraft, entryFromDraft, progressCsv, removeProgressEntry, upsertProgressEntry } from '@/lib/progress-entries';
+import { EntryDraft, entryFromDraft, pourDates, pourDatesLabel, progressCsv, removeProgressEntry, setPourDates, upsertProgressEntry } from '@/lib/progress-entries';
 import { loadProgress, ProgressSnapshot, saveProgress } from '@/lib/progress-storage';
 import { cloudStorageEnabled } from '@/lib/cloud-storage';
 
@@ -56,6 +56,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
   const [multiple, setMultiple] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [date, setDate] = useState('');
+  const [pourDraft, setPourDraft] = useState('');
   const [plannedDate, setPlannedDate] = useState('');
   const [comparisonStage, setComparisonStage] = useState('');
   const [inlineEdit, setInlineEdit] = useState<{key:string;bid:string;sid:string;field:'actual'|'planned';value:string;error:string}|null>(null);
@@ -158,6 +159,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     const b=document.buildings.find(b=>b.id===bid),r=b?.records[sid];
     if (!b?.stages.some(s=>s.id===sid)) return;
     setMultiple(false); selectRecord(document,bid,sid);
+    if (field==='actual' && r?.dates) { setNotice('여러 타설일은 선택 항목의 타설일 목록에서 추가·삭제해주세요.'); return; }
     clearInlineAutoSave();inlineKeyRef.current=bid+':'+sid+':'+field;
     setInlineEdit({key:bid+':'+sid+':'+field,bid,sid,field,value:(field==='planned'?r?.plannedDate:r?.date)||'',error:''});
     setNotice('날짜 입력을 마치면 자동 저장됩니다. · Esc로 입력 취소');
@@ -300,6 +302,20 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     finally { if (importRef.current) importRef.current.value = ''; }
   }
 
+  // Each extra pour date shown on one line widens that building's actual-date column.
+  function extraDateWidth(b: ProgressDocument['buildings'][number]) {
+    return Math.max(0, ...Object.values(b.records).map(r => pourDates(r).length - 1)) * 50;
+  }
+  async function changePourDates(next: string[]) {
+    if (!snapshot || lock.current || stale || inlineEdit || !selectedBuilding || !selectedStage) return;
+    try {
+      const record = selectedBuilding.records[selectedStageId], updated = setPourDates(record, next, color);
+      if (record?.entries?.length && record.date !== updated.date && !confirm('마지막 타설일이 바뀌어 구역 내역의 공통 타설일도 함께 바뀝니다. 계속하시겠습니까?')) return;
+      const doc = structuredClone(document), target = doc.buildings.find(b => b.id === selectedBuildingId)!;
+      target.records[selectedStageId] = { ...updated, comparisonStage: updated.comparisonStage ?? previousStage(document, selectedBuildingId, selectedStageId) };
+      if (await commit(doc)) { selectRecord(doc, selectedBuildingId, selectedStageId); setPourDraft(''); setNotice(`${buildingLabel(selectedBuilding.name)} ${selectedStage.name} 타설일을 저장했습니다.`); }
+    } catch (e) { setError(e instanceof Error ? e.message : '타설일을 확인해주세요.'); }
+  }
   function renderCellEditor() {
     const single = selected.length === 1;
     const recentColors = recentProgressColors(document, standardColors.map(c => c.value));
@@ -317,6 +333,15 @@ export function PouringProgress({ site, onWorkPending }: Props) {
         <button type="button" className="ui-button ui-danger progress-clear-record" disabled={!selected.length} onClick={() => applyRecords('clear')}>선택 기록 지우기</button>
       </div>
       <div className="progress-selection-details">
+      {single && <div className="progress-pour-dates" role="group" aria-label="타설일 목록">
+        <span className="ui-label">타설일</span>
+        {pourDates(selectedRecord).map(d => <span key={d} className="progress-pour-chip">{shortDate(d, '.')}<button type="button" aria-label={`${shortDate(d, '.')} 타설일 삭제`} onClick={() => { void changePourDates(pourDates(selectedRecord).filter(x => x !== d)); }}>×</button></span>)}
+        {!pourDates(selectedRecord).length && <span className="ui-note">미입력</span>}
+        <form className="progress-pour-add" onSubmit={e => { e.preventDefault(); if (!validDate(pourDraft)) { setError('추가할 타설일을 올바르게 입력해주세요.'); return; } if (pourDates(selectedRecord).includes(pourDraft)) { setError('이미 넣은 타설일입니다.'); return; } void changePourDates([...pourDates(selectedRecord), pourDraft]); }}>
+          <ShortDateInput label="추가할 타설일" value={pourDraft} onChange={setPourDraft}/><button type="submit" className="ui-button">+ 타설일 추가</button>
+        </form>
+        {(selectedRecord?.dates?.length || 0) > 1 && <span className="ui-note">차이·작업일은 마지막 날짜 기준</span>}
+      </div>}
       {single && <details className="inline-basis"><summary>작업일·계산 기준</summary>
         <div className="inline-work-results" aria-live="polite"><div><span>예정 작업일</span><strong data-result="planned">{days(plannedDays)}</strong></div><div><span>실시 작업일</span><strong data-result="actual">{days(actualDays)}</strong></div></div>
         <label htmlFor="progress-comparison-stage">작업일 비교 단계<select id="progress-comparison-stage" value={comparisonStage} aria-describedby="progress-comparison-help" onChange={e=>{ void chooseComparisonStage(e.target.value); }}><option value="">미지정</option>{[...(selectedBuilding?.stages || [])].sort((a,b)=>b.order-a.order).filter(s=>s.id!==selectedStageId).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
@@ -357,9 +382,9 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     <ProgressPrint buildings={visible} siteName={site.name} basis={basis} ink={ink}/>
     <div className={cn('progress-work', panel && 'has-panel')}>
       <div>{!document.buildings.length ? <div className="progress-empty"><h3 className="ui-section-title">등록된 동이 없습니다</h3><p>동 이름과 지상·지하 층수를 입력하면 버림·기초·옥상·옥탑을 포함한 표가 만들어집니다.</p><button className="ui-button ui-primary" disabled={!snapshot} onClick={openBuildingForm}>+ 첫 동 추가</button></div> : <div className="progress-table-wrap progress-comparison-wrap" tabIndex={0} role="region" aria-label="동별 층별 예정일 실시일 비교표">
-        <table className="progress-table progress-comparison-table" style={{ '--progress-building-count': visible.length || 1, '--progress-editor-count': inlineEdit ? 1 : 0 } as React.CSSProperties}>
+        <table className="progress-table progress-comparison-table" style={{ '--progress-building-count': visible.length || 1, '--progress-editor-count': inlineEdit ? 1 : 0, '--progress-extra-width': `${visible.reduce((sum, b) => sum + extraDateWidth(b), 0)}px` } as React.CSSProperties}>
           <caption>{site.name} 타설현황 · {shortDate(basis)} 기준 · 예정일·실시일·차이</caption>
-          <colgroup><col className="comparison-stage-col"/></colgroup>{visible.map(b => <colgroup key={b.id}><col className={cn('comparison-date-col',inlineEdit?.bid === b.id && inlineEdit.field === 'planned' && 'is-editing')}/><col className={cn('comparison-date-col',inlineEdit?.bid === b.id && inlineEdit.field === 'actual' && 'is-editing')}/><col className="comparison-gap-col"/></colgroup>)}
+          <colgroup><col className="comparison-stage-col"/></colgroup>{visible.map(b => <colgroup key={b.id}><col className={cn('comparison-date-col',inlineEdit?.bid === b.id && inlineEdit.field === 'planned' && 'is-editing')}/><col className={cn('comparison-date-col',inlineEdit?.bid === b.id && inlineEdit.field === 'actual' && 'is-editing')} style={extraDateWidth(b) ? { width: `calc(var(--progress-date-width) + ${extraDateWidth(b)}px)` } : undefined}/><col className="comparison-gap-col"/></colgroup>)}
           <thead>
             <tr><th scope="col" rowSpan={2}>층 / 단계</th>{visible.map(b => { const done = completedStages(b, basis); return <th scope="colgroup" colSpan={3} key={b.id} className="comparison-building-header"><span>{buildingLabel(b.name)}</span><small>최고 {done[0]?.name || '미타설'} · {done.length}/{b.stages.length}단계 완료</small></th>; })}</tr>
             <tr>{visible.map(b => <React.Fragment key={b.id}><th scope="col">예정일</th><th scope="col">실시일</th><th scope="col" className="comparison-group-end">차이</th></React.Fragment>)}</tr>
@@ -373,7 +398,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
               return <React.Fragment key={b.id}>
                 {(['planned','actual'] as const).map(field => {
                   const key = `${recordKey}:${field}`, fieldName = field === 'planned' ? '예정일' : '실시일';
-                  const value = (field === 'planned' ? record?.plannedDate : record?.date) || '';
+                  const value = (field === 'planned' ? record?.plannedDate : record?.date) || '', label = field === 'actual' && record?.dates ? pourDatesLabel(record) : value ? shortDate(value,'.') : '';
                   return <td key={field} data-date-field={field}>{inlineEdit?.key === key ? renderInlineDate() : <button
                     ref={node => { if (node) cellNodes.current.set(key,node); else cellNodes.current.delete(key); }}
                     disabled={saving || stale} title={fieldName+' · 더블클릭 또는 Enter로 직접 수정'}
@@ -382,8 +407,8 @@ export function PouringProgress({ site, onWorkPending }: Props) {
                     className={cn('progress-cell',selected.includes(recordKey) && 'is-selected')}
                     style={background ? { background, '--progress-cell-background': background, '--progress-cell-ink': ink(background) } as React.CSSProperties : undefined}
                     onClick={() => selectCell(b.id,row.id)} aria-pressed={selected.includes(recordKey)}
-                    aria-label={`${buildingLabel(b.name)} ${stage.name} ${fieldName} ${value ? shortDate(value) : '미입력'}`}>
-                    <span className="progress-cell-date">{value ? shortDate(value,'.') : '—'}</span>{field === 'actual' && !!record?.entries?.length && <span className="progress-cell-detail progress-entry-count">{record.entries.length}구역</span>}
+                    aria-label={`${buildingLabel(b.name)} ${stage.name} ${fieldName} ${label || '미입력'}`}>
+                    <span className="progress-cell-date">{label || '—'}</span>{field === 'actual' && !!record?.entries?.length && <span className="progress-cell-detail progress-entry-count">{record.entries.length}구역</span>}
                   </button>}</td>;
                 })}
                 <td className="comparison-gap comparison-group-end" data-variance={variance === null ? 'missing' : variance}>
