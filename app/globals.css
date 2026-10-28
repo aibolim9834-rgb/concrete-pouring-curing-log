@@ -3,8 +3,13 @@
 @tailwind utilities;
 
 /* Keep structure actions next to their targets without changing the progress grid or cell colors. */
-.progress-page .progress-work.has-panel:has(> .progress-structure) { grid-template-columns: minmax(0,1fr) 360px; }
-.progress-page .progress-structure { align-self:start; position:sticky; top:112px; background:#fff; }
+.progress-page .progress-work.has-panel:has(> .progress-structure) { grid-template-columns: minmax(0,1fr) 320px; }
+/* The panel fills the viewport height so the stage list, not the page, absorbs the spare space. */
+.progress-page .progress-structure { align-self:start; position:sticky; top:112px; background:#fff; display:flex; flex-direction:column; max-height:calc(100vh - 128px); overflow-y:auto; }
+.progress-structure > fieldset { display:flex; flex-direction:column; flex:1; min-height:0; }
+.progress-structure .structure-building-row { display:flex; align-items:center; gap:6px; }
+.progress-page .progress-structure .structure-building-row select { flex:1; min-width:0; width:auto; }
+.progress-structure .structure-building-row .ui-button { min-height:36px; padding:4px 8px; font-size:13px; flex-shrink:0; }
 .progress-structure h4 { font-size:15px; font-weight:600; }
 .progress-structure .structure-buttons, .progress-structure .structure-footer, .structure-dialog .structure-buttons { display:flex; gap:8px; flex-wrap:wrap; }
 .progress-structure .structure-stage-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:12px; border-top:1px solid #cbd9cf; }
@@ -14,7 +19,7 @@
 .progress-structure .structure-form label { display:flex; flex-direction:column; gap:8px; line-height:1.5; min-width:0; }
 .progress-structure .structure-form :is(input,select) { margin:0; }
 .progress-structure .structure-two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.progress-structure .structure-stage-list { position:relative; max-height:clamp(150px,calc(100vh - 820px),350px); overflow:auto; border-block:1px solid #d5dfd8; }
+.progress-structure .structure-stage-list { position:relative; flex:1 1 auto; min-height:150px; overflow:auto; border-block:1px solid #d5dfd8; }
 .progress-structure .structure-stage-row { display:flex; align-items:center; gap:6px; padding:6px 2px; border-bottom:1px solid #dde4df; }
 .progress-structure .structure-stage-row[aria-current=true] { background:#deefe3; box-shadow:inset 3px 0 #008529; }
 .progress-structure .structure-stage-pick { flex:1; min-width:0; text-align:left; padding:5px 8px; font-size:14px; color:#263c2d; }
@@ -27,7 +32,7 @@
 .structure-dialog p { margin-bottom:18px; }
 .structure-dialog .structure-buttons { justify-content:flex-end; margin-top:18px; }
 .structure-dialog .structure-copy-target { display:flex; align-items:center; gap:10px; padding:8px 0; }
-@media(max-width:760px) { .progress-page .progress-work.has-panel:has(> .progress-structure) { grid-template-columns:minmax(0,1fr); } .progress-page .progress-structure { position:static; } }
+@media(max-width:760px) { .progress-page .progress-work.has-panel:has(> .progress-structure) { grid-template-columns:minmax(0,1fr); } .progress-page .progress-structure { position:static; max-height:none; } .progress-structure .structure-stage-list { max-height:350px; } }
 
 :root {
   --background: #090d16;
