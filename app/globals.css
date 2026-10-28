@@ -411,6 +411,8 @@ body {
 .progress-pour-chip button:focus-visible { outline: 2px solid var(--progress-accent); outline-offset: 1px; }
 .progress-pour-add { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .progress-pour-add .short-date-field { inline-size: 8.25rem; flex: 0 1 8.25rem; }
+/* Mouse users add, edit and delete pour dates in the table cell; touch devices keep this row because double-click is unreliable there. */
+@media (pointer: fine) { .progress-pour-dates { display: none; } }
 .progress-page .progress-selection-details :is(.inline-basis,.progress-details) { border: 0; padding: 0; margin: 0; min-inline-size: 0; }
 .progress-page .progress-selection-details details[open] { flex: 1 1 100%; }
 .progress-page .progress-selection-details summary { margin: 0; cursor: pointer; }
