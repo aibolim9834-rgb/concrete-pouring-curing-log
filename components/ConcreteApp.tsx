@@ -306,8 +306,8 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
         {operationError && <p className="progress-error" role="alert">{operationError}</p>}
         <p className="ui-note" role="status">{logBusy ? '저장 중입니다.' : notice}</p>
       </div>
-      {/* Main Content Body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Main Content Body: the strip above already gives 16px under the header, so only add space when it shows something. */}
+      <main className={`flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pb-6 ${dataIssue || operationError || logBusy || notice || (!loading && !isSupabase) ? 'pt-3' : 'pt-0'}`}>
         
         {/* Summary Counter & Alert Cards */}
         {initialView === 'logs' && <SummaryCards logs={viewedLogs} site={currentSite} />}

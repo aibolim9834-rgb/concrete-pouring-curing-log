@@ -32,7 +32,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
   }, Object.create(null) as Record<string, number>);
 
   return (
-    <div className="summary-cards grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+    <div className="summary-cards grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
       
       {/* 1. Selected Site & Total Records */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition">
