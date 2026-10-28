@@ -618,7 +618,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                     if (!cell || cell.cellIndex === 0 || cell.cellIndex === 13) return;
                     startInlineEdit(log);
                   }}
-                  className={`record-display-row hover:bg-slate-800/60 transition group ${
+                  className={`record-display-row transition group ${
                     index % 2 === 0 ? 'bg-slate-900/40' : 'bg-slate-900'
                   }`}
                 >
@@ -685,14 +685,14 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                       <button
                         onClick={() => startInlineEdit(log)}
                         title="셀 직접 수정"
-                        className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded transition"
+                        className="p-1.5 text-slate-400 hover:text-amber-400 rounded transition"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => onDeleteLog(log.id)}
                         title="삭제"
-                        className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded transition"
+                        className="p-1.5 text-slate-400 hover:text-red-400 rounded transition"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

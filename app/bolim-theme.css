@@ -142,6 +142,10 @@
   .concrete-app tbody tr:hover > td { background-color:var(--b-soft); }
   .concrete-app td.log-temperature-cell.is-hot { background-color:var(--b-danger-soft)!important; color:var(--b-danger)!important; }
   .concrete-app td.log-temperature-cell.is-cold { background-color:var(--b-info-soft)!important; color:var(--b-info)!important; }
+  .concrete-app .record-log-table [class*="divide-slate-"] > * { border-color:var(--b-line)!important; }
+  .concrete-app .record-log-table tbody tr.record-display-row:nth-child(odd) > td { background-color:#F7F8F7; }
+  .concrete-app .record-log-table tbody tr.record-display-row:hover > td { background-color:var(--b-selected); }
+  .concrete-app .record-row-actions button:hover { background:var(--b-surface); }
   /* Strengthen journal text contrast without changing backgrounds or action buttons. */
   .concrete-app:has(.record-log-table) { --b-muted:#46534B; }
   .concrete-app .record-log-table tbody td.text-amber-300,
