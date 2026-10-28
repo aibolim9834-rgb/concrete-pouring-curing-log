@@ -145,6 +145,8 @@
   .concrete-app .record-row-actions button:hover { background:var(--b-surface); }
   /* Strengthen journal text contrast without changing backgrounds or action buttons. */
   .concrete-app:has(.record-log-table) { --b-muted:#46534B; }
+  /* Field labels keep the shared muted tone so they match the progress and photo pages. */
+  .concrete-app .log-filters label { color:#59635D; color:oklch(0.489098 0.015560 159.484748); }
   .concrete-app .record-log-table tbody td.text-amber-300,
   .concrete-app .record-log-table tbody td > span:is([class*="bg-emerald-950"],[class*="bg-amber-950"]) { color:#005C1A!important; }
   .concrete-app .progress-comparison-table tbody tr:hover > td { background-color:transparent; }
