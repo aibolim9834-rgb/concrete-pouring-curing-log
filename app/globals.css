@@ -14,7 +14,7 @@
 .progress-structure h4 { font-size:13px; font-weight:600; }
 .progress-structure .structure-buttons, .progress-structure .structure-footer, .structure-dialog .structure-buttons { display:flex; gap:8px; flex-wrap:wrap; }
 .progress-structure .structure-stage-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:12px; border-top:1px solid #cbd9cf; }
-.progress-structure .structure-selected { color:#087b29; font-weight:600; font-size:13px; }
+.progress-structure .structure-selected { color:var(--b-action); font-weight:600; font-size:13px; }
 .progress-structure .structure-form { display:grid; gap:16px; padding:16px; border:1px solid #cadbce; border-radius:6px; background:#f2f8f4; }
 .progress-structure .structure-form > * { margin:0; }
 .progress-structure .structure-form label { display:flex; flex-direction:column; gap:8px; line-height:1.5; min-width:0; }
@@ -23,12 +23,12 @@
 .progress-structure .structure-stage-list { position:relative; flex:1 1 auto; min-height:150px; overflow:auto; border-block:1px solid #d5dfd8; }
 .progress-structure .structure-stage-row { display:flex; align-items:center; gap:6px; padding:6px 2px; border-bottom:1px solid #dde4df; }
 .progress-structure .structure-stage-row[aria-current=true] { background:#deefe3; box-shadow:inset 3px 0 #008529; }
-.progress-structure .structure-stage-pick { flex:1; min-width:0; text-align:left; padding:5px 8px; font-size:13px; color:#263c2d; }
+.progress-structure .structure-stage-pick { flex:1; min-width:0; text-align:left; padding:5px 8px; font-size:13px; color:var(--b-ink); }
 .progress-structure .structure-stage-pick small { display:block; font-size:12px; color:#5b6d60; }
 .progress-structure .structure-stage-row .ui-button { min-height:32px; padding:4px 8px; font-size:13px; flex-shrink:0; }
 .progress-structure .structure-footer { justify-content:space-between; margin-bottom:0; }
 .structure-error { color:#b42534; font-size:14px; }
-.structure-dialog { padding:24px; width:480px; max-width:calc(100vw - 32px); max-height:calc(100dvh - 32px); overflow-y:auto; background:#fff; color:#263c2d; border:1px solid #cadbce; border-radius:10px; box-shadow:0 16px 48px rgb(0 0 0 / .2); line-height:1.6; }
+.structure-dialog { padding:24px; width:480px; max-width:calc(100vw - 32px); max-height:calc(100dvh - 32px); overflow-y:auto; background:#fff; color:var(--b-ink); border:1px solid #cadbce; border-radius:10px; box-shadow:0 16px 48px rgb(0 0 0 / .2); line-height:1.6; }
 .structure-dialog h3 { font-size:18px; font-weight:600; margin-bottom:14px; }
 .structure-dialog p { margin-bottom:18px; }
 .structure-dialog .structure-buttons { justify-content:flex-end; margin-top:18px; }

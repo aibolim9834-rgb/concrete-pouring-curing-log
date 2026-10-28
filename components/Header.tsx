@@ -40,7 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
   isProgress,
   onOpenProgress,
 }) => {
-  const photosButton = onOpenPhotos && <button type="button" onClick={onOpenPhotos} className="ui-button app-progress-button">{isPhotos ? "일지로 돌아가기" : "알폼핀 체결 사진"}</button>;
+  const photosButton = onOpenPhotos && <button type="button" onClick={onOpenPhotos} className={`ui-button ${isPhotos ? 'app-return-button' : 'app-progress-button'}`}>{isPhotos && <span className="app-return-arrow" aria-hidden="true">←</span>}{isPhotos ? "일지로 돌아가기" : "알폼핀 체결 사진"}</button>;
 
   return (
     <header className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-30 shadow-md">
