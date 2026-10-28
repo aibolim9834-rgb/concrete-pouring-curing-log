@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "backup:cloud": "node scripts/export-cloud-backup.cjs",
     "test": "node scripts/test-data-safety.cjs && node scripts/test-log-upgrade.cjs && node scripts/test-pouring-progress.cjs && node scripts/test-progress-print.cjs && node scripts/test-progress-schedule.cjs && node scripts/test-progress-structure.cjs && node scripts/test-same-day-progress.cjs"
   },
   "dependencies": {
