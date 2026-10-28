@@ -3,12 +3,9 @@
 import React from 'react';
 import { PouringLog, Site } from '@/lib/types';
 import { 
-  ClipboardList, 
-  Thermometer, 
-  Sun, 
-  ShieldAlert, 
-  Building,
-  CheckCircle2
+  ClipboardList,
+  Thermometer,
+  Building
 } from 'lucide-react';
 
 interface SummaryCardsProps {
@@ -25,11 +22,6 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
   
   const minTemp = validMinTemps.length > 0 ? Math.min(...validMinTemps) : null;
   const maxTemp = validMaxTemps.length > 0 ? Math.max(...validMaxTemps) : null;
-
-  // Check Curing alerts
-  const hasColdAlert = minTemp !== null && minTemp <= 0;
-  const hasHotAlert = maxTemp !== null && maxTemp > 30;
-  const noTemperature = minTemp === null && maxTemp === null;
   const missingTemperatureCount = logs.filter(log => log.min_temp === null || log.max_temp === null).length;
 
   // Member types breakdown
@@ -40,7 +32,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
   }, Object.create(null) as Record<string, number>);
 
   return (
-    <div className="summary-cards grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+    <div className="summary-cards grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
       
       {/* 1. Selected Site & Total Records */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition">
@@ -61,39 +53,16 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
         </div>
       </div>
 
-      {/* 2. Temperature Range and Alerts */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition lg:col-span-2">
+      {/* 2. Temperature Range */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-400">온도 범위·확인</span>
+          <span className="text-xs font-semibold text-slate-400">온도 범위</span>
           <div className="p-2 bg-amber-500/10 text-amber-400 rounded-lg"><Thermometer className="w-4 h-4" /></div>
         </div>
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <div className="flex items-center justify-between text-xs mb-1"><span className="text-slate-400">최저 온도</span><span className="font-bold text-blue-400">{minTemp !== null ? `${minTemp}°C` : '-'}</span></div>
-            <div className="flex items-center justify-between text-xs"><span className="text-slate-400">최고 온도</span><span className="font-bold text-red-400">{maxTemp !== null ? `${maxTemp}°C` : '-'}</span></div>
-          </div>
-          <div>
-          {noTemperature ? <p className="text-xs text-slate-400">판단할 온도 자료 없음</p> : hasHotAlert || hasColdAlert ? (
-            <div className="space-y-2">
-              {hasHotAlert && <div className="temperature-alert is-hot text-xs border p-2 rounded-md flex items-center gap-1.5 font-medium">
-                <Sun className="w-3.5 h-3.5 flex-shrink-0" />
-                입력 온도 중 고온 확인 필요
-              </div>}
-              {hasColdAlert && <div className="temperature-alert is-cold text-xs border p-2 rounded-md flex items-center gap-1.5 font-medium">
-                <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" />
-                입력 온도 중 저온 확인 필요
-              </div>}
-            </div>
-          ) : (
-            <div className="text-xs text-emerald-300 bg-emerald-950/60 border border-emerald-800/60 p-2 rounded-md flex items-center gap-1.5 font-medium">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-              입력된 온도 중 설정 경고 없음
-            </div>
-          )}
-          <p className="ui-note mt-2">조회 기록 기준이며 양생 적합성 판정이 아닙니다.</p>
-          {missingTemperatureCount > 0 && <p className="ui-note">온도 미입력 {missingTemperatureCount}건 포함</p>}
-
-          </div>
+        <div className="mt-3">
+          <div className="flex items-center justify-between text-xs mb-1"><span className="text-slate-400">최저 온도</span><span className="font-bold text-blue-400">{minTemp !== null ? `${minTemp}°C` : '-'}</span></div>
+          <div className="flex items-center justify-between text-xs"><span className="text-slate-400">최고 온도</span><span className="font-bold text-red-400">{maxTemp !== null ? `${maxTemp}°C` : '-'}</span></div>
+          {missingTemperatureCount > 0 && <p className="ui-note mt-2">온도 미입력 {missingTemperatureCount}건 포함</p>}
         </div>
       </div>
 

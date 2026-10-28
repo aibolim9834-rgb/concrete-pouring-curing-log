@@ -102,8 +102,6 @@
   .concrete-app .summary-cards :is([class*="bg-amber-950"],[class*="bg-amber-500/10"]) { background:var(--b-warning-soft)!important; color:var(--b-warning)!important; border-color:var(--b-warning)!important; }
   .concrete-app .summary-cards [class*="bg-amber-950"] [class*="text-amber-"] { color:var(--b-warning)!important; }
   .concrete-app .summary-cards [class*="bg-blue-950"] { background:var(--b-info-soft)!important; color:var(--b-info)!important; border-color:var(--b-info)!important; }
-  .concrete-app .summary-cards :is(.temperature-alert,.temperature-alert-icon).is-hot { background:var(--b-danger-soft); color:var(--b-danger); border-color:var(--b-danger); }
-  .concrete-app .summary-cards :is(.temperature-alert,.temperature-alert-icon).is-cold { background:var(--b-info-soft); color:var(--b-info); border-color:var(--b-info); }
   .concrete-app :is(input:not([type=checkbox]):not([type=color]),select,textarea) { background:var(--b-surface)!important; color:var(--b-ink)!important; border-color:var(--b-control)!important; }
   .concrete-app :is(input,textarea)::placeholder { color:var(--b-muted)!important; }
   .concrete-app input[type=checkbox] { accent-color:var(--b-action); }
@@ -150,7 +148,6 @@
   .concrete-app:has(.record-log-table) { --b-muted:#46534B; }
   .concrete-app .record-log-table tbody td.text-amber-300,
   .concrete-app .record-log-table tbody td > span:is([class*="bg-emerald-950"],[class*="bg-amber-950"]) { color:#005C1A!important; }
-  .concrete-app .summary-cards .temperature-alert.is-hot { color:#8B1E28; }
   .concrete-app .progress-comparison-table tbody tr:hover > td { background-color:transparent; }
   .app-modal { color:var(--b-ink); }
   .app-modal::backdrop { background:rgb(20 40 25 / .38); backdrop-filter:blur(2px); }
