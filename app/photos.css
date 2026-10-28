@@ -2,14 +2,14 @@
 .photo-panel{padding:24px;border:1px solid var(--b-line);border-radius:9px;background:var(--b-surface);min-width:0}
 .photo-upload{display:grid;grid-template-columns:minmax(420px,550px) minmax(0,1fr);gap:12px 28px}
 .photo-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:24px}
-.site-photos label{display:grid;gap:6px;color:var(--b-muted);font-size:13px}
+.site-photos label{display:grid;gap:6px;color:var(--b-muted);font-size:12px;font-weight:500}
 .site-photos input,.site-photos select{width:100%;min-width:0;min-height:40px;border:1px solid var(--b-control);border-radius:6px;padding:8px 12px;background:white;color:var(--b-ink)}
 .photo-drop{padding:18px;text-align:center;border:2px dashed #91af99;border-radius:8px;background:#f7faf7}
 .photo-drop.is-over{background:var(--b-selected);border-color:var(--b-action)}
 .photo-upload-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:12px}
 .photo-upload-actions .photo-camera-button{display:none}
 @media(pointer:coarse){.photo-upload-actions .photo-camera-button{display:inline-flex}}
-.photo-drop strong{font-size:18px}.photo-drop p{margin:8px 0}.photo-status{grid-column:1/-1;overflow-wrap:anywhere}
+.photo-drop strong{font-size:14px;font-weight:600}.photo-drop p{margin:8px 0}.photo-status{grid-column:1/-1;overflow-wrap:anywhere}
 .site-photos .photo-file-input{position:absolute;width:1px;height:1px;min-height:0;opacity:0;clip-path:inset(50%);padding:0}
 .photo-heading,.photo-viewer-heading,.photo-viewer-footer{display:flex;justify-content:space-between;align-items:center;gap:16px}
 .photo-list-header{display:flex;flex-wrap:wrap;align-items:center;gap:20px 40px;margin-bottom:20px}

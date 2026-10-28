@@ -11,7 +11,7 @@
 .progress-structure .structure-building-row { display:flex; align-items:center; gap:6px; }
 .progress-page .progress-structure .structure-building-row select { flex:1; min-width:0; width:auto; }
 .progress-structure .structure-building-row .ui-button { min-height:36px; padding:4px 8px; font-size:13px; flex-shrink:0; }
-.progress-structure h4 { font-size:15px; font-weight:600; }
+.progress-structure h4 { font-size:13px; font-weight:600; }
 .progress-structure .structure-buttons, .progress-structure .structure-footer, .structure-dialog .structure-buttons { display:flex; gap:8px; flex-wrap:wrap; }
 .progress-structure .structure-stage-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:12px; border-top:1px solid #cbd9cf; }
 .progress-structure .structure-selected { color:#087b29; font-weight:600; font-size:13px; }
@@ -23,7 +23,7 @@
 .progress-structure .structure-stage-list { position:relative; flex:1 1 auto; min-height:150px; overflow:auto; border-block:1px solid #d5dfd8; }
 .progress-structure .structure-stage-row { display:flex; align-items:center; gap:6px; padding:6px 2px; border-bottom:1px solid #dde4df; }
 .progress-structure .structure-stage-row[aria-current=true] { background:#deefe3; box-shadow:inset 3px 0 #008529; }
-.progress-structure .structure-stage-pick { flex:1; min-width:0; text-align:left; padding:5px 8px; font-size:14px; color:#263c2d; }
+.progress-structure .structure-stage-pick { flex:1; min-width:0; text-align:left; padding:5px 8px; font-size:13px; color:#263c2d; }
 .progress-structure .structure-stage-pick small { display:block; font-size:12px; color:#5b6d60; }
 .progress-structure .structure-stage-row .ui-button { min-height:32px; padding:4px 8px; font-size:13px; flex-shrink:0; }
 .progress-structure .structure-footer { justify-content:space-between; margin-bottom:0; }
@@ -137,7 +137,7 @@ body {
 .progress-page .progress-na { color: var(--progress-muted); background: repeating-linear-gradient(135deg,var(--progress-surface),var(--progress-surface) 5px,var(--progress-line) 5px,var(--progress-line) 6px); }
 .progress-page .progress-panel { background: var(--progress-surface); border-color: var(--progress-line); padding: 16px; border-radius: 7px; }
 .progress-page .progress-panel-heading { align-items: start; flex-wrap: wrap; gap: 6px; }
-.progress-page .progress-panel-heading .ui-section-title { font-size: .9375rem; }
+.progress-page .progress-panel-heading .ui-section-title { font-size: 1rem; }
 .progress-page .progress-panel .progress-actions { display: grid; gap: 7px; }
 .progress-page .progress-panel input[type=color] { width: 42px; height: 34px; padding: 3px; }
 .progress-page .progress-swatches { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 6px; }
@@ -214,7 +214,7 @@ body {
 .progress-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
 .progress-page label { display: flex; flex-direction: column; gap: .375rem; font-size: .75rem; line-height: 1.125rem; font-weight: 500; }
 .progress-controls label { flex-direction: row; align-items: center; flex-wrap: wrap; }
-.concrete-app .progress-controls > :is(.progress-check, .ui-note) { font-size: 14px; line-height: 21px; }
+.concrete-app .progress-controls > :is(.progress-check, .ui-note) { font-size: 13px; line-height: 20px; }
 .progress-page .progress-check { flex-direction: row; align-items: center; }
 .progress-page :is(input:not([type=checkbox]),select,textarea) { max-width: 100%; min-height: 2.25rem; border: 1px solid #334155; background: #1e293b; color: #f1f5f9; border-radius: .5rem; padding: .5rem .625rem; }
 .progress-page input[type=checkbox] { accent-color: #f59e0b; }
@@ -260,7 +260,7 @@ body {
 .backup-file input { max-width: 100%; }
 .backup-manager textarea { display: block; width: 100%; border: 1px solid #475569; background: #1e293b; padding: .5rem; border-radius: .5rem; margin-block: .5rem; resize: vertical; }
 .log-filters { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; padding: 1rem; border-bottom: 1px solid #334155; }
-.log-filters label { display: flex; flex-direction: column; gap: .375rem; font-size: .75rem; min-width: 0; }
+.log-filters label { display: flex; flex-direction: column; gap: .375rem; font-size: .75rem; font-weight: 500; min-width: 0; }
 .log-filters :is(input, select) { background: #1e293b; border: 1px solid #475569; padding: .5rem; border-radius: .5rem; max-width: 100%; min-height: 2.25rem; }
 .app-modal :is(input, select) { min-width: 0; max-width: 100%; }
 @media(max-width: 1100px) { .app-header-layout { flex-direction: column; align-items: stretch; } }

@@ -43,7 +43,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
           </div>
         </div>
         <div className="mt-3">
-          <h3 className="text-sm font-bold text-amber-400 truncate">
+          <h3 className="text-base font-bold text-amber-400 truncate">
             {site?.name || '현장 미선택'}
           </h3>
           <div className="mt-2 flex items-baseline justify-between">
