@@ -40,7 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
   isProgress,
   onOpenProgress,
 }) => {
-  const photosButton = onOpenPhotos && <button type="button" onClick={onOpenPhotos} className={`ui-button ${isPhotos ? 'app-return-button' : 'app-progress-button'}`}>{isPhotos && <span className="app-return-arrow" aria-hidden="true">←</span>}{isPhotos ? "일지로 돌아가기" : "알폼핀 체결 사진"}</button>;
+  const photosButton = onOpenPhotos && <button type="button" onClick={onOpenPhotos} className={`ui-button ${isPhotos ? 'app-return-button' : 'app-progress-button'}`}>{isPhotos && <span className="app-return-arrow" aria-hidden="true">←</span>}{isPhotos ? <span>일지<span className="long-text">로 돌아가기</span></span> : <span>알폼핀 <span className="long-text">체결 </span>사진</span>}</button>;
 
   return (
     <header className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-30 shadow-md">
@@ -55,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <h1 className="text-lg font-bold text-slate-100 tracking-tight">
                   <button type="button" className="app-home-button" onClick={onOpenHome} title="타설 일지 첫 화면으로 이동">콘크리트 타설 및 양생 관리 시스템</button>
                 </h1>
-                <span className={`px-2 py-0.5 text-xs rounded-full font-medium flex items-center gap-1 border ${
+                <span className={`app-header-status px-2 py-0.5 text-xs rounded-full font-medium flex items-center gap-1 border ${
                   isSupabase 
                     ? 'bg-emerald-950 text-emerald-300 border-emerald-800' 
                     : 'bg-amber-950 text-amber-300 border-amber-800'
@@ -67,8 +67,8 @@ export const Header: React.FC<HeaderProps> = ({
               
               {/* Site selector dropdown */}
               <div className="app-header-site-row">
-                <Building2 className="w-4 h-4 text-slate-400" />
-                <span className="text-xs text-slate-400 font-semibold">현장명:</span>
+                <Building2 className="app-header-site-label w-4 h-4 text-slate-400" />
+                <span className="app-header-site-label text-xs text-slate-400 font-semibold">현장명:</span>
                 {sites.length > 0 ? (
                   <select aria-label="현장 선택"
                     value={selectedSiteId}
@@ -103,22 +103,24 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Actions */}
           <div className="app-header-actions">
             {isPhotos && photosButton}
-            {onOpenProgress && <button type="button" onClick={onOpenProgress} className={`ui-button ${isProgress ? 'app-return-button' : 'app-progress-button'}`}>{isProgress ? <span className="app-return-arrow" aria-hidden="true">←</span> : <Table2 size={18} aria-hidden="true" />}{isProgress ? '일지로 돌아가기' : '타설현황'}</button>}
+            {onOpenProgress && <button type="button" onClick={onOpenProgress} className={`ui-button ${isProgress ? 'app-return-button' : 'app-progress-button'}`}>{isProgress ? <span className="app-return-arrow" aria-hidden="true">←</span> : <Table2 size={18} aria-hidden="true" />}{isProgress ? <span>일지<span className="long-text">로 돌아가기</span></span> : '타설현황'}</button>}
             {!isPhotos && photosButton}
             {!isPhotos && <>
             <button
               onClick={onOpenPrintView}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-[5px] text-xs flex items-center gap-1.5 transition"
+              aria-label="인쇄/보고서 서식" title="인쇄/보고서 서식"
+              className="app-header-icon-action bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-[5px] text-xs flex items-center gap-1.5 transition"
             >
               <Printer className="w-4 h-4 text-slate-300" />
-              인쇄/보고서 서식
+              <span className="app-header-action-label">인쇄/보고서 서식</span>
             </button>
             <button
               onClick={onExportExcel}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-[5px] text-xs flex items-center gap-1.5 transition"
+              aria-label="CSV 내보내기" title="CSV 내보내기"
+              className="app-header-icon-action bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-[5px] text-xs flex items-center gap-1.5 transition"
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-              CSV 내보내기
+              <span className="app-header-action-label">CSV 내보내기</span>
             </button></>}
           </div>
 

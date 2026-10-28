@@ -35,7 +35,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs }) => {
     <div className="summary-cards grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
       
       {/* 1. Record count & poured volume (the site name already sits in the header) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition">
+      <div className="summary-card-full bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-400">타설 기록</span>
           <div className="p-2 bg-blue-500/10 text-blue-400 rounded-lg">
@@ -52,7 +52,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs }) => {
       </div>
 
       {/* 2. Temperature Range */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition">
+      <div className="summary-card-full bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-400">온도 범위</span>
           <div className="p-2 bg-amber-500/10 text-amber-400 rounded-lg"><Thermometer className="w-4 h-4" /></div>
@@ -65,7 +65,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs }) => {
       </div>
 
       {/* 4. Concrete Member Breakdown */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition">
+      <div className="summary-card-full bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-400">타설 부위 현황</span>
           <div className="p-2 bg-purple-500/10 text-purple-400 rounded-lg">
@@ -83,6 +83,25 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs }) => {
             <span className="text-slate-500">기록 없음</span>
           )}
         </div>
+      </div>
+
+      {/* Phones show the same three figures as one short row of compact cards. */}
+      <div className="summary-card-compact bg-slate-900 border border-slate-800 rounded-xl">
+        <span className="text-slate-400">타설 기록</span>
+        <strong className="text-slate-100">{totalCount}건</strong>
+        <span className="text-slate-400">{totalVolume.toLocaleString('ko-KR')} m³</span>
+      </div>
+      <div className="summary-card-compact bg-slate-900 border border-slate-800 rounded-xl">
+        <span className="text-slate-400">온도</span>
+        <strong className="text-slate-100">{minTemp === null && maxTemp === null ? '-' : `${minTemp ?? '-'}~${maxTemp ?? '-'}°C`}</strong>
+        <span className="text-slate-400">최저~최고</span>
+      </div>
+      <div className="summary-card-compact bg-slate-900 border border-slate-800 rounded-xl">
+        <span className="text-slate-400">부위</span>
+        {Object.keys(memberCounts).length > 0
+          ? Object.entries(memberCounts).slice(0, 2).map(([member, count]) => <span key={member} className="summary-compact-member text-slate-100">{member} <strong>{count}</strong></span>)
+          : <span className="text-slate-500">기록 없음</span>}
+        {Object.keys(memberCounts).length > 2 && <span className="text-slate-400">외 {Object.keys(memberCounts).length - 2}종</span>}
       </div>
 
     </div>

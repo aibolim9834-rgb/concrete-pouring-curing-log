@@ -159,3 +159,47 @@
 @media screen and (forced-colors:active) { .concrete-app { --b-canvas:Canvas; --b-surface:Canvas; --b-soft:Canvas; --b-ink:CanvasText; --b-muted:CanvasText; --b-line:CanvasText; --b-control:ButtonText; --b-action:LinkText; --b-selected:Canvas; } }
 
 @media screen and (pointer:coarse) { .concrete-app .app-header-actions { --header-action-size:48px; } }
+
+/* Touch devices: 16px fields stop iOS from zooming on focus, and controls get a 44px tap height.
+   Table internals, in-cell editors, swatches and the picker icon inside date fields keep their compact sizes. */
+@media screen and (pointer:coarse) {
+  .concrete-app :is(input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),select,textarea) { font-size:16px!important; }
+  .concrete-app :is(button,select,input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file])):not(:is(table,.inline-cell-edit,.progress-swatches,.progress-pour-chip) *):not(.short-date-picker,.progress-cell-add,.app-home-button) { min-block-size:44px; }
+  .concrete-app summary { padding-block:13px; }
+}
+
+/* Phones: the header shrinks to one title line, one site row and one action row, and scrolls away with the page. */
+@media screen and (max-width:760px) {
+  .concrete-app > header { position:static; }
+  .concrete-app .long-text { position:absolute; inline-size:1px; block-size:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+  .concrete-app .app-header-layout { gap:10px; }
+  .concrete-app .app-header-identity, .concrete-app .app-header-copy { inline-size:100%; }
+  .concrete-app .app-header-title-row h1 { font-size:16px; line-height:24px; min-inline-size:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .concrete-app .app-header-status, .concrete-app .app-header-site-label { display:none; }
+  .concrete-app .app-header-site-row { flex-wrap:nowrap; margin-top:8px; }
+  .concrete-app .app-header-site-row select { inline-size:auto; flex:1 1 auto; }
+  .concrete-app .app-header-actions { flex-wrap:nowrap; inline-size:100%; }
+  .concrete-app .app-header-actions > :is(.app-progress-button,.app-return-button) { flex:1 1 0; min-inline-size:0; padding-inline:8px; }
+  .concrete-app .app-header-actions > .app-header-icon-action { flex:0 0 var(--header-action-size); inline-size:var(--header-action-size); padding:0; justify-content:center; }
+  .concrete-app .app-header-action-label { position:absolute; inline-size:1px; block-size:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+
+  /* Logs: one-line summary, collapsible filters, and the row number and date columns pinned while the table scrolls sideways. */
+  .concrete-app .summary-cards > .summary-card-full { display:none; }
+  .concrete-app .summary-cards > .summary-card-compact { display:grid; }
+  .concrete-app .summary-cards { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+  .concrete-app .log-filters-toggle { display:flex; }
+  .concrete-app .log-filters.is-collapsed { display:none; }
+  .concrete-app .record-log-table :is(thead tr:first-child > th, tbody td):nth-child(-n+2) { position:sticky; z-index:1; background:var(--b-surface); }
+  .concrete-app .record-log-table thead tr:first-child > th:nth-child(-n+2) { z-index:2; background:var(--b-head); }
+  .concrete-app .record-log-table :is(thead tr:first-child > th, tbody td):first-child { inset-inline-start:0; inline-size:44px; min-inline-size:44px; max-inline-size:44px; }
+  .concrete-app .record-log-table :is(thead tr:first-child > th, tbody td):nth-child(2) { inset-inline-start:44px; box-shadow:3px 0 4px -2px rgb(0 0 0 / .18); }
+  .concrete-app .record-log-table tbody tr:first-child > td:nth-child(-n+2) { background:var(--b-selected); }
+
+  /* Progress: swatches slide sideways in one line, and the three record actions share one row. */
+  .concrete-app .progress-selection-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+  .concrete-app .progress-selection-row > .progress-selection-name { grid-column:2 / -1; }
+  .concrete-app .progress-selection-row > .progress-color-tools { grid-column:1 / -1; flex-wrap:nowrap; overflow-x:auto; overscroll-behavior-x:contain; scrollbar-width:thin; padding-block:4px; }
+  .concrete-app .progress-selection-row > .progress-color-tools .progress-swatches { flex-wrap:nowrap; }
+  .concrete-app .progress-selection-row > .progress-color-tools > * { flex:none; }
+  .concrete-app .progress-selection-row > .ui-button { min-inline-size:0; padding-inline:6px; white-space:normal; }
+}

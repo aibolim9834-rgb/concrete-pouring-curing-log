@@ -359,7 +359,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
         </div>
         <button type="button" className="ui-button" disabled={!selected.length} onClick={() => applyRecords('clear-color')}>색상만 지우기</button>
         <button type="button" className="ui-button ui-primary progress-add-trigger" aria-expanded={addingBuilding} aria-controls="structure-panel" onClick={openBuildingForm}>+ 동 추가</button>
-        <button type="button" className="ui-button ui-danger progress-clear-record" disabled={!selected.length} onClick={() => applyRecords('clear')}>선택 기록 지우기</button>
+        <button type="button" className="ui-button ui-danger progress-clear-record" disabled={!selected.length} onClick={() => applyRecords('clear')}><span><span className="long-text">선택 </span>기록 지우기</span></button>
       </div>
       {single && <div className="progress-pour-dates" role="group" aria-label="타설일 목록">
         <span className="ui-label">타설일</span>

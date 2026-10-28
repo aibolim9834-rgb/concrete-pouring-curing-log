@@ -428,3 +428,8 @@ body {
 @media(pointer:coarse) {
   .progress-page .progress-selection-tools .progress-swatches button { inline-size: 40px; block-size: 40px; min-block-size: 40px; }
 }
+/* Mobile-only pieces; the phone layout rules in bolim-theme.css switch them on. */
+.summary-card-compact { display:none; min-inline-size:0; padding:10px; gap:2px; align-content:start; font-size:12px; line-height:18px; }
+.summary-card-compact > strong { font-size:16px; line-height:22px; font-weight:800; }
+.summary-card-compact > span { overflow-wrap:anywhere; }
+.log-filters-toggle { display:none; justify-content:space-between; align-items:center; gap:8px; margin:12px 16px 0; inline-size:calc(100% - 32px); font-weight:600; }

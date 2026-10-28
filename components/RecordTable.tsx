@@ -60,6 +60,9 @@ export const RecordTable: React.FC<RecordTableProps> = ({
 
   // Quick New Row State (Always available empty input row above existing records)
   const [newRowData, setNewRowData] = useState<PouringLogInput>(() => newLog(site?.id, String(logs.length + 1)));
+  // Phones start with the filter block folded so the table is reachable without scrolling past it.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilterCount = [filters.from, filters.to, filters.building, filters.floor, filters.member].filter(Boolean).length;
   const filteredLogs = filterLogs(logs, filters);
   const sortState = (key: LogSortKey) => sort.key === key ? sort.direction === 'asc' ? 'ascending' as const : 'descending' as const : undefined;
   function sortButton(label: string, key: LogSortKey) {
@@ -192,7 +195,10 @@ export const RecordTable: React.FC<RecordTableProps> = ({
         </div>
       </div>
 
-      <div className="log-filters">
+      <button type="button" className="log-filters-toggle ui-button" aria-expanded={filtersOpen} aria-controls="log-filters" onClick={() => setFiltersOpen(open => !open)}>
+        조회 조건 {filtersOpen ? '접기' : '펼치기'}<span className="ui-note">적용 {activeFilterCount}개</span>
+      </button>
+      <div id="log-filters" className={`log-filters${filtersOpen ? '' : ' is-collapsed'}`}>
         <button className="ui-button" disabled={!logs.length} onClick={() => {
           const latest = [...logs].sort((a,b) => b.date.localeCompare(a.date))[0];
           if (!latest) return;
