@@ -283,6 +283,7 @@ export function PouringProgress({ site, backupTarget, onWorkPending }: Props) {
     }
   }
   function exportCSV() {
+    if (!snapshot) { setError('타설현황을 불러온 뒤 CSV로 내보내주세요.'); return; }
     downloadFile(`${site.name}_타설현황.csv`, progressCsv(document, filter, basis), 'text/csv;charset=utf-8');
   }
   function exportBackup() {
@@ -346,7 +347,6 @@ export function PouringProgress({ site, backupTarget, onWorkPending }: Props) {
       <div className="progress-actions progress-heading-actions print:hidden">
         <button className="ui-button" disabled={!history.length || saving || !!inlineEdit} onClick={undo}>실행 취소</button>
         <button className="ui-button" disabled={!snapshot || saving || !!inlineEdit} onClick={() => { setPanel('structure'); setAddingBuilding(false); }}>동·층 관리</button>
-        <button className="ui-button" disabled={!snapshot} onClick={() => window.print()}>출력</button><button className="ui-button" disabled={!snapshot} onClick={exportCSV}>CSV 내보내기</button>
       </div></div>
     {(error || stale) && <div className="progress-error"><p role="alert">{error || '저장된 현황을 다시 불러와주세요.'}</p>{stale && <button type="button" className="ui-button" disabled={saving || !!inlineEdit} onClick={reload}>새로 불러오기</button>}{stale && inlineEdit && <p className="ui-note">셀 입력을 취소한 뒤 다시 불러와주세요.</p>}</div>}<p className="sr-only" role="status">{saving ? '저장 중입니다.' : notice}</p>
     <fieldset disabled={!snapshot || saving || stale || !!inlineEdit} className="progress-controls print:hidden"><label>기준일<ShortDateInput label="기준일" value={basis} onChange={v=>{if(validDate(v))setBasis(v);}}/></label><label>표시할 동<select value={filter} onChange={e => { setFilter(e.target.value); setSelected([]); setNotice('표시할 동이 바뀌어 선택을 해제했습니다.'); }}><option value="all">전체 동</option>{document.buildings.map(b => <option key={b.id} value={b.id}>{buildingLabel(b.name)}</option>)}</select></label><button type="button" className="ui-button ui-primary progress-add-trigger" aria-expanded={addingBuilding} aria-controls="structure-panel" onClick={openBuildingForm}>+ 동 추가</button><label className="progress-check"><input type="checkbox" checked={multiple} onChange={e => { setMultiple(e.target.checked); setSelected([]); setEntryDraft(blankEntry()); }} />여러 칸 선택</label><span className="ui-note">{visible.length}개 동 표시 · {selected.length}칸 선택</span><span role="status" className="ui-note">{saving ? '저장 중…' : notice}</span></fieldset>

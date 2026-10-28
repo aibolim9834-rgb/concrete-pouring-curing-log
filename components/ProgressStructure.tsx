@@ -110,7 +110,7 @@ export function ProgressStructure({document,buildingId,stageId,disabled,adding,o
         <button className="structure-stage-pick" onClick={()=>{closeForm();onSelect(document,buildingId,s.id);}}>{s.name}{building?.records[s.id]?.date&&<small>실시일 {shortDate(building.records[s.id].date,'.')}</small>}</button>
         <button className="ui-button" aria-label={`${s.name} 수정`} onClick={()=>editStage(s.id,'rename')}>수정</button><button className="ui-button ui-danger" aria-label={`${s.name} 삭제`} onClick={()=>editStage(s.id,'delete')}>삭제</button>
       </div>)}{!building&&<p className="ui-note">동을 추가하면 층 목록이 나타납니다.</p>}</div>
-      <div className="structure-footer"><button className="ui-button ui-primary" onClick={()=>onAdding(true)}>+ 동 추가</button><button className="ui-button" disabled={!selectedStage||document.buildings.length<2} onClick={()=>{setTargets([]);setError('');setDialog('copy');}}>다른 동에도 추가…</button><button className="ui-button" disabled={!canUndo} onClick={async()=>{closeForm();await onUndo();}}>실행 취소</button></div>
+      <div className="structure-footer"><button className="ui-button" disabled={!selectedStage||document.buildings.length<2} onClick={()=>{setTargets([]);setError('');setDialog('copy');}}>다른 동에도 추가…</button><button className="ui-button" disabled={!canUndo} onClick={async()=>{closeForm();await onUndo();}}>실행 취소</button></div>
     </fieldset>
     {dialog&&building&&<Modal labelledBy="structure-dialog-title" onClose={()=>{if(!disabled)setDialog(null);}}><div className="structure-dialog">
       <h3 id="structure-dialog-title">{dialog==='delete-building'?`${buildingLabel(building.name)} 삭제`:dialog==='delete-stage'?`${buildingLabel(building.name)} · ${selectedStage?.name} 삭제`:`${selectedStage?.name}을 다른 동에도 추가`}</h3>
