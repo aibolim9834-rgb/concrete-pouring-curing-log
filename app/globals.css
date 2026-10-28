@@ -387,6 +387,8 @@ body {
 .progress-page .progress-color-picker input { inline-size: 36px; block-size: 36px; padding: 3px; }
 .progress-page .progress-selection-tools .progress-swatches { display: flex; flex-wrap: wrap; gap: 6px; }
 .progress-page .progress-selection-tools .progress-swatches button { inline-size: 28px; block-size: 28px; min-block-size: 28px; }
+.progress-page .progress-selection-tools .progress-recent-swatches { align-items: center; padding-inline-start: 8px; border-inline-start: 1px solid var(--progress-line); }
+.progress-recent-label { font-size: 11px; color: var(--progress-muted); }
 .progress-clear-record { margin-inline-start: auto; }
 .progress-selection-details { gap: 8px 24px; margin-block-start: 8px; align-items: start; }
 .progress-page .progress-selection-details :is(.inline-basis,.progress-details) { border: 0; padding: 0; margin: 0; min-inline-size: 0; }

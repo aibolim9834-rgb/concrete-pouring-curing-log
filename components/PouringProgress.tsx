@@ -8,7 +8,7 @@ import { ShortDateInput } from './ShortDateInput';
 import { ProgressPrint } from './ProgressPrint';
 import { ProgressStructure } from './ProgressStructure';
 import { inlineDateRecord } from '@/lib/inline-date';
-import { clearProgressColor, progressColor, setProgressColor } from '@/lib/progress-color';
+import { clearProgressColor, progressColor, recentProgressColors, setProgressColor } from '@/lib/progress-color';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Site } from '@/lib/types';
@@ -302,12 +302,15 @@ export function PouringProgress({ site, backupTarget, onWorkPending }: Props) {
 
   function renderCellEditor() {
     const single = selected.length === 1;
+    const recentColors = recentProgressColors(document, standardColors.map(c => c.value));
+    const swatch = (value: string, label: string, title: string) => <button key={value} type="button" disabled={!selected.length} style={{ background: value }} aria-label={label} title={title} aria-pressed={!!selected.length && selected.every(key => { const [bid,sid] = key.split(':'); return progressColor(document.buildings.find(b=>b.id===bid)?.records[sid])?.toUpperCase() === value; })} onClick={() => { void chooseColor(value); }} />;
     return <>
       <div className="progress-selection-row">
         <h3 className="ui-label">선택 항목</h3><span className="progress-selection-name">{single ? `${buildingLabel(selectedBuilding?.name || '')} · ${selectedStage?.name}` : selected.length ? `${selected.length}칸 선택` : '선택한 칸 없음'}</span>
         <div className="progress-color-tools" role="group" aria-label="칸 배경색">
           <label htmlFor="progress-cell-color" className="progress-color-picker"><span className="sr-only">사용자 지정 배경색</span><input id="progress-cell-color" type="color" value={color} disabled={!selected.length} onInput={e => { void chooseColor(e.currentTarget.value); }} /></label>
-          <div className="progress-swatches" role="group" aria-label="표준색">{standardColors.map(c => <button key={c.value} type="button" disabled={!selected.length} style={{ background: c.value }} aria-label={`표준색 ${c.name}`} title={`${c.name} (${c.value})`} aria-pressed={!!selected.length && selected.every(key => { const [bid,sid] = key.split(':'); return progressColor(document.buildings.find(b=>b.id===bid)?.records[sid])?.toUpperCase() === c.value; })} onClick={() => { void chooseColor(c.value); }} />)}</div>
+          <div className="progress-swatches" role="group" aria-label="표준색">{standardColors.map(c => swatch(c.value, `표준색 ${c.name}`, `${c.name} (${c.value})`))}</div>
+          {recentColors.length > 0 && <div className="progress-swatches progress-recent-swatches" role="group" aria-label="최근 사용 색"><span className="progress-recent-label" aria-hidden="true">최근</span>{recentColors.map(c => swatch(c, `최근 사용 색 ${c}`, c))}</div>}
         </div>
         <button type="button" className="ui-button" disabled={!selected.length} onClick={() => applyRecords('clear-color')}>색상만 지우기</button>
         <button type="button" className="ui-button ui-danger progress-clear-record" disabled={!selected.length} onClick={() => applyRecords('clear')}>선택 기록 지우기</button>
