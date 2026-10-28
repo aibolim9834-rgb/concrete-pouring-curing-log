@@ -81,8 +81,8 @@
   .concrete-app .app-header-actions .app-progress-button:active:not(:disabled) { background:var(--b-action-hover); color:var(--b-surface); }
   .concrete-app .app-header-actions .app-progress-button:focus-visible { outline:3px solid var(--b-action); outline-offset:3px; }
   .concrete-app .record-log-wrap { max-inline-size:100%; }
-  .concrete-app .record-row-actions { gap:12px; }
-  .concrete-app .record-row-actions button { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0; }
+  .concrete-app .record-row-actions { gap:6px; }
+  .concrete-app .record-row-actions button { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; padding:0; border:1px solid var(--b-line); border-radius:5px; background:var(--b-surface); }
   .concrete-app .record-log-table { table-layout:fixed; inline-size:100%; min-inline-size:1270px; }
   .concrete-app .record-log-table :is(th,td) { min-inline-size:0; padding-inline:4px; }
   .concrete-app .record-log-table thead th { padding-block:3px; }

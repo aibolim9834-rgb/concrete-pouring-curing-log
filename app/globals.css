@@ -10,7 +10,7 @@
 .progress-structure > fieldset { display:flex; flex-direction:column; flex:1; min-height:0; }
 .progress-structure .structure-building-row { display:flex; align-items:center; gap:6px; }
 .progress-page .progress-structure .structure-building-row select { flex:1; min-width:0; width:auto; }
-.progress-structure .structure-building-row .ui-button { min-height:36px; padding:4px 8px; font-size:13px; flex-shrink:0; }
+.progress-structure .structure-building-row .ui-button { min-height:38px; padding:4px 8px; font-size:13px; flex-shrink:0; }
 .progress-structure h4 { font-size:13px; font-weight:600; }
 .progress-structure .structure-buttons, .progress-structure .structure-footer, .structure-dialog .structure-buttons { display:flex; gap:8px; flex-wrap:wrap; }
 .progress-structure .structure-stage-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:12px; border-top:1px solid #cbd9cf; }

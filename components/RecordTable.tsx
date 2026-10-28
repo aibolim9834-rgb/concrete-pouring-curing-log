@@ -437,7 +437,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                 <button
                   type="button"
                   onClick={() => handleQuickAddSubmit()}
-                  className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-2 py-1 rounded text-xs flex items-center justify-center gap-1 shadow transition"
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-2 py-1 rounded-[5px] text-xs flex items-center justify-center gap-1 shadow transition"
                   title="이 행에 기록 입력 추가"
                 >
                   <Plus className="w-3.5 h-3.5" /> 추가

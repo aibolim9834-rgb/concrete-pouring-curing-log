@@ -92,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={onOpenAddSite}
                   title="현장 추가 및 관리"
-                  className="text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1 rounded-md flex items-center gap-1 transition"
+                  className="text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1 rounded-[5px] flex items-center gap-1 transition"
                 >
                   <Plus className="w-3 h-3" /> 현장 관리
                 </button>
@@ -108,14 +108,14 @@ export const Header: React.FC<HeaderProps> = ({
             {!isPhotos && <>
             <button
               onClick={onOpenPrintView}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 transition"
+              className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-[5px] text-xs flex items-center gap-1.5 transition"
             >
               <Printer className="w-4 h-4 text-slate-300" />
               인쇄/보고서 서식
             </button>
             <button
               onClick={onExportExcel}
-              className="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 transition"
+              className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-[5px] text-xs flex items-center gap-1.5 transition"
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
               CSV 내보내기
