@@ -113,7 +113,6 @@
   .concrete-app :is(button,input,select,textarea,[tabindex],summary):focus-visible { outline:2px solid var(--b-action); outline-offset:2px; }
   .concrete-app .backup-manager { background:var(--b-surface); border-color:var(--b-line); }
   .concrete-app .backup-manager summary { color:var(--b-action); font-weight:600; }
-  .concrete-app .backup-progress-section { border-color:var(--b-line); }
   .concrete-app .progress-page { --progress-bg:var(--b-surface); --progress-surface:var(--b-surface); --progress-text:var(--b-ink); --progress-muted:var(--b-muted); --progress-line:var(--b-line); --progress-accent:var(--b-action); background:var(--b-surface); color:var(--b-ink); border-color:var(--b-line); border-radius:8px; }
   .concrete-app .progress-page .ui-button { border-color:var(--b-control); }
   .concrete-app .progress-page .ui-button:hover:not(:disabled) { background:var(--b-soft); }

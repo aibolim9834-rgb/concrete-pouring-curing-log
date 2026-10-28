@@ -255,8 +255,6 @@ body {
 .backup-manager { border: 1px solid #334155; border-radius: .5rem; padding: .75rem; font-size: .75rem; }
 .backup-manager summary { cursor: pointer; color: #fbbf24; }
 .backup-manager > * + *, .backup-preview > * + * { margin-top: .75rem; }
-.backup-progress-section { border-block-end: 1px solid #334155; padding-block-end: .75rem; }
-.backup-progress-section h3 { margin-block-end: .5rem; overflow-wrap: anywhere; }
 .backup-file { flex-wrap: wrap; max-width: 100%; white-space: normal; }
 .backup-file input { max-width: 100%; }
 .backup-manager textarea { display: block; width: 100%; border: 1px solid #475569; background: #1e293b; padding: .5rem; border-radius: .5rem; margin-block: .5rem; resize: vertical; }

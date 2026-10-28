@@ -38,7 +38,6 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
   const [notice, setNotice] = useState('');
   const [filters, setFilters] = useState<LogFilters>(emptyLogFilters);
   const [outputScope, setOutputScope] = useState<'filtered' | 'all'>('filtered');
-  const [progressBackupTarget, setProgressBackupTarget] = useState<HTMLDivElement | null>(null);
 
   const siteLock = useRef(false);
   const photoWorkPending = useRef(false);
@@ -302,7 +301,8 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
 
       <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4">
         {dataIssue && <div className="progress-error" role="alert">{dataIssue}<button className="ui-button" onClick={() => { if (confirm('작성 중인 내용을 따로 보관하셨나요? 새로고침하면 저장하지 않은 입력은 사라집니다.')) window.location.reload(); }}>새로고침</button></div>}
-        <BackupManager cloud={isSupabase} blocked={!ready || !!dataIssue} loading={loading} siteId={selectedSiteId} progressBackup={initialView === 'progress' && currentSite ? { siteName: currentSite.name, containerRef: setProgressBackupTarget } : undefined} />
+        {/* DB mode has no whole-app backup, so the menu only appears for browser storage. */}
+        {!loading && !isSupabase && <BackupManager cloud={isSupabase} blocked={!ready || !!dataIssue} loading={loading} siteId={selectedSiteId} />}
         {operationError && <p className="progress-error" role="alert">{operationError}</p>}
         <p className="ui-note" role="status">{logBusy ? '저장 중입니다.' : notice}</p>
       </div>
@@ -313,7 +313,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
         {initialView === 'logs' && <SummaryCards logs={viewedLogs} site={currentSite} />}
 
         {/* Concrete Pouring & Curing Log Table */}
-        {initialView === 'photos' ? loading ? <p role="status">현장을 불러오는 중입니다.</p> : currentSite ? <SitePhotos key={currentSite.id} site={currentSite} blocked={!ready || !!dataIssue} onWorkPending={value=>{photoWorkPending.current=value;}} /> : <div className="progress-empty">현장을 먼저 선택하거나 추가해주세요.</div> : initialView === 'progress' ? loading ? <p className="ui-note" role="status">현장을 불러오는 중입니다.</p> : currentSite ? <PouringProgress key={currentSite.id} site={currentSite} backupTarget={progressBackupTarget} onWorkPending={value=>{progressWorkPending.current=value;}} /> : <div className="progress-empty"><h2 className="ui-page-title">현장을 먼저 추가해주세요</h2><button className="ui-button ui-primary" onClick={openSiteManager}>현장 추가</button></div> : loading ? <p role="status">일지를 불러오는 중입니다.</p> : <RecordTable
+        {initialView === 'photos' ? loading ? <p role="status">현장을 불러오는 중입니다.</p> : currentSite ? <SitePhotos key={currentSite.id} site={currentSite} blocked={!ready || !!dataIssue} onWorkPending={value=>{photoWorkPending.current=value;}} /> : <div className="progress-empty">현장을 먼저 선택하거나 추가해주세요.</div> : initialView === 'progress' ? loading ? <p className="ui-note" role="status">현장을 불러오는 중입니다.</p> : currentSite ? <PouringProgress key={currentSite.id} site={currentSite} onWorkPending={value=>{progressWorkPending.current=value;}} /> : <div className="progress-empty"><h2 className="ui-page-title">현장을 먼저 추가해주세요</h2><button className="ui-button ui-primary" onClick={openSiteManager}>현장 추가</button></div> : loading ? <p role="status">일지를 불러오는 중입니다.</p> : <RecordTable
           key={currentSite?.id || 'empty'}
           logs={siteLogs}
           filters={filters}

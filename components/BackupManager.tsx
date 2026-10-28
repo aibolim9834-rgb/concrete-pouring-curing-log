@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState, type RefCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AppBackup, backupCounts, collectBackup, parseBackup, restoreBackup } from '@/lib/app-backup';
 import { downloadFile } from '@/lib/pouring-progress';
 import { localToday } from '@/lib/log-data';
 
-export function BackupManager({ cloud, blocked, loading, siteId, progressBackup }: { cloud: boolean; blocked: boolean; loading: boolean; siteId?: string; progressBackup?: { siteName: string; containerRef: RefCallback<HTMLDivElement> } }) {
+export function BackupManager({ cloud, blocked, loading, siteId }: { cloud: boolean; blocked: boolean; loading: boolean; siteId?: string }) {
   const menuRef = useRef<HTMLDetailsElement>(null);
   useEffect(() => { if (menuRef.current) menuRef.current.open = false; }, [siteId]);
   const [error, setError] = useState('');
@@ -35,11 +35,6 @@ export function BackupManager({ cloud, blocked, loading, siteId, progressBackup 
   }
   return <details ref={menuRef} className="backup-manager print:hidden">
     <summary>자료 백업·복원</summary>
-    {progressBackup && <section className="backup-progress-section" aria-label="현재 현장 타설현황 백업">
-      <h3 className="ui-label">현재 현장 타설현황 · {progressBackup.siteName}</h3>
-      <div ref={progressBackup.containerRef} />
-    </section>}
-    {progressBackup && <h3 className="ui-label">전체 자료</h3>}
     <p className="ui-note">{cloud ? 'DB 현장의 전체 백업·복원은 별도 DB 연결 작업에서 진행합니다.' : '이 브라우저의 전체 현장·일지·타설현황·삭제 보관본을 함께 관리합니다.'}</p>
     <div className="progress-actions">
       <button className="ui-button" disabled={cloud || blocked || busy} onClick={() => exportData()}>전체 백업 저장</button>

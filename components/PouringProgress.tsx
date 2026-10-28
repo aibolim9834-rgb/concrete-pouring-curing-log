@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { difference, days, gap, shortDate } from '@/lib/date-only';
 import { previousStageId, scheduleMetrics } from '@/lib/progress-schedule';
 import { ShortDateInput } from './ShortDateInput';
@@ -41,8 +40,8 @@ const ink = (hex: string) => {
   return (luminance + .05) / .05 >= 1.05 / (luminance + .05) ? '#000000' : '#ffffff';
 };
 const blankEntry = (): EntryDraft => ({ member: '슬라브', zone: '', volume: '', remarks: '' });
-interface Props { site: Site; backupTarget?: HTMLElement | null; onWorkPending?: (pending: boolean) => void }
-export function PouringProgress({ site, backupTarget, onWorkPending }: Props) {
+interface Props { site: Site; onWorkPending?: (pending: boolean) => void }
+export function PouringProgress({ site, onWorkPending }: Props) {
   const [snapshot, setSnapshot] = useState<ProgressSnapshot | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -346,6 +345,9 @@ export function PouringProgress({ site, backupTarget, onWorkPending }: Props) {
   return <section className="progress-page" aria-label="타설현황">
     <div className="progress-heading"><div><p className="ui-note">{site.name}</p><div className="progress-title-row"><h2 className="ui-page-title">동별 타설현황</h2><span className="progress-storage-badge ui-note print:hidden">{snapshot ? snapshot.mode === 'local' ? '브라우저 저장' : 'DB 저장' : stale ? '불러오기 실패' : '불러오는 중…'}</span></div></div>
       <div className="progress-actions progress-heading-actions print:hidden">
+        <button type="button" className="ui-button" disabled={!snapshot || saving} onClick={exportBackup}>백업 저장</button>
+        <button type="button" className="ui-button" disabled={!snapshot || saving || !!inlineEdit || stale} onClick={() => importRef.current?.click()}>백업 불러오기</button>
+        <input hidden type="file" accept=".json,application/json" ref={importRef} onChange={e => importJSON(e.target.files?.[0])} aria-label="타설현황 백업 파일" />
         <button className="ui-button" disabled={!history.length || saving || !!inlineEdit} onClick={undo}>실행 취소</button>
         <button className="ui-button" disabled={!snapshot || saving || !!inlineEdit} onClick={() => { setPanel('structure'); setAddingBuilding(false); }}>동·층 관리</button>
       </div></div>
@@ -399,10 +401,5 @@ export function PouringProgress({ site, backupTarget, onWorkPending }: Props) {
 
     </div>
     {!!entryReport.length && <section className="progress-entry-report" aria-label="구역별 타설 내역 출력"><h3 className="ui-section-title">같은 날 부위·구역별 타설 내역</h3><table className="progress-table"><thead><tr>{['동', '층·단계', '공통 타설일', '구조부위', '구역', '물량(m³)', '비고'].map(name => <th scope="col" key={name}>{name}</th>)}</tr></thead><tbody>{entryReport.map(({ b, s, date, entry }) => <tr key={`${b}:${s}:${entry.id}`}><td>{b}</td><td>{s}</td><td>{date}</td><td>{entry.member}</td><td>{entry.zone}</td><td>{entry.volume ?? '미입력'}</td><td>{entry.remarks}</td></tr>)}</tbody></table></section>}
-    {backupTarget && createPortal(<div className="progress-actions">
-      <button type="button" className="ui-button" disabled={!snapshot || saving} onClick={exportBackup}>백업 저장</button>
-      <button type="button" className="ui-button" disabled={!snapshot || saving || !!inlineEdit || stale} onClick={() => importRef.current?.click()}>백업 불러오기</button>
-      <input hidden type="file" accept=".json,application/json" ref={importRef} onChange={e => importJSON(e.target.files?.[0])} aria-label="타설현황 백업 파일" />
-    </div>, backupTarget)}
   </section>;
 }
