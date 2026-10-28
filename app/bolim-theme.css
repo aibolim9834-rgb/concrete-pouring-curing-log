@@ -85,6 +85,7 @@
   .concrete-app .record-row-actions button { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0; }
   .concrete-app .record-log-table { table-layout:fixed; inline-size:100%; min-inline-size:1270px; }
   .concrete-app .record-log-table :is(th,td) { min-inline-size:0; padding-inline:4px; }
+  .concrete-app .record-log-table thead th { padding-block:3px; }
   .concrete-app .record-log-table .record-display-row > td { padding-block:5px; }
   .concrete-app .record-log-table thead tr:first-child > th:first-child { white-space:nowrap; }
   .concrete-app .record-log-table tbody td:is(:nth-child(3),:nth-child(4),:nth-child(5),:nth-child(9),:nth-child(10)) { white-space:normal; word-break:keep-all; overflow-wrap:anywhere; }
@@ -97,6 +98,7 @@
   .concrete-app .log-sort-button:focus-visible { outline:2px solid var(--b-action); outline-offset:2px; }
   .concrete-app .log-sort-icon { font-size:11px; }
   .concrete-app th[aria-sort] .log-sort-button { color:var(--b-action-hover); font-weight:700; }
+  .concrete-app table thead th[class*="text-amber-"] { color:var(--b-action-hover)!important; }
   .concrete-app .summary-cards :is([class*="bg-amber-950"],[class*="bg-amber-500/10"]) { background:var(--b-warning-soft)!important; color:var(--b-warning)!important; border-color:var(--b-warning)!important; }
   .concrete-app .summary-cards [class*="bg-amber-950"] [class*="text-amber-"] { color:var(--b-warning)!important; }
   .concrete-app .summary-cards [class*="bg-blue-950"] { background:var(--b-info-soft)!important; color:var(--b-info)!important; border-color:var(--b-info)!important; }

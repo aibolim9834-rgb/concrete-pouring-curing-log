@@ -80,7 +80,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
       case '비':
         return <CloudRain className="w-3.5 h-3.5 text-blue-400 inline mr-1" />;
       case '눈':
-        return <Snowflake className="w-3.5 h-3.5 text-cyan-300 inline mr-1" />;
+        return <Snowflake className="w-3.5 h-3.5 text-blue-400 inline mr-1" />;
       default:
         return null;
     }
@@ -709,7 +709,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
       {/* Footer info */}
       <div className="p-3 bg-slate-950 border-t border-slate-800 text-[11px] text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
         <div className="flex items-center gap-2">
-          <span>✏️ <strong className="text-amber-400">표 직접 입력:</strong> 표 상단의 입력 행에 직접 입력 후 <strong className="text-white">[추가]</strong> 또는 엔터를 누르면 바로 기록됩니다.</span>
+          <span>✏️ <strong className="text-amber-400">표 직접 입력:</strong> 표 상단의 입력 행에 직접 입력 후 <strong className="text-slate-200">[추가]</strong> 또는 엔터를 누르면 바로 기록됩니다.</span>
         </div>
         <div>
           등록된 데이터 칸을 더블클릭해 수정하고, 행 밖을 누르면 자동 저장됩니다.
