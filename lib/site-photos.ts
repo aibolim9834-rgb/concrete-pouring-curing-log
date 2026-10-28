@@ -62,7 +62,7 @@ export function latestDeletedBatch(photos: SitePhoto[]) {
   return latest.deletionBatchId?photos.filter(p=>p.deletedAt&&p.siteId===latest.siteId&&p.deletionBatchId===latest.deletionBatchId):[latest];
 }
 export async function updatePhotoLocations(photos: SitePhoto[], building: string, floor: string) {
-  building=building.trim();floor=floor.trim();
+  building=building.trim().toUpperCase();floor=floor.trim();
   if(!building||!floor)throw Error('동·구역과 층을 모두 입력해주세요.');
   if(!photos.length||photos.some(p=>p.siteId!==photos[0].siteId))throw Error('같은 현장의 사진을 선택해주세요.');
   await write(['metadata'],tx=>{

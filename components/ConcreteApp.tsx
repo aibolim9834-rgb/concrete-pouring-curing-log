@@ -119,7 +119,8 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
     if (siteLock.current) throw new Error('저장 중입니다. 잠시 후 다시 시도해주세요.');
     const activeSiteId = selectedSiteId;
     if (!sites.some(site => site.id === activeSiteId)) throw new Error('등록할 현장을 선택해주세요.');
-    const input = { ...data, site_id: activeSiteId, strength: normalizeStrength(data.strength), curing_watering: normalizeWatering(data.curing_watering) };
+    const trimmed = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v])) as PouringLogInput;
+    const input = { ...trimmed, site_id: activeSiteId, building: trimmed.building.toUpperCase(), strength: normalizeStrength(trimmed.strength), curing_watering: normalizeWatering(trimmed.curing_watering) };
     validateLogInput(input);
     if (id && !siteLogs.some(log => log.id === id)) throw new Error('수정할 일지를 다시 선택해주세요.');
     siteLock.current = true; setLogBusy(true); setOperationError(''); setNotice('');

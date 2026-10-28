@@ -55,7 +55,7 @@ export function SitePhotos({site,blocked=false,onWorkPending}:{site:Site;blocked
     try {for(let i=0;i<files.length;i++) {
       if(!alive.current)break;
       setMessage(`${i+1} / ${files.length}장 처리 중`);
-      try {const file=files[i],thumbnail=await makePhotoThumbnail(file);const photo:SitePhoto={id:crypto.randomUUID(),siteId:site.id,date:iso,building:building.trim(),floor:floor.trim(),name:file.name,size:file.size,createdAt:Date.now()};await savePhoto(photo,file,thumbnail);saved++;if(alive.current)setPhotos(rows=>[...rows,photo]);}
+      try {const file=files[i],thumbnail=await makePhotoThumbnail(file);const photo:SitePhoto={id:crypto.randomUUID(),siteId:site.id,date:iso,building:building.trim().toUpperCase(),floor:floor.trim(),name:file.name,size:file.size,createdAt:Date.now()};await savePhoto(photo,file,thumbnail);saved++;if(alive.current)setPhotos(rows=>[...rows,photo]);}
       catch(e){errors.push(`${files[i].name}: ${e instanceof Error?e.message:'저장 실패'}`);}
     }
     if(alive.current){setMonth(iso.slice(0,7));setFilter('');setDay(iso);setLimit(20);setMessage(`${saved}장 저장 완료${errors.length?' · '+errors.join(' / '):''}`);}
