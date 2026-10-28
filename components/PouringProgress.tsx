@@ -231,6 +231,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
       if(e.key==='Enter' && e.target===inlineDateRef.current){e.preventDefault();e.stopPropagation();if(e.nativeEvent.isComposing || e.nativeEvent.keyCode===229)return;void saveInline();}
     }}>
       <span id="inline-cell-help" className="sr-only">올바른 날짜 입력 완료 후 자동 저장됩니다. Enter로 바로 저장, Escape로 입력을 취소합니다.</span><label className="sr-only" htmlFor="inline-cell-date">셀 {field}</label>
+      {inlineEdit.add && <span className="inline-add-prev"><span className="sr-only">기존 타설일 </span>{pourDatesLabel(document.buildings.find(b=>b.id===inlineEdit.bid)?.records[inlineEdit.sid])},</span>}
       {inlineEdit.list ? <input id="inline-cell-date" ref={inlineDateRef} type="text" className="inline-date-list" inputMode="numeric" autoComplete="off" spellCheck={false} aria-label="셀 실시일 목록, 쉼표로 구분" aria-describedby={inlineEdit.error?'inline-cell-error':'inline-cell-help'} aria-invalid={!!inlineEdit.error} disabled={saving || stale} value={inlineEdit.value} onChange={e=>setInlineEdit(current=>current?{...current,value:e.target.value,error:''}:null)} onBlur={()=>{void saveInline();}}/>
         : <ShortDateInput id="inline-cell-date" inputRef={inlineDateRef} label={'셀 '+field} value={inlineEdit.value} onChange={setInlineValue} onCommit={queueInlineSave} disabled={saving || stale} describedBy={inlineEdit.error?'inline-cell-error':'inline-cell-help'} invalid={!!inlineEdit.error}/>}
     </form>{inlineEdit.error && <p id="inline-cell-error" role="alert" className="inline-cell-error">{inlineEdit.error}</p>}</>;
@@ -330,6 +331,10 @@ export function PouringProgress({ site, onWorkPending }: Props) {
   function extraDateWidth(b: ProgressDocument['buildings'][number]) {
     return Math.max(0, ...Object.values(b.records).map(r => pourDates(r).length - 1)) * 50;
   }
+  // While adding a pour date the existing dates stay visible in front of the input, so that column grows instead.
+  function actualExtraWidth(b: ProgressDocument['buildings'][number]) {
+    return inlineEdit?.add && inlineEdit.bid === b.id ? pourDates(b.records[inlineEdit.sid]).length * 50 + 8 : extraDateWidth(b);
+  }
   async function changePourDates(next: string[]) {
     if (!snapshot || lock.current || stale || inlineEdit || !selectedBuilding || !selectedStage) return;
     try {
@@ -410,9 +415,9 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     <ProgressPrint buildings={visible} siteName={site.name} basis={basis} ink={ink}/>
     <div className={cn('progress-work', panel && 'has-panel')}>
       <div>{!document.buildings.length ? <div className="progress-empty"><h3 className="ui-section-title">등록된 동이 없습니다</h3><p>동 이름과 지상·지하 층수를 입력하면 버림·기초·옥상·옥탑을 포함한 표가 만들어집니다.</p><button className="ui-button ui-primary" disabled={!snapshot} onClick={openBuildingForm}>+ 첫 동 추가</button></div> : <div className="progress-table-wrap progress-comparison-wrap" tabIndex={0} role="region" aria-label="동별 층별 예정일 실시일 비교표">
-        <table className="progress-table progress-comparison-table" style={{ '--progress-building-count': visible.length || 1, '--progress-editor-count': inlineEdit ? 1 : 0, '--progress-extra-width': `${visible.reduce((sum, b) => sum + extraDateWidth(b), 0)}px` } as React.CSSProperties}>
+        <table className="progress-table progress-comparison-table" style={{ '--progress-building-count': visible.length || 1, '--progress-editor-count': inlineEdit ? 1 : 0, '--progress-extra-width': `${visible.reduce((sum, b) => sum + actualExtraWidth(b), 0)}px` } as React.CSSProperties}>
           <caption>{site.name} 타설현황 · {shortDate(basis)} 기준 · 예정일·실시일·차이</caption>
-          <colgroup><col className="comparison-stage-col"/></colgroup>{visible.map(b => <colgroup key={b.id}><col className={cn('comparison-date-col',inlineEdit?.bid === b.id && inlineEdit.field === 'planned' && 'is-editing')}/><col className={cn('comparison-date-col',inlineEdit?.bid === b.id && inlineEdit.field === 'actual' && 'is-editing')} style={extraDateWidth(b) ? { width: `calc(var(--progress-date-width) + ${extraDateWidth(b)}px)` } : undefined}/><col className="comparison-gap-col"/></colgroup>)}
+          <colgroup><col className="comparison-stage-col"/></colgroup>{visible.map(b => <colgroup key={b.id}><col className={cn('comparison-date-col',inlineEdit?.bid === b.id && inlineEdit.field === 'planned' && 'is-editing')}/><col className={cn('comparison-date-col',inlineEdit?.bid === b.id && inlineEdit.field === 'actual' && 'is-editing')} style={actualExtraWidth(b) ? { width: `calc(var(${inlineEdit?.bid === b.id && inlineEdit.field === 'actual' ? '--progress-edit-width' : '--progress-date-width'}) + ${actualExtraWidth(b)}px)` } : undefined}/><col className="comparison-gap-col"/></colgroup>)}
           <thead>
             <tr><th scope="col" rowSpan={2}>층 / 단계</th>{visible.map(b => { const done = completedStages(b, basis); return <th scope="colgroup" colSpan={3} key={b.id} className="comparison-building-header"><span>{buildingLabel(b.name)}</span><small>최고 {done[0]?.name || '미타설'} · {done.length}/{b.stages.length}단계 완료</small></th>; })}</tr>
             <tr>{visible.map(b => <React.Fragment key={b.id}><th scope="col">예정일</th><th scope="col">실시일</th><th scope="col" className="comparison-group-end">차이</th></React.Fragment>)}</tr>

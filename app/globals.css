@@ -305,6 +305,7 @@ body {
 .progress-page .inline-cell-edit > .inline-date-list { flex:1 1 auto; inline-size:100%; min-inline-size:0; min-block-size:25px; block-size:25px; padding:2px 4px; border-radius:3px; font-size:12px; font-variant-numeric:tabular-nums; }
 .progress-page .inline-cell-edit .short-date-field > input[type=text] { min-block-size:25px; block-size:25px; padding:2px 29px 2px 4px; border-radius:3px; font-size:12px; line-height:18px; }
 .concrete-app .inline-cell-edit .short-date-field > .short-date-picker { inset-block:1px; block-size:23px; inline-size:24px; min-block-size:0; }
+.progress-page .inline-cell-edit > .inline-add-prev { flex:none; padding-inline-start:3px; color:var(--progress-muted); font-size:12px; line-height:18px; white-space:nowrap; font-variant-numeric:tabular-nums; }
 @media(pointer:coarse) { .progress-page .short-date-field > input[type=text] { font-size:1rem; } }
 /* Progress comparison: retain each building, with dates and variance together. */
 /* Let the whole page scroll vertically; only wide building groups scroll inside the table. */
