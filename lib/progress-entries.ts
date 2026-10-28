@@ -2,6 +2,7 @@ import { buildingLabel, ProgressDocument, ProgressEntry, ProgressRecord, validat
 import { scheduleMetrics } from './progress-schedule';
 import { progressColor } from './progress-color';
 import { csvCell } from './csv';
+import { normalizeShortDate } from './date-only';
 
 export interface EntryDraft { id?: string; member: string; zone: string; volume: string; remarks: string }
 export function entryFromDraft(draft: EntryDraft, id: string): ProgressEntry {
@@ -62,4 +63,11 @@ export function setPourDates(record: ProgressRecord | undefined, dates: string[]
 export function pourDatesLabel(record: ProgressRecord | undefined) {
   const list = pourDates(record);
   return list.map((d, i) => i && d.slice(0, 4) === list[0].slice(0, 4) ? d.slice(5).replace('-', '.') : d.slice(2).replaceAll('-', '.')).join(', ');
+}
+// Comma-separated pour dates typed in a cell: "26-07-01, 26-07-03" or "260701, 260703".
+export function parsePourDateList(text: string): string[] {
+  const parts = text.split(',').map(s => s.trim()).filter(Boolean), dates = parts.map(normalizeShortDate);
+  const bad = parts.filter((_, i) => !dates[i]);
+  if (bad.length) throw new Error(`날짜 형식을 확인해주세요: ${bad.join(', ')} (예: 26-07-09)`);
+  return Array.from(new Set(dates as string[])).sort();
 }

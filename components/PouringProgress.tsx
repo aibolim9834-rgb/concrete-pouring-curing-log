@@ -12,7 +12,7 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Site } from '@/lib/types';
 import { buildingLabel, completedStages, downloadFile, emptyProgress, ProgressDocument, progressId, progressRows, validDate } from '@/lib/pouring-progress';
-import { EntryDraft, entryFromDraft, pourDates, pourDatesLabel, progressCsv, removeProgressEntry, setPourDates, upsertProgressEntry } from '@/lib/progress-entries';
+import { EntryDraft, entryFromDraft, parsePourDateList, pourDates, pourDatesLabel, progressCsv, removeProgressEntry, setPourDates, upsertProgressEntry } from '@/lib/progress-entries';
 import { loadProgress, ProgressSnapshot, saveProgress } from '@/lib/progress-storage';
 import { cloudStorageEnabled } from '@/lib/cloud-storage';
 
@@ -59,7 +59,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
   const [pourDraft, setPourDraft] = useState('');
   const [plannedDate, setPlannedDate] = useState('');
   const [comparisonStage, setComparisonStage] = useState('');
-  const [inlineEdit, setInlineEdit] = useState<{key:string;bid:string;sid:string;field:'actual'|'planned';value:string;error:string;add?:boolean}|null>(null);
+  const [inlineEdit, setInlineEdit] = useState<{key:string;bid:string;sid:string;field:'actual'|'planned';value:string;error:string;add?:boolean;list?:boolean}|null>(null);
   const workPending = saving || !!inlineEdit;
   useEffect(() => {
     onWorkPending?.(workPending);
@@ -168,10 +168,11 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     const b=document.buildings.find(b=>b.id===bid),r=b?.records[sid];
     if (!b?.stages.some(s=>s.id===sid)) return;
     setMultiple(false); selectRecord(document,bid,sid);
-    if (field==='actual' && r?.dates && !add) { setNotice('날짜가 여러 개인 칸은 + 로 추가하고, 위쪽 타설일 목록에서 지워주세요.'); return; }
     clearInlineAutoSave();inlineKeyRef.current=bid+':'+sid+':'+field;
-    setInlineEdit({key:bid+':'+sid+':'+field,bid,sid,field,value:add?'':(field==='planned'?r?.plannedDate:r?.date)||'',error:'',add});
-    setNotice(add?'추가할 타설일을 입력하면 자동 저장됩니다. · Esc로 입력 취소':'날짜 입력을 마치면 자동 저장됩니다. · Esc로 입력 취소');
+    // Multi-date cells edit all dates as one comma-separated line.
+    const list=field==='actual' && !!r?.dates && !add;
+    setInlineEdit({key:bid+':'+sid+':'+field,bid,sid,field,value:list?pourDates(r).map(d=>shortDate(d)).join(', '):add?'':(field==='planned'?r?.plannedDate:r?.date)||'',error:'',add,list});
+    setNotice(list?'날짜를 쉼표로 구분해 고치거나 지우고 Enter로 저장합니다. · Esc로 입력 취소':add?'추가할 타설일을 입력하면 자동 저장됩니다. · Esc로 입력 취소':'날짜 입력을 마치면 자동 저장됩니다. · Esc로 입력 취소');
   }
   function setInlineValue(value:string) {
     clearInlineAutoSave();
@@ -204,15 +205,21 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     inlineSavingRef.current=true;
     try {
       const next=structuredClone(document),target=next.buildings.find(b=>b.id===edit.bid)!;
-      if(edit.add){
+      if(edit.list){
+        const dates=parsePourDateList(edit.value);
+        if(dates.join()===pourDates(record).join()){inlineKeyRef.current=null;setInlineEdit(null);focusCell(edit.key);return;}
+        const updated=setPourDates(record,dates,record?.color || defaultColor);
+        if(record?.entries?.length && record.date!==updated.date && !confirm('마지막 타설일이 바뀌어 구역 내역의 공통 타설일도 함께 바뀝니다. 계속하시겠습니까?'))return;
+        target.records[edit.sid]={...updated,comparisonStage:updated.comparisonStage ?? previousStage(document,edit.bid,edit.sid)};
+      } else if(edit.add){
         if(!validDate(edit.value))throw Error('추가할 타설일을 올바르게 입력해주세요.');
         if(pourDates(record).includes(edit.value))throw Error('이미 넣은 타설일입니다.');
         const updated=setPourDates(record,[...pourDates(record),edit.value],record?.color || defaultColor);
         if(record?.entries?.length && record.date!==updated.date && !confirm('마지막 타설일이 바뀌어 구역 내역의 공통 타설일도 함께 바뀝니다. 계속하시겠습니까?'))return;
         target.records[edit.sid]={...updated,comparisonStage:updated.comparisonStage ?? previousStage(document,edit.bid,edit.sid)};
       } else target.records[edit.sid]=inlineDateRecord(record,edit.field,edit.value,record?.color || defaultColor,previousStage(document,edit.bid,edit.sid));
-      if(!edit.add && edit.field==='actual' && record?.entries?.length && record.date!==edit.value && !confirm('이 층·단계의 모든 구역에 공통으로 적용되는 실시일을 변경하시겠습니까?'))return;
-      if(await commit(next)){inlineKeyRef.current=null;setInlineEdit(null);selectRecord(next,edit.bid,edit.sid);setNotice(buildingLabel(b.name)+' '+(b.stages.find(s=>s.id===edit.sid)?.name || '')+' '+(edit.add?'타설일 '+shortDate(edit.value,'.')+'을 추가했습니다.':(edit.field==='planned'?'예정일':'실시일')+'을 저장했습니다.'));focusCell(edit.key);}
+      if(!edit.add && !edit.list && edit.field==='actual' && record?.entries?.length && record.date!==edit.value && !confirm('이 층·단계의 모든 구역에 공통으로 적용되는 실시일을 변경하시겠습니까?'))return;
+      if(await commit(next)){inlineKeyRef.current=null;setInlineEdit(null);selectRecord(next,edit.bid,edit.sid);setNotice(buildingLabel(b.name)+' '+(b.stages.find(s=>s.id===edit.sid)?.name || '')+' '+(edit.list?'타설일을 저장했습니다.':edit.add?'타설일 '+shortDate(edit.value,'.')+'을 추가했습니다.':(edit.field==='planned'?'예정일':'실시일')+'을 저장했습니다.'));focusCell(edit.key);}
     } catch(e) {setInlineEdit(current=>current ? {...current,error:e instanceof Error?e.message:'날짜를 확인해주세요.'}:null);}
     finally {inlineSavingRef.current=false;}
   }
@@ -224,7 +231,8 @@ export function PouringProgress({ site, onWorkPending }: Props) {
       if(e.key==='Enter' && e.target===inlineDateRef.current){e.preventDefault();e.stopPropagation();if(e.nativeEvent.isComposing || e.nativeEvent.keyCode===229)return;void saveInline();}
     }}>
       <span id="inline-cell-help" className="sr-only">올바른 날짜 입력 완료 후 자동 저장됩니다. Enter로 바로 저장, Escape로 입력을 취소합니다.</span><label className="sr-only" htmlFor="inline-cell-date">셀 {field}</label>
-      <ShortDateInput id="inline-cell-date" inputRef={inlineDateRef} label={'셀 '+field} value={inlineEdit.value} onChange={setInlineValue} onCommit={queueInlineSave} disabled={saving || stale} describedBy={inlineEdit.error?'inline-cell-error':'inline-cell-help'} invalid={!!inlineEdit.error}/>
+      {inlineEdit.list ? <input id="inline-cell-date" ref={inlineDateRef} type="text" className="inline-date-list" inputMode="numeric" autoComplete="off" spellCheck={false} aria-label="셀 실시일 목록, 쉼표로 구분" aria-describedby={inlineEdit.error?'inline-cell-error':'inline-cell-help'} aria-invalid={!!inlineEdit.error} disabled={saving || stale} value={inlineEdit.value} onChange={e=>setInlineEdit(current=>current?{...current,value:e.target.value,error:''}:null)} onBlur={()=>{void saveInline();}}/>
+        : <ShortDateInput id="inline-cell-date" inputRef={inlineDateRef} label={'셀 '+field} value={inlineEdit.value} onChange={setInlineValue} onCommit={queueInlineSave} disabled={saving || stale} describedBy={inlineEdit.error?'inline-cell-error':'inline-cell-help'} invalid={!!inlineEdit.error}/>}
     </form>{inlineEdit.error && <p id="inline-cell-error" role="alert" className="inline-cell-error">{inlineEdit.error}</p>}</>;
   }
   async function chooseColor(nextColor: string) {
