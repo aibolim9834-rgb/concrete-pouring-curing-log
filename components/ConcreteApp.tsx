@@ -19,6 +19,7 @@ import { BackupManager } from './BackupManager';
 import { nextSiteCode } from '@/lib/site-code';
 import { loadCloudLogData } from '@/lib/cloud-log-data';
 import { csvCell } from '@/lib/csv';
+import { normalizeWatering } from '@/lib/watering';
 
 export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | 'progress' | 'photos' }) {
   const [sites, setSites] = useState<Site[]>([]);
@@ -121,7 +122,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
     if (siteLock.current) throw new Error('저장 중입니다. 잠시 후 다시 시도해주세요.');
     const activeSiteId = selectedSiteId;
     if (!sites.some(site => site.id === activeSiteId)) throw new Error('등록할 현장을 선택해주세요.');
-    const input = { ...data, site_id: activeSiteId };
+    const input = { ...data, site_id: activeSiteId, curing_watering: normalizeWatering(data.curing_watering) };
     validateLogInput(input);
     if (id && !siteLogs.some(log => log.id === id)) throw new Error('수정할 일지를 다시 선택해주세요.');
     siteLock.current = true; setLogBusy(true); setOperationError(''); setNotice('');
@@ -243,7 +244,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       log.remicon_company,
       log.strength || '',
       log.volume ?? '',
-      log.curing_watering,
+      normalizeWatering(log.curing_watering),
       log.curing_protection,
       log.remarks || '',
     ]);

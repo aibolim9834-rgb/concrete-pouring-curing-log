@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { PouringLog, Site } from '@/lib/types';
+import { normalizeWatering } from '@/lib/watering';
 import { Printer, ArrowLeft } from 'lucide-react';
 
 interface PrintViewProps {
@@ -172,7 +173,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
                   {log.volume !== null && log.volume !== undefined && log.volume !== '' ? `${log.volume} m³` : ''}
                 </td>
                 <td className="border border-black px-2 py-1 text-center">
-                  {log.curing_watering}
+                  {normalizeWatering(log.curing_watering)}
                 </td>
                 <td className="border border-black px-2 py-1 text-center">
                   {log.curing_protection}

@@ -1,17 +1,17 @@
-# Graph Report - con1  (2026-10-27)
+# Graph Report - con1  (2026-10-28)
 
 ## Corpus Check
-- 60 files · ~25,395 words
+- 62 files · ~25,580 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 8 file(s) not represented in the graph (top: (none) 3, .css 3, .example 1)
 
 ## Summary
-- 508 nodes · 1164 edges · 29 communities (23 shown, 6 thin omitted)
+- 514 nodes · 1188 edges · 28 communities (22 shown, 6 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 19 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `fdd208f4`
+- Built from commit: `557a5434`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -42,21 +42,22 @@
 - tailwindcss
 - next.config.mjs
 - Project Rules & Customizations
-- app-backup.ts
 
 ## God Nodes (most connected - your core abstractions)
 1. `PouringProgress()` - 63 edges
-2. `ConcreteApp()` - 37 edges
+2. `ConcreteApp()` - 38 edges
 3. `SitePhotos()` - 25 edges
 4. `Site` - 22 edges
 5. `validateProgress()` - 18 edges
-6. `compilerOptions` - 16 edges
-7. `react` - 15 edges
+6. `react` - 16 edges
+7. `compilerOptions` - 16 edges
 8. `shortDate()` - 14 edges
 9. `PouringLog` - 14 edges
 10. `document()` - 14 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `ConcreteApp()` --indirect_call--> `csvCell()`  [INFERRED]
+  components/ConcreteApp.tsx → lib/csv.ts
 - `Props` --references--> `Site`  [EXTRACTED]
   components/PouringProgress.tsx → lib/types.ts
 - `editStage()` --indirect_call--> `document()`  [INFERRED]
@@ -65,28 +66,26 @@
   components/ShortDateInput.tsx → lib/date-only.ts
 - `Home()` --calls--> `ConcreteApp()`  [EXTRACTED]
   app/page.tsx → components/ConcreteApp.tsx
-- `PhotosPage()` --calls--> `ConcreteApp()`  [EXTRACTED]
-  app/photos/page.tsx → components/ConcreteApp.tsx
 
 ## Import Cycles
 - None detected.
 
-## Communities (29 total, 6 thin omitted)
+## Communities (28 total, 6 thin omitted)
 
 ### Community 0 - "PouringProgress"
 Cohesion: 0.07
-Nodes (85): blankEntry(), cn(), ink(), PouringProgress(), applyRecords(), beginInline(), cancelInline(), chooseColor() (+77 more)
+Nodes (86): blankEntry(), cn(), ink(), PouringProgress(), applyRecords(), beginInline(), cancelInline(), chooseColor() (+78 more)
 
 ### Community 1 - "ConcreteApp.tsx"
-Cohesion: 0.09
-Nodes (57): Home(), PhotosPage(), ProgressPage(), ConcreteApp(), canLeavePhotos(), initData(), openSiteManager(), refreshArchives() (+49 more)
+Cohesion: 0.07
+Nodes (73): Home(), PhotosPage(), ProgressPage(), BackupManager(), exportData(), prepare(), preview(), ConcreteApp() (+65 more)
 
 ### Community 2 - "site-photos-cloud.ts"
 Cohesion: 0.11
 Nodes (44): PhotoImage(), photoLocation(), PhotoLocationEditor(), submit(), SitePhotos(), attach(), changeMonth(), download() (+36 more)
 
 ### Community 3 - "test-log-upgrade.cjs"
-Cohesion: 0.07
+Cohesion: 0.06
 Nodes (20): appHarness(), assert, backup, cache, check(), data, editorNode(), find() (+12 more)
 
 ### Community 4 - "test-progress-schedule.cjs"
@@ -161,29 +160,25 @@ Nodes (4): postcss, overrides, next, postcss-selector-parser
 Cohesion: 0.50
 Nodes (3): Git Commit Message Directive, Graphify 프로젝트 그래프, Project Rules & Customizations
 
-### Community 28 - "app-backup.ts"
-Cohesion: 0.33
-Nodes (14): BackupManager(), exportData(), prepare(), preview(), AppBackup, backupCounts(), collectBackup(), isDataKey() (+6 more)
-
 ## Knowledge Gaps
 - **5 isolated node(s):** `@types/node`, `@types/react`, `@types/react-dom`, `autoprefixer`, `postcss`
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 215 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 216 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `typescript` connect `test-progress-print.cjs` to `test-log-upgrade.cjs`, `test-progress-schedule.cjs`, `test-same-day-progress.cjs`, `test-data-safety.cjs`, `test-pouring-progress.cjs`, `test-progress-structure.cjs`, `test-cloud-storage-live.cjs`, `package.json`?**
-  _High betweenness centrality (0.302) - this node is a cross-community bridge._
+  _High betweenness centrality (0.303) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `PouringProgress()` (e.g. with `blankEntry()` and `exportCSV()`) actually correct?**
   _`PouringProgress()` has 3 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `@types/node`, `@types/react`, `@types/react-dom` to the rest of the system?**
   _5 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `PouringProgress` be split into smaller, more focused modules?**
-  _Cohesion score 0.06990099009900991 - nodes in this community are weakly interconnected._
-- **Why does `react` connect `ConcreteApp.tsx` to `PouringProgress`, `site-photos-cloud.ts`, `app-backup.ts`, `package.json`?**
-  _High betweenness centrality (0.202) - this node is a cross-community bridge._
+  _Cohesion score 0.06796116504854369 - nodes in this community are weakly interconnected._
+- **Why does `react` connect `ConcreteApp.tsx` to `PouringProgress`, `site-photos-cloud.ts`, `package.json`?**
+  _High betweenness centrality (0.206) - this node is a cross-community bridge._
 - **Should `ConcreteApp.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.0861244019138756 - nodes in this community are weakly interconnected._
-- **Why does `PouringProgress()` connect `PouringProgress` to `ConcreteApp.tsx`, `site-photos-cloud.ts`, `app-backup.ts`?**
+  _Cohesion score 0.07236842105263158 - nodes in this community are weakly interconnected._
+- **Why does `PouringProgress()` connect `PouringProgress` to `ConcreteApp.tsx`, `site-photos-cloud.ts`?**
   _High betweenness centrality (0.086) - this node is a cross-community bridge._

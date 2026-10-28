@@ -30,10 +30,10 @@
     "semantic_hash": "374cda56dca3a4a7e3654062c57c1d8f"
   },
   "components/ConcreteApp.tsx": {
-    "mtime": 1793076111.0572543,
-    "seen": 1793079795.642262,
-    "ast_hash": "88cb228424fd4b5d0332600de15861f5",
-    "semantic_hash": "88cb228424fd4b5d0332600de15861f5"
+    "mtime": 1793146136.0917,
+    "seen": 1793146143.1860356,
+    "ast_hash": "5bc67696c12b02196562fb585284196c",
+    "semantic_hash": ""
   },
   "components/Header.tsx": {
     "mtime": 1793074345.1710176,
@@ -54,9 +54,9 @@
     "semantic_hash": "1e83288148f363ad2b70545206260417"
   },
   "components/PrintView.tsx": {
-    "mtime": 1793080340.6769369,
-    "seen": 1793080347.372469,
-    "ast_hash": "aaecd64c97126bb0b660d6f48b2476ba",
+    "mtime": 1793146136.0927,
+    "seen": 1793146143.1860452,
+    "ast_hash": "f6baa85c04f31ac8bf36b6093d0c5ac8",
     "semantic_hash": ""
   },
   "components/ProgressPrint.tsx": {
@@ -72,15 +72,15 @@
     "semantic_hash": "09b685f5d899bd5f4b24383207131317"
   },
   "components/RecordModal.tsx": {
-    "mtime": 1792743805.193637,
-    "seen": 1793079795.6422734,
-    "ast_hash": "ecfe0f0971db5584264fe1a0392107ab",
-    "semantic_hash": "ecfe0f0971db5584264fe1a0392107ab"
+    "mtime": 1793146136.0917,
+    "seen": 1793146143.1860511,
+    "ast_hash": "60dfd722aafe8cefceb9d41adeda7f01",
+    "semantic_hash": ""
   },
   "components/RecordTable.tsx": {
-    "mtime": 1793080403.0589728,
-    "seen": 1793080411.0428789,
-    "ast_hash": "1390cc018640fa0a5939a5613ef4cac9",
+    "mtime": 1793146305.2981622,
+    "seen": 1793146312.4917865,
+    "ast_hash": "7fa654447b0acf03d5d0d99db1ec9606",
     "semantic_hash": ""
   },
   "components/ShortDateInput.tsx": {
@@ -276,10 +276,10 @@
     "semantic_hash": "ba1ef81ad73e46ad541a2972cfc4cc7b"
   },
   "scripts/test-log-upgrade.cjs": {
-    "mtime": 1793076167.2936833,
-    "seen": 1793079795.642309,
-    "ast_hash": "8721dd778158e1b56e62fd7194705341",
-    "semantic_hash": "8721dd778158e1b56e62fd7194705341"
+    "mtime": 1793146224.0713115,
+    "seen": 1793146231.382467,
+    "ast_hash": "4da833af781e3faff9607421727f8bd4",
+    "semantic_hash": ""
   },
   "scripts/test-pouring-progress.cjs": {
     "mtime": 1792979257.9534502,
@@ -357,6 +357,18 @@
     "mtime": 1793076635.9175265,
     "seen": 1793080026.147825,
     "ast_hash": "927c67cc904e3c0d73e969a177b8b70b",
+    "semantic_hash": ""
+  },
+  "components/WateringSelect.tsx": {
+    "mtime": 1793146125.7955723,
+    "seen": 1793146133.0141718,
+    "ast_hash": "3dfca23354283a5468d818fb04be6d4a",
+    "semantic_hash": ""
+  },
+  "lib/watering.ts": {
+    "mtime": 1793146125.7945716,
+    "seen": 1793146133.0142145,
+    "ast_hash": "5563277c38f6e3c9d71b3a1089e97a83",
     "semantic_hash": ""
   }
 }

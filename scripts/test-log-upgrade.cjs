@@ -38,6 +38,7 @@ function appHarness(result, local = false) {
   deps['@/lib/site-code']=load('lib/site-code.ts');
   deps['@/lib/cloud-log-data']={loadCloudLogData:async()=>({sites:[site],logs:[log]})};
   deps['@/lib/csv']=load('lib/csv.ts');
+  deps['@/lib/watering']=load('lib/watering.ts');
   for(const name of ['Header','SummaryCards','RecordTable','RecordModal','SiteModal','PrintView','PouringProgress','SitePhotos'])deps[`@/components/${name}`]={[name]:name};
   const app=load('components/ConcreteApp.tsx',deps,{confirm:()=>true,alert:message=>alerts.push(message),window:{location:{search:'',assign:url=>navigation.push(url)},addEventListener(){},removeEventListener(){}},URLSearchParams,setTimeout:()=>{},Blob:class{constructor(parts){csv=parts.join('');}},URL:{createObjectURL:()=> 'blob:test'},document:{createElement:()=>({setAttribute(){},click(){}}),body:{appendChild(){},removeChild(){}}}});
   return {states,navigation,alerts,get csv(){return csv;},get effects(){return effects;},render(){cursor=0;refCursor=0;effects=[];return app.ConcreteApp({initialView:arguments[0]||'logs'});}};
@@ -47,10 +48,31 @@ function uiHarness(file, name, props) {
   const react={useState(initial){const i=cursor++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return [states[i],v=>{states[i]=typeof v==='function'?v(states[i]):v;}];},useEffect(fn){effects.push(fn);},useCallback(fn){return fn;},useRef(value){return refs[refCursor++] ||= {current:value};}};
   const jsx=(type,props)=>({type,props});
   const events=new Map();
-  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name})},{Node:TestNode,document:{addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
+  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./WateringSelect':{WateringSelect:'WateringSelect'},'@/lib/watering':load('lib/watering.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name})},{Node:TestNode,document:{addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
   return {states,events,get effects(){return effects;},render(){cursor=0;refCursor=0;effects=[];return exports[name](props);}};
 }
 (async()=>{
+  await check('watering dropdown offers four choices and retains nonstandard existing content',()=>{
+    const props={value:'1일 2회 살수 실시',onChange(){},'aria-label':'살수'};
+    const show=value=>uiHarness('components/WateringSelect.tsx','WateringSelect',{...props,value}).render();
+    const tree=show(props.value);
+    assert.equal(tree.type,'select');assert.equal(tree.props.value,'1일 2회 살수');
+    assert.equal(JSON.stringify(tree).includes('실시'),false);
+    for(let i=1;i<=4;i++)assert(JSON.stringify(tree).includes(`1일 ${i}회 살수`));
+    assert.equal(show('1일 0회 살수 실시').props.value,'1일 0회 살수');
+    assert(JSON.stringify(show('1일 0회 살수 실시')).includes('(기존 내용)'));
+    assert.equal(show('').props.value,'');
+    const watering=load('lib/watering.ts');
+    for(const value of ['','살수 없음','1일 4회 살수'])assert.equal(watering.normalizeWatering(value),value);
+    assert.equal(watering.normalizeWatering('\t 1일 3회 살수 실시'),'1일 3회 살수');
+  });
+  await check('watering save strips only 실시 while other journal fields remain intact',async()=>{
+    const input={...log,curing_watering:'1일 2회 살수 실시',curing_protection:'보양 실시',remarks:'실시일 확인'};
+    const h=appHarness(null,true);storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site]));storage.setItem('cp_logs',JSON.stringify([log]));
+    await find(h.render(),'RecordTable').props.onQuickUpdateLog(log.id,input);
+    const saved=JSON.parse(storage.getItem('cp_logs'))[0];
+    same(saved,{...input,curing_watering:'1일 2회 살수'});
+  });
   await check('inline row saves only on leaving row, prevents duplicate saves and retains failed draft',async()=>{
     const all=(node,type)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,type)):[...(node.type===type?[node]:[]),...all(node.props?.children,type)];
     let calls=0,resolve,reject;

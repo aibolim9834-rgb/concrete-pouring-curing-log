@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PouringLog, PouringLogInput, Site } from '@/lib/types';
 import { newLog, reuseLogBasics, filterLogs, LogFilters, LogSort, LogSortKey } from '@/lib/log-data';
+import { WateringSelect } from './WateringSelect';
+import { normalizeWatering } from '@/lib/watering';
 import { 
   Search, 
   Edit3, 
@@ -408,13 +410,10 @@ export const RecordTable: React.FC<RecordTableProps> = ({
 
               {/* 살수 */}
               <td className="p-1.5 border-r border-slate-800">
-                <input
-                  type="text"
-                  placeholder="살수 내용"
+                <WateringSelect
                   aria-label="새 일지 살수"
                   value={newRowData.curing_watering}
                   onChange={(e) => setNewRowData({ ...newRowData, curing_watering: e.target.value })}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && !e.repeat && handleQuickAddSubmit()}
                   className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-emerald-300 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
                 />
               </td>
@@ -563,8 +562,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                       />
                     </td>
                     <td className="p-1 border-r border-slate-800">
-                      <input
-                        type="text"
+                      <WateringSelect
                         aria-label="수정 일지 살수"
                         value={editingRowData.curing_watering}
                         onChange={(e) => setEditingRowData({ ...editingRowData, curing_watering: e.target.value })}
@@ -662,7 +660,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                   <td className="px-2.5 py-3 border-r border-slate-800/80 text-slate-300">
                     {log.curing_watering ? (
                       <span className="text-emerald-300 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded text-[11px] block truncate">
-                        {log.curing_watering}
+                        {normalizeWatering(log.curing_watering)}
                       </span>
                     ) : (
                       <span className="text-slate-600">-</span>

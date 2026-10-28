@@ -4,6 +4,7 @@ import { Modal } from './Modal';
 import React, { useState, useEffect, useRef } from 'react';
 import { PouringLog, PouringLogInput, Site } from '@/lib/types';
 import { newLog } from '@/lib/log-data';
+import { WateringSelect } from './WateringSelect';
 import { X, Save, Calendar, Thermometer, MapPin, Building, ShieldCheck } from 'lucide-react';
 
 interface RecordModalProps {
@@ -267,9 +268,7 @@ export const RecordModal: React.FC<RecordModalProps> = ({
                 <label htmlFor="record-field-12" className="block text-[11px] font-medium text-slate-400 mb-1">
                   살수 (수분 공급 및 살수 양생)
                 </label>
-                <input id="record-field-12"
-                  type="text"
-                  placeholder="예: 1일 3회 살수 실시"
+                <WateringSelect id="record-field-12"
                   value={formData.curing_watering}
                   onChange={(e) => setFormData({ ...formData, curing_watering: e.target.value })}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
