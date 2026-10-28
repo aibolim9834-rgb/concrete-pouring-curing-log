@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node scripts/test-data-safety.cjs && node scripts/test-log-upgrade.cjs && node scripts/test-pouring-progress.cjs && node scripts/test-progress-print.cjs && node scripts/test-progress-schedule.cjs && node scripts/test-progress-structure.cjs && node scripts/test-same-day-progress.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.44.0",

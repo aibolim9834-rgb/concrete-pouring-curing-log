@@ -166,6 +166,6 @@ npm run dev -- --hostname localhost --port 3000
 - 현장·일지·사진 정보는 정렬된 페이지를 끝까지 조회합니다. 서버의 페이지당 반환 제한이 요청보다 작아도 다음 페이지를 계속 읽으며, 중간 실패나 중복 ID가 감지되면 일부 목록만 정상 자료로 표시하지 않습니다.
 - 일지 행 편집·저장, 현황 날짜 편집·저장, 사진 위치 수정 중에는 상단 이동과 현장 전환을 차단합니다. 일지와 현황 편집 중 새로고침·창 닫기에는 브라우저 확인이 표시됩니다.
 - 스프레드시트용 CSV는 수식으로 시작하는 문자열에 탭을 붙여 텍스트로 내보냅니다. 원본 저장값과 JSON 백업은 바꾸지 않으며, CSV를 다시 프로그램에 가져올 때는 보호용 탭을 고려해야 합니다. Excel의 재저장·재열기와 모든 외부 스프레드시트의 동작을 보장하는 형식은 아닙니다.
-- 테스트는 운영 데이터를 사용하지 않는 `node scripts/test-data-safety.cjs`, `node scripts/test-log-upgrade.cjs`, `node scripts/test-pouring-progress.cjs`, `node scripts/test-progress-schedule.cjs`, `node scripts/test-same-day-progress.cjs`, `node scripts/test-progress-print.cjs`, `node scripts/test-progress-structure.cjs`를 실행합니다. 타입 검사는 `npx tsc --noEmit`, 프로덕션 빌드는 `npm run build`입니다.
+- 테스트는 `npm test` 한 번으로 운영 데이터를 사용하지 않는 `node scripts/test-data-safety.cjs`, `node scripts/test-log-upgrade.cjs`, `node scripts/test-pouring-progress.cjs`, `node scripts/test-progress-schedule.cjs`, `node scripts/test-same-day-progress.cjs`, `node scripts/test-progress-print.cjs`, `node scripts/test-progress-structure.cjs`를 차례로 실행하며, 하나라도 실패하면 그 자리에서 멈춥니다. 실제 DB에 접속하는 `test-cloud-storage-live.cjs`와 `verify-existing-cloud-photos.cjs`는 포함하지 않습니다. 타입 검사는 `npx tsc --noEmit`, 프로덕션 빌드는 `npm run build`입니다.
 - `npm run lint`는 ESLint 구성이 없어 초기 설정 화면을 표시합니다. 타입 검사나 테스트를 대신하는 검사로 간주하지 않습니다. ESLint 도입은 별도 개발 도구 설정 작업입니다.
 - 초기 설치용 `supabase/schema.sql`의 일지 읽기 정책 대상 테이블 오기를 수정했습니다. 운영 DB 정책이나 마이그레이션 이력은 변경하지 않았습니다.
