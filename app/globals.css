@@ -336,6 +336,11 @@ body {
 .concrete-app .progress-comparison-table .progress-cell { white-space:normal; }
 .progress-comparison-table .progress-cell-date { white-space:nowrap; font-weight:600; }
 .progress-comparison-table .progress-cell-detail { display:block; white-space:nowrap; }
+.progress-comparison-table td[data-date-field=actual] { position:relative; }
+.progress-comparison-table td[data-date-field=actual]:has(> .progress-cell-add) .progress-cell { padding-inline-end:28px; }
+.progress-comparison-table .progress-cell-add { position:absolute; inset-inline-end:3px; inset-block-start:50%; transform:translateY(-50%); min-inline-size:24px; block-size:22px; min-block-size:0; padding:0 5px; border:1px solid var(--progress-accent); border-radius:11px; background:#DEF0E3; color:#005C1A; font-weight:700; line-height:1; cursor:pointer; }
+.progress-comparison-table .progress-cell-add:focus-visible { outline:2px solid var(--progress-accent); outline-offset:1px; }
+@media print { .progress-comparison-table .progress-cell-add { display:none; } }
 .progress-page .progress-comparison-table thead th { min-inline-size:0; }
 .progress-page .progress-comparison-table thead tr:nth-child(2) th { position:static; inline-size:auto; min-inline-size:0; padding:5px 3px; font-size:12px; line-height:18px; white-space:nowrap; font-weight:500; background:#202c3f; }
 .progress-page .progress-comparison-table .comparison-building-header,
