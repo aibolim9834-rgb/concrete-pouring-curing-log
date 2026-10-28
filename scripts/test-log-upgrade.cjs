@@ -39,6 +39,7 @@ function appHarness(result, local = false) {
   deps['@/lib/cloud-log-data']={loadCloudLogData:async()=>({sites:[site],logs:[log]})};
   deps['@/lib/csv']=load('lib/csv.ts');
   deps['@/lib/watering']=load('lib/watering.ts');
+  deps['@/lib/strength']=load('lib/strength.ts');
   for(const name of ['Header','SummaryCards','RecordTable','RecordModal','SiteModal','PrintView','PouringProgress','SitePhotos'])deps[`@/components/${name}`]={[name]:name};
   const app=load('components/ConcreteApp.tsx',deps,{confirm:()=>true,alert:message=>alerts.push(message),window:{location:{search:'',assign:url=>navigation.push(url)},addEventListener(){},removeEventListener(){}},URLSearchParams,setTimeout:()=>{},Blob:class{constructor(parts){csv=parts.join('');}},URL:{createObjectURL:()=> 'blob:test'},document:{createElement:()=>({setAttribute(){},click(){}}),body:{appendChild(){},removeChild(){}}}});
   return {states,navigation,alerts,get csv(){return csv;},get effects(){return effects;},render(){cursor=0;refCursor=0;effects=[];return app.ConcreteApp({initialView:arguments[0]||'logs'});}};
@@ -48,10 +49,32 @@ function uiHarness(file, name, props) {
   const react={useState(initial){const i=cursor++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return [states[i],v=>{states[i]=typeof v==='function'?v(states[i]):v;}];},useEffect(fn){effects.push(fn);},useCallback(fn){return fn;},useRef(value){return refs[refCursor++] ||= {current:value};}};
   const jsx=(type,props)=>({type,props});
   const events=new Map();
-  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./WateringSelect':{WateringSelect:'WateringSelect'},'@/lib/watering':load('lib/watering.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name})},{Node:TestNode,document:{addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
+  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./WateringSelect':{WateringSelect:'WateringSelect'},'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name})},{Node:TestNode,document:{addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
   return {states,events,get effects(){return effects;},render(){cursor=0;refCursor=0;effects=[];return exports[name](props);}};
 }
 (async()=>{
+  await check('standalone strengths gain one MPa while empty and mixed specifications survive',()=>{
+    const {normalizeStrength:format}=load('lib/strength.ts');
+    for(const [input,expected] of [['30','30MPa'],[' 30 ','30MPa'],['30 MPa','30MPa'],['30mpa','30MPa'],['30MPaMPa','30MPa'],['30.5','30.5MPa'],['0','0MPa'],['',''],['  ',''],[null,''],[undefined,''],['40-210','40-210'],['25-24-150','25-24-150'],['27, 30MPa','27, 30MPa'],['27MPa(기둥 40MPa 12M3)','27MPa(기둥 40MPa 12M3)']]){
+      assert.equal(format(input),expected);assert.equal(format(format(input)),expected);
+    }
+  });
+  await check('strength typing stays raw until blur in quick add inline edit and modal',()=>{
+    const all=(n,type)=>!n||typeof n!=='object'?[]:Array.isArray(n)?n.flatMap(x=>all(x,type)):[...(n.type===type?[n]:[]),...all(n.props?.children,type)];
+    const h=uiHarness('components/RecordTable.tsx','RecordTable',{logs:[log],site,filters:data.emptyLogFilters(),sort:data.defaultLogSort});
+    let input=all(h.render(),'input').find(n=>n.props['aria-label']==='새 일지 타설강도');
+    input.props.onChange({target:{value:'30'}});input=all(h.render(),'input').find(n=>n.props['aria-label']==='새 일지 타설강도');assert.equal(input.props.value,'30');
+    input.props.onBlur({target:{value:'30'}});assert.equal(all(h.render(),'input').find(n=>n.props['aria-label']==='새 일지 타설강도').props.value,'30MPa');
+    h.states[2]=log.id;h.states[3]={...log,strength:'35 MPa'};input=all(h.render(),'input').find(n=>n.props['aria-label']==='수정 일지 타설강도');input.props.onBlur({target:{value:'35 MPa'}});assert.equal(h.states[3].strength,'35MPa');
+    const m=uiHarness('components/RecordModal.tsx','RecordModal',{isOpen:true,currentSite:site});input=all(m.render(),'input').find(n=>n.props.id==='record-field-10');input.props.onBlur({target:{value:'24'}});assert.equal(all(m.render(),'input').find(n=>n.props.id==='record-field-10').props.value,'24MPa');
+  });
+  await check('strength submission normalizes even without blur and CSV matches saved strength',async()=>{
+    const h=appHarness(null,true);storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site]));storage.setItem('cp_logs',JSON.stringify([log]));
+    const before={...log,strength:'33',curing_protection:'원본 보양'};
+    await find(h.render(),'RecordTable').props.onQuickUpdateLog(log.id,before);
+    same(JSON.parse(storage.getItem('cp_logs'))[0],{...before,strength:'33MPa'});
+    find(h.render(),'Header').props.onExportExcel();assert(h.csv.includes('33MPa'));assert(!h.csv.includes('MPaMPa'));
+  });
   await check('watering dropdown offers four choices and retains nonstandard existing content',()=>{
     const props={value:'1일 2회 살수 실시',onChange(){},'aria-label':'살수'};
     const show=value=>uiHarness('components/WateringSelect.tsx','WateringSelect',{...props,value}).render();

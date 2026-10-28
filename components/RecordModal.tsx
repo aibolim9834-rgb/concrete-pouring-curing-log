@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { PouringLog, PouringLogInput, Site } from '@/lib/types';
 import { newLog } from '@/lib/log-data';
 import { WateringSelect } from './WateringSelect';
+import { normalizeStrength } from '@/lib/strength';
 import { X, Save, Calendar, Thermometer, MapPin, Building, ShieldCheck } from 'lucide-react';
 
 interface RecordModalProps {
@@ -236,9 +237,10 @@ export const RecordModal: React.FC<RecordModalProps> = ({
               </label>
               <input id="record-field-10"
                 type="text"
-                placeholder="예: 24MPa 또는 25-24-150"
+                placeholder="예: 24 (MPa 자동) 또는 25-24-150"
                 value={formData.strength || ''}
                 onChange={(e) => setFormData({ ...formData, strength: e.target.value })}
+                onBlur={(e) => { const strength = normalizeStrength(e.target.value); setFormData(current => ({ ...current, strength })); }}
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
               />
             </div>

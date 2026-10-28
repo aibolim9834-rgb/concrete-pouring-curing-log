@@ -5,6 +5,7 @@ import { PouringLog, PouringLogInput, Site } from '@/lib/types';
 import { newLog, reuseLogBasics, filterLogs, LogFilters, LogSort, LogSortKey } from '@/lib/log-data';
 import { WateringSelect } from './WateringSelect';
 import { normalizeWatering } from '@/lib/watering';
+import { normalizeStrength } from '@/lib/strength';
 import { 
   Search, 
   Edit3, 
@@ -387,8 +388,10 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                   type="text"
                   placeholder="강도"
                   aria-label="새 일지 타설강도"
+                  title="숫자만 입력하면 MPa가 자동으로 붙습니다."
                   value={newRowData.strength || ''}
                   onChange={(e) => setNewRowData({ ...newRowData, strength: e.target.value })}
+                  onBlur={(e) => { const strength = normalizeStrength(e.target.value); setNewRowData(current => ({ ...current, strength })); }}
                   onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && !e.repeat && handleQuickAddSubmit()}
                   className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-center text-amber-300 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
                 />
@@ -546,8 +549,10 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                       <input
                         type="text"
                         aria-label="수정 일지 타설강도"
+                        title="숫자만 입력하면 MPa가 자동으로 붙습니다."
                         value={editingRowData.strength || ''}
                         onChange={(e) => setEditingRowData({ ...editingRowData, strength: e.target.value })}
+                        onBlur={(e) => { const strength = normalizeStrength(e.target.value); setEditingRowData(current => current ? { ...current, strength } : current); }}
                         className="w-full bg-slate-800 border border-amber-500 rounded px-1.5 py-1 text-xs text-center text-amber-300"
                       />
                     </td>
@@ -652,7 +657,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                     {log.remicon_company || '-'}
                   </td>
                   <td className="px-2.5 py-3 border-r border-slate-800/80 text-center font-semibold text-amber-300 whitespace-nowrap">
-                    {log.strength || '-'}
+                    {normalizeStrength(log.strength) || '-'}
                   </td>
                   <td className="px-2.5 py-3 border-r border-slate-800/80 text-center font-semibold text-slate-200 whitespace-nowrap">
                     {log.volume !== null && log.volume !== undefined && log.volume !== '' ? `${log.volume} m³` : '-'}

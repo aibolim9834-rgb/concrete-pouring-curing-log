@@ -3,6 +3,7 @@
 import React from 'react';
 import { PouringLog, Site } from '@/lib/types';
 import { normalizeWatering } from '@/lib/watering';
+import { normalizeStrength } from '@/lib/strength';
 import { Printer, ArrowLeft } from 'lucide-react';
 
 interface PrintViewProps {
@@ -167,7 +168,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
                   {log.remicon_company}
                 </td>
                 <td className="border border-black px-1 py-1 text-center font-medium">
-                  {log.strength}
+                  {normalizeStrength(log.strength)}
                 </td>
                 <td className="border border-black px-1 py-1 text-center font-medium">
                   {log.volume !== null && log.volume !== undefined && log.volume !== '' ? `${log.volume} m³` : ''}
