@@ -28,7 +28,7 @@
 @media(max-width:1100px){.photo-upload{grid-template-columns:1fr}.photo-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:640px){.photo-panel{padding:16px}.photo-fields{gap:8px}.photo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.photo-date-row{grid-template-columns:90px 1fr 36px 60px;gap:6px}.photo-heading,.photo-viewer-footer{flex-wrap:wrap}.photo-viewer-heading{align-items:start}}
 /* All three pages share the existing header and body gutters. */
-@media screen{.concrete-app>main{padding-top:24px;padding-bottom:24px}.concrete-app .progress-page{padding:24px}@media(max-width:640px){.concrete-app .progress-page{padding:16px}}}
+@media screen{.concrete-app>main{padding-bottom:24px}.concrete-app .progress-page{padding:24px}@media(max-width:640px){.concrete-app .progress-page{padding:16px}}}
 
 .photo-location-editor{display:grid;gap:8px;margin:10px 0}.photo-location-editor>div{display:flex;gap:8px}.photo-info .photo-edit-location{margin-bottom:10px}.photo-location-editor p[role=alert]{color:var(--b-danger)}
 .photo-bulk-tools{display:flex;flex-wrap:wrap;align-items:end;gap:12px;padding:14px;margin-top:12px;background:var(--b-selected);border:1px solid var(--b-line);border-radius:6px}
