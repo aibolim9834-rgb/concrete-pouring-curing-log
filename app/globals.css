@@ -5,7 +5,8 @@
 /* Keep structure actions next to their targets without changing the progress grid or cell colors. */
 .progress-page .progress-work.has-panel:has(> .progress-structure) { grid-template-columns: minmax(0,1fr) 320px; }
 /* The panel fills the viewport height so the stage list, not the page, absorbs the spare space. */
-.progress-page .progress-structure { align-self:start; position:sticky; top:112px; background:#fff; display:flex; flex-direction:column; max-height:calc(100vh - 128px); overflow-y:auto; }
+/* Sits below the sticky app header and selection bar, whose heights are measured in PouringProgress. */
+.progress-page .progress-structure { align-self:start; position:sticky; top:calc(var(--app-header-height, 104px) + var(--selection-bar-height, 0px) + 8px); background:#fff; display:flex; flex-direction:column; max-height:calc(100vh - var(--app-header-height, 104px) - var(--selection-bar-height, 0px) - 24px); overflow-y:auto; }
 .progress-structure > fieldset { display:flex; flex-direction:column; flex:1; min-height:0; }
 .progress-structure .structure-building-row { display:flex; align-items:center; gap:6px; }
 .progress-page .progress-structure .structure-building-row select { flex:1; min-width:0; width:auto; }
@@ -32,7 +33,7 @@
 .structure-dialog p { margin-bottom:18px; }
 .structure-dialog .structure-buttons { justify-content:flex-end; margin-top:18px; }
 .structure-dialog .structure-copy-target { display:flex; align-items:center; gap:10px; padding:8px 0; }
-@media(max-width:760px) { .progress-page .progress-work.has-panel:has(> .progress-structure) { grid-template-columns:minmax(0,1fr); } .progress-page .progress-structure { position:static; max-height:none; } .progress-structure .structure-stage-list { max-height:350px; } }
+@media(max-width:760px) { .progress-page .progress-work.has-panel:has(> .progress-structure) { grid-template-columns:minmax(0,1fr); } .progress-page .progress-structure { position:static; max-height:none; } .progress-page .progress-selection-tools { position:static; } .progress-structure .structure-stage-list { max-height:350px; } }
 
 :root {
   --background: #090d16;
@@ -382,7 +383,10 @@ body {
 .progress-page .progress-heading-actions { align-items: start; max-inline-size: 100%; }
 .progress-page .progress-error .ui-button { margin-block-start: 8px; }
 .progress-page .progress-controls { gap: 12px; margin-block-end: 8px; }
-.progress-page .progress-selection-tools { border-block: 1px solid var(--progress-line); padding-block: 12px; margin-block-end: 12px; }
+.progress-page .progress-selection-tools { position: sticky; top: var(--app-header-height, 104px); z-index: 25; display: grid; gap: 8px; border-block: 1px solid var(--progress-line); padding-block: 10px; background: var(--progress-surface); }
+.progress-page .progress-selection-extra { margin-block-end: 12px; }
+.progress-page .progress-selection-tools > fieldset { display: grid; gap: 8px; }
+@media(max-width:760px) { .progress-page .progress-selection-tools { position: static; } }
 .progress-selection-row, .progress-color-tools, .progress-selection-details { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-inline-size: 0; }
 .progress-selection-row > h3 { margin: 0; color: var(--progress-muted); }
 .progress-selection-name { font-weight: 600; overflow-wrap: anywhere; }
@@ -399,6 +403,7 @@ body {
 .progress-pour-chip button { min-block-size: 28px; padding: 0 8px; border: 0; border-radius: 12px; background: none; color: #b42534; cursor: pointer; }
 .progress-pour-chip button:focus-visible { outline: 2px solid var(--progress-accent); outline-offset: 1px; }
 .progress-pour-add { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.progress-pour-add .short-date-field { inline-size: 8.25rem; flex: 0 1 8.25rem; }
 .progress-page .progress-selection-details :is(.inline-basis,.progress-details) { border: 0; padding: 0; margin: 0; min-inline-size: 0; }
 .progress-page .progress-selection-details details[open] { flex: 1 1 100%; }
 .progress-page .progress-selection-details summary { margin: 0; cursor: pointer; }
