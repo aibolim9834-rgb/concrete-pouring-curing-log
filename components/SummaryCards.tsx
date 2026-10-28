@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { PouringLog, Site } from '@/lib/types';
-import { 
+import { PouringLog } from '@/lib/types';
+import {
   ClipboardList,
   Thermometer,
   Building
@@ -10,11 +10,11 @@ import {
 
 interface SummaryCardsProps {
   logs: PouringLog[];
-  site: Site | undefined;
 }
 
-export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
+export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs }) => {
   const totalCount = logs.length;
+  const totalVolume = logs.reduce((sum, log) => sum + Number(log.volume || 0), 0);
   
   // Calculate temp statistics
   const validMinTemps = logs.map(l => l.min_temp).filter((t): t is number => t !== null);
@@ -34,22 +34,20 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
   return (
     <div className="summary-cards grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
       
-      {/* 1. Selected Site & Total Records */}
+      {/* 1. Record count & poured volume (the site name already sits in the header) */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-400">선택 현장 개요</span>
+          <span className="text-xs font-semibold text-slate-400">타설 기록</span>
           <div className="p-2 bg-blue-500/10 text-blue-400 rounded-lg">
             <Building className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-3">
-          <h3 className="text-base font-bold text-amber-400 truncate">
-            {site?.name || '현장 미선택'}
-          </h3>
-          <div className="mt-2 flex items-baseline justify-between">
+          <div className="flex items-baseline justify-between">
             <span className="text-xs text-slate-400">조회된 타설/양생 기록</span>
             <span className="text-xl font-extrabold text-slate-100">{totalCount} <span className="text-xs font-normal text-slate-400">건</span></span>
           </div>
+          <div className="mt-1 flex items-center justify-between text-xs"><span className="text-slate-400">타설물량 합계</span><span className="font-bold text-slate-100">{totalVolume.toLocaleString('ko-KR')} m³</span></div>
         </div>
       </div>
 

@@ -150,12 +150,10 @@ export const RecordTable: React.FC<RecordTableProps> = ({
       <fieldset disabled={busy || pending || blocked || !site}>
       {/* Table Top Toolbar */}
       <div className="p-4 border-b border-slate-800 bg-slate-900/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-amber-400 uppercase tracking-wider bg-amber-950/70 border border-amber-800/80 px-2.5 py-1 rounded-md">
-            현장명 : {site?.name || '미선택'}
-          </span>
+        <div className="flex items-baseline gap-2.5">
+          <h2 className="ui-section-title">타설 일지</h2>
           <span className="text-xs text-slate-400 font-medium">
-            (조회 {filteredLogs.length}건 / 전체 {logs.length}건)
+            조회 {filteredLogs.length}건 / 전체 {logs.length}건
           </span>
         </div>
 

@@ -311,7 +311,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       <main className={`flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pb-6 ${dataIssue || operationError || logBusy || notice || (!loading && !isSupabase) ? 'pt-3' : 'pt-0'}`}>
         
         {/* Summary Counter & Alert Cards */}
-        {initialView === 'logs' && <SummaryCards logs={viewedLogs} site={currentSite} />}
+        {initialView === 'logs' && <SummaryCards logs={viewedLogs} />}
 
         {/* Concrete Pouring & Curing Log Table */}
         {initialView === 'photos' ? loading ? <p role="status">현장을 불러오는 중입니다.</p> : currentSite ? <SitePhotos key={currentSite.id} site={currentSite} blocked={!ready || !!dataIssue} onWorkPending={value=>{photoWorkPending.current=value;}} /> : <div className="progress-empty">현장을 먼저 선택하거나 추가해주세요.</div> : initialView === 'progress' ? loading ? <p className="ui-note" role="status">현장을 불러오는 중입니다.</p> : currentSite ? <PouringProgress key={currentSite.id} site={currentSite} onWorkPending={value=>{progressWorkPending.current=value;}} /> : <div className="progress-empty"><h2 className="ui-page-title">현장을 먼저 추가해주세요</h2><button className="ui-button ui-primary" onClick={openSiteManager}>현장 추가</button></div> : loading ? <p role="status">일지를 불러오는 중입니다.</p> : <RecordTable
