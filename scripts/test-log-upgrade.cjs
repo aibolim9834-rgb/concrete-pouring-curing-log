@@ -49,7 +49,7 @@ function uiHarness(file, name, props) {
   const react={useState(initial){const i=cursor++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return [states[i],v=>{states[i]=typeof v==='function'?v(states[i]):v;}];},useEffect(fn){effects.push(fn);},useCallback(fn){return fn;},useRef(value){return refs[refCursor++] ||= {current:value};}};
   const jsx=(type,props)=>({type,props});
   const events=new Map();
-  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./WateringSelect':{WateringSelect:'WateringSelect'},'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name})},{Node:TestNode,document:{addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
+  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./WateringSelect':{WateringSelect:'WateringSelect'},'./MobileLogSheet':{MobileLogSheet:'MobileLogSheet'},'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name})},{Node:TestNode,document:{addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
   return {states,events,get effects(){return effects;},render(){cursor=0;refCursor=0;effects=[];return exports[name](props);}};
 }
 (async()=>{
@@ -216,6 +216,31 @@ function uiHarness(file, name, props) {
     const tree=uiHarness('components/SummaryCards.tsx','SummaryCards',{logs:[{...log,id:'a',member_type:'constructor'},{...log,id:'b',member_type:'constructor'}],site}).render();
     const all=(n,type)=>!n||typeof n!=='object'?[]:Array.isArray(n)?n.flatMap(x=>all(x,type)):[...(n.type===type?[n]:[]),...all(n.props?.children,type)];
     assert(all(tree,'strong').some(n=>n.props.children===2));
+  });
+  await check('phone log sheet blocks missing fields, normalizes on save and keeps basics for the next entry',async()=>{
+    const all=(n,type)=>!n||typeof n!=='object'?[]:Array.isArray(n)?n.flatMap(x=>all(x,type)):[...(n.type===type?[n]:[]),...all(n.props?.children,type)];
+    const added=[];const h=uiHarness('components/MobileLogSheet.tsx','MobileLogSheet',{log:null,logs:[log],site,onAdd:async d=>{added.push(d);},onUpdate:async()=>{throw new Error('no update');},onDelete(){},onClose(){}});
+    const byId=(id)=>all(h.render(),'input').find(n=>n.props.id===id);
+    const submit=()=>all(h.render(),'form')[0].props.onSubmit({preventDefault(){}});
+    await submit();assert.equal(added.length,0);assert(JSON.stringify(h.render()).includes('동(구역)을 입력해주세요.'));
+    byId('mobile-log-building').props.onChange({target:{value:'102동'}});byId('mobile-log-floor').props.onChange({target:{value:'3층'}});
+    byId('mobile-log-strength').props.onChange({target:{value:'30'}});byId('mobile-log-volume').props.onChange({target:{value:'12.5'}});
+    byId('mobile-log-min').props.onChange({target:{value:'-3'}});byId('mobile-log-remicon_company').props.onChange({target:{value:'아주'}});
+    const next=all(h.render(),'button').find(n=>n.props.children==='이어서 입력');next.props.onClick();await new Promise(r=>setImmediate(r));
+    assert.equal(added.length,1);const saved=added[0];
+    assert.equal(saved.strength,'30MPa');assert.equal(saved.volume,12.5);assert.equal(saved.min_temp,-3);assert.equal(saved.max_temp,null);assert.equal(saved.site_id,site.id);assert.equal(saved.member_type,'슬라브');
+    assert.equal(byId('mobile-log-building').props.value,'102동');assert.equal(byId('mobile-log-remicon_company').props.value,'아주');
+    assert.equal(byId('mobile-log-strength').props.value,'');assert.equal(byId('mobile-log-volume').props.value,'');assert.equal(byId('mobile-log-min').props.value,'-3');
+  });
+  await check('phone log sheet edits the chosen log and rejects a non-numeric volume',async()=>{
+    const all=(n,type)=>!n||typeof n!=='object'?[]:Array.isArray(n)?n.flatMap(x=>all(x,type)):[...(n.type===type?[n]:[]),...all(n.props?.children,type)];
+    const updates=[];const h=uiHarness('components/MobileLogSheet.tsx','MobileLogSheet',{log,logs:[log],site,onAdd:async()=>{throw new Error('no add');},onUpdate:async(id,d)=>{updates.push([id,d]);},onDelete(){},onClose(){}});
+    const byId=(id)=>all(h.render(),'input').find(n=>n.props.id===id);
+    const submit=()=>all(h.render(),'form')[0].props.onSubmit({preventDefault(){}});
+    assert(JSON.stringify(h.render()).includes('일지 수정'));
+    byId('mobile-log-volume').props.onChange({target:{value:'12a'}});await submit();assert.equal(updates.length,0);assert(JSON.stringify(h.render()).includes('타설물량은 숫자로 입력해주세요.'));
+    byId('mobile-log-volume').props.onChange({target:{value:'20'}});byId('mobile-log-floor').props.onChange({target:{value:'2층'}});await submit();
+    assert.equal(updates.length,1);assert.equal(updates[0][0],log.id);assert.equal(updates[0][1].floor,'2층');assert.equal(updates[0][1].volume,20);assert.equal(updates[0][1].building,'101동');
   });
   console.log(`${count} upgrade checks passed; no network or real browser storage writes.`);
 })().catch(error=>{console.error(error);process.exitCode=1;});

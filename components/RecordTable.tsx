@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PouringLog, PouringLogInput, Site } from '@/lib/types';
 import { newLog, reuseLogBasics, filterLogs, LogFilters, LogSort, LogSortKey } from '@/lib/log-data';
 import { WateringSelect } from './WateringSelect';
+import { MobileLogSheet } from './MobileLogSheet';
 import { normalizeWatering } from '@/lib/watering';
 import { normalizeStrength } from '@/lib/strength';
 import { 
@@ -50,19 +51,22 @@ export const RecordTable: React.FC<RecordTableProps> = ({
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [editingRowData, setEditingRowData] = useState<PouringLogInput | null>(null);
   const editingRowRef = useRef<HTMLTableRowElement>(null);
-  const workPending = pending || editingRowId !== null;
-  useEffect(() => {
-    onWorkPending?.(workPending);
-    const prevent = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
-    if (workPending) window.addEventListener('beforeunload', prevent);
-    return () => { onWorkPending?.(false); if (workPending) window.removeEventListener('beforeunload', prevent); };
-  }, [workPending, onWorkPending]);
 
   // Quick New Row State (Always available empty input row above existing records)
   const [newRowData, setNewRowData] = useState<PouringLogInput>(() => newLog(site?.id, String(logs.length + 1)));
   // Phones start with the filter block folded so the table is reachable without scrolling past it.
   const [filtersOpen, setFiltersOpen] = useState(false);
   const activeFilterCount = [filters.from, filters.to, filters.building, filters.floor, filters.member].filter(Boolean).length;
+  // Phones enter and edit logs in a full-screen sheet: undefined = closed, null = new log.
+  const [sheetLog, setSheetLog] = useState<PouringLog | null | undefined>(undefined);
+  const isPhone = () => typeof window !== 'undefined' && !!window.matchMedia?.('(max-width: 760px)').matches;
+  const workPending = pending || editingRowId !== null || sheetLog !== undefined;
+  useEffect(() => {
+    onWorkPending?.(workPending);
+    const prevent = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    if (workPending) window.addEventListener('beforeunload', prevent);
+    return () => { onWorkPending?.(false); if (workPending) window.removeEventListener('beforeunload', prevent); };
+  }, [workPending, onWorkPending]);
   const filteredLogs = filterLogs(logs, filters);
   const sortState = (key: LogSortKey) => sort.key === key ? sort.direction === 'asc' ? 'ascending' as const : 'descending' as const : undefined;
   function sortButton(label: string, key: LogSortKey) {
@@ -272,7 +276,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
           <tbody className="divide-y divide-slate-800">
             
             {/* ✏️ ALWAYS-AVAILABLE BLANK INPUT ROW ABOVE EXISTING RECORDS (직접 입력 빈칸 행) */}
-            <tr className="bg-amber-950/20 border-t-2 border-dashed border-amber-500/50 hover:bg-amber-950/30 transition">
+            <tr className="log-quick-add-row bg-amber-950/20 border-t-2 border-dashed border-amber-500/50 hover:bg-amber-950/30 transition">
               {/* 구분 */}
               <td className="p-1.5 border-r border-slate-800 text-center text-slate-400">자동</td>
 
@@ -614,6 +618,10 @@ export const RecordTable: React.FC<RecordTableProps> = ({
               return (
                 <tr
                   key={log.id}
+                  onClick={(event) => {
+                    if (!isPhone() || (event.target as HTMLElement).closest('button') || busy || pending || blocked || !site || editingRowId) return;
+                    setSheetLog(log);
+                  }}
                   onDoubleClick={(event) => {
                     if (busy || pending || blocked || !site || editingRowId) return;
                     const cell = (event.target as HTMLElement).closest('td');
@@ -685,7 +693,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                   <td className="px-2 py-3 text-center whitespace-nowrap">
                     <div className="record-row-actions flex items-center justify-center opacity-90 group-hover:opacity-100">
                       <button
-                        onClick={() => startInlineEdit(log)}
+                        onClick={() => isPhone() ? setSheetLog(log) : startInlineEdit(log)}
                         title="셀 직접 수정"
                         className="p-1.5 text-slate-400 hover:text-amber-400 rounded transition"
                       >
@@ -710,15 +718,21 @@ export const RecordTable: React.FC<RecordTableProps> = ({
 
       {/* Footer info */}
       <div className="p-3 bg-slate-950 border-t border-slate-800 text-[11px] text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
-        <div className="flex items-center gap-2">
+        <p className="log-footer-phone">아래 <strong>+ 새 일지</strong>로 입력하고, 표의 줄을 누르면 그 일지를 고치거나 지울 수 있습니다.</p>
+        <div className="log-footer-desktop flex items-center gap-2">
           <span>✏️ <strong className="text-amber-400">표 직접 입력:</strong> 표 상단의 입력 행에 직접 입력 후 <strong className="text-slate-200">[추가]</strong> 또는 엔터를 누르면 바로 기록됩니다.</span>
         </div>
-        <div>
+        <div className="log-footer-desktop">
           등록된 데이터 칸을 더블클릭해 수정하고, 행 밖을 누르면 자동 저장됩니다.
         </div>
       </div>
+      <div className="log-new-dock"><button type="button" className="log-new-button" onClick={() => setSheetLog(null)}>+ 새 일지</button></div>
 
       </fieldset>
+      {sheetLog !== undefined && <MobileLogSheet key={sheetLog?.id || 'new'} log={sheetLog} logs={logs} site={site}
+        onAdd={async data => { if (!onQuickAddLog) throw new Error('등록 경로를 확인해주세요.'); await onQuickAddLog(data); }}
+        onUpdate={async (id, data) => { if (!onQuickUpdateLog) throw new Error('수정 경로를 확인해주세요.'); await onQuickUpdateLog(id, data); }}
+        onDelete={onDeleteLog} onClose={() => setSheetLog(undefined)} />}
     </div>
   );
 };
