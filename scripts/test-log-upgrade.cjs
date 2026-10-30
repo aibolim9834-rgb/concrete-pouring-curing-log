@@ -297,7 +297,7 @@ function uiHarness(file, name, props) {
   });
   await check('log floors save as B2F and 21F while other floor text is kept',async()=>{
     const {normalizeFloor}=load('lib/floor.ts');
-    for(const [input,expected] of [['지하 2층','B2F'],['지하2층','B2F'],['지하1F','B1F'],['B2층','B2F'],['21층','21F'],['21 층','21F'],['19층(옥상 파라펫)','19F(옥상 파라펫)'],['1~3층','1~3F'],['PH2','PH2'],['옥상','옥상'],['B1F','B1F'],['15','15'],['','']])assert.equal(normalizeFloor(input),expected);
+    for(const [input,expected] of [['지하 2층','B2F'],['지하2층','B2F'],['지하1F','B1F'],['B2층','B2F'],['21층','21F'],['21 층','21F'],['19층(옥상 파라펫)','19F(옥상 파라펫)'],['1~3층','1~3F'],['B1층~1F층','B1F~1F'],['3층, 5층','3F, 5F'],['PH2','PH2'],['옥상','옥상'],['B1F','B1F'],['15','15'],['','']])assert.equal(normalizeFloor(input),expected);
     const h=appHarness(null,true);storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site]));storage.setItem('cp_logs',JSON.stringify([log]));
     await find(h.render(),'RecordTable').props.onQuickAddLog({...data.newLog(site.id,'2'),date:'2026-08-02',building:'101동',floor:'지하 2층',member_type:'슬라브'});
     assert.equal(JSON.parse(storage.getItem('cp_logs')).find(l=>l.id!==log.id).floor,'B2F');
