@@ -44,7 +44,7 @@
 @media screen {
   :root { --background:var(--b-canvas); --foreground:var(--b-ink); color-scheme:light; }
   body { background:var(--b-canvas); color:var(--b-ink); }
-  .concrete-app { --ui-body:.8125rem; --ui-line:1.25rem; color-scheme:only light; background:var(--b-canvas)!important; color:var(--b-ink)!important; }
+  .concrete-app { --ui-body:.75rem; --ui-line:1.25rem; color-scheme:only light; background:var(--b-canvas)!important; color:var(--b-ink)!important; }
   .concrete-app > header { background:var(--b-surface)!important; border-color:var(--b-line)!important; box-shadow:none; border-top:3px solid var(--b-brand); }
   .concrete-app .app-header-identity { gap:14px; }
   .concrete-app .ui-button { min-block-size:38px; }
@@ -137,9 +137,10 @@
   .concrete-app .progress-page .progress-comparison-wrap::-webkit-scrollbar-thumb:horizontal:hover { background:var(--b-action); }
   .concrete-app .progress-page .progress-comparison-wrap::-webkit-scrollbar-thumb:horizontal:active { background:var(--b-action-hover); }
   .concrete-app .progress-error { background:var(--b-danger-soft); color:var(--b-danger); border-color:var(--b-danger); }
-  .concrete-app table { color:var(--b-ink); font-size:13px; }
-  .concrete-app .progress-page .progress-table { font-size:13px; line-height:20px; }
-  .concrete-app .progress-page .progress-comparison-table thead tr:nth-child(2) th { font-size:13px; line-height:20px; }
+  /* PC text is 12px (9pt): tables, fields, buttons and body notes. Phones keep their larger sizes below. */
+  .concrete-app table { color:var(--b-ink); font-size:12px; }
+  .concrete-app .progress-page .progress-table { font-size:12px; line-height:20px; }
+  .concrete-app .progress-page .progress-comparison-table thead tr:nth-child(2) th { font-size:12px; line-height:20px; }
   .concrete-app .log-filters { background:var(--b-surface); border-color:var(--b-line); }
   .concrete-app tbody tr:hover > td { background-color:var(--b-soft); }
   .concrete-app td.log-temperature-cell.is-hot { background-color:var(--b-danger-soft)!important; color:var(--b-danger)!important; }
@@ -224,6 +225,7 @@
   /* Phone text: buttons and notes 14px and labels 13px, one step above PC; data tables keep 13px and fields 16px. */
   .concrete-app { --ui-body:.875rem; }
   .concrete-app :is(table, table .text-xs, table [class*="text-["], table button) { font-size:13px; }
+  .concrete-app .progress-page :is(.progress-table, .progress-float-grid > .progress-float-building), .concrete-app .progress-page .progress-comparison-table thead tr:nth-child(2) th { font-size:13px; }
   .concrete-app :is(.log-filters,.progress-controls,.photo-fields,.photo-filters,.mobile-log-group) label, .concrete-app .mobile-log-group > legend,
   .concrete-app .summary-card-compact, .concrete-app .progress-page :is(.progress-pour-chip,details > summary,.structure-stage-pick small) { font-size:13px; }
   .concrete-app .progress-page :is(.progress-selection-name,.progress-controls > :is(.progress-check,.ui-note),.structure-stage-pick,.structure-selected,.progress-structure h4,.progress-structure .ui-button), .concrete-app .mobile-log-group .mobile-log-chip { font-size:14px; }
