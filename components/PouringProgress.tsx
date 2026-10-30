@@ -181,6 +181,25 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     if(inlineEdit.field==='planned')setPlannedDate(value);else setDate(value);
   }
   function focusCell(key:string) { requestAnimationFrame(()=>cellNodes.current.get(key)?.focus({preventScroll:true})); }
+  // Arrow keys move between date cells like a spreadsheet; at the table edge the key is left alone so the page still scrolls.
+  function moveCell(e:React.KeyboardEvent<HTMLButtonElement>,bid:string,sid:string,field:'planned'|'actual') {
+    const step=({ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]} as Record<string,[number,number]>)[e.key];
+    if(!step || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.defaultPrevented)return;
+    const columns=visible.flatMap(b=>(['planned','actual'] as const).map(f=>({b,f})));
+    let r=rows.findIndex(s=>s.id===sid),c=columns.findIndex(x=>x.b.id===bid && x.f===field);
+    for(;;){
+      r+=step[0];c+=step[1];
+      const row=rows[r],col=columns[c];
+      if(!row || !col)return;
+      if(!col.b.stages.some(s=>s.id===row.id))continue; // "해당 없음" cells are skipped
+      const node=cellNodes.current.get(`${col.b.id}:${row.id}:${col.f}`);
+      if(!node || node.disabled)return;
+      e.preventDefault();
+      if(!multiple)selectCell(col.b.id,row.id);
+      node.focus({preventScroll:true});node.scrollIntoView({block:'nearest',inline:'nearest'});
+      return;
+    }
+  }
   function cancelInline() {
     if(!inlineEdit || lock.current)return;
     clearInlineAutoSave();inlineKeyRef.current=null;
@@ -436,7 +455,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
                     ref={node => { if (node) cellNodes.current.set(key,node); else cellNodes.current.delete(key); }}
                     disabled={saving || stale} title={fieldName+' · 더블클릭 또는 Enter로 직접 수정'}
                     onDoubleClick={() => beginInline(b.id,row.id,field)}
-                    onKeyDown={e => { if ((e.key === 'Enter' || e.key === 'F2') && !e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) { e.preventDefault(); beginInline(b.id,row.id,field); } }}
+                    onKeyDown={e => { if ((e.key === 'Enter' || e.key === 'F2') && !e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) { e.preventDefault(); beginInline(b.id,row.id,field); } else moveCell(e,b.id,row.id,field); }}
                     className={cn('progress-cell',selected.includes(recordKey) && 'is-selected')}
                     style={background ? { background, '--progress-cell-background': background, '--progress-cell-ink': ink(background) } as React.CSSProperties : undefined}
                     onClick={() => selectCell(b.id,row.id)} aria-pressed={selected.includes(recordKey)}

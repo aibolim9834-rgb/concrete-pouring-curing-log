@@ -134,6 +134,8 @@ body {
 }
 .concrete-app .progress-page .progress-cell:is(.is-selected,:focus-visible) { outline-color: currentColor; outline-offset: -2px; }
 .progress-page .progress-cell:hover:not(:disabled) { box-shadow: inset 0 0 0 1px currentColor; }
+/* Arrow-key moves scroll the cell clear of the sticky header, selection bar and stage column. */
+.progress-page .progress-cell { scroll-margin-block: calc(var(--app-header-height, 104px) + var(--selection-bar-height, 0px) + 8px) 8px; scroll-margin-inline-start: var(--progress-stage-width, 6rem); }
 .progress-page .progress-na { color: var(--progress-muted); background: repeating-linear-gradient(135deg,var(--progress-surface),var(--progress-surface) 5px,var(--progress-line) 5px,var(--progress-line) 6px); }
 .progress-page .progress-panel { background: var(--progress-surface); border-color: var(--progress-line); padding: 16px; border-radius: 7px; }
 .progress-page .progress-panel-heading { align-items: start; flex-wrap: wrap; gap: 6px; }
