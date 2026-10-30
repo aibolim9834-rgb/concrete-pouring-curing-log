@@ -192,6 +192,8 @@
   .concrete-app .record-log-table :is(thead tr:first-child > th, tbody td):nth-child(-n+2) { position:sticky; z-index:1; background:var(--b-surface); }
   .concrete-app .record-log-table thead tr:first-child > th:nth-child(-n+2) { z-index:2; background:var(--b-head); }
   .concrete-app .record-log-table :is(thead tr:first-child > th, tbody td):first-child { inset-inline-start:0; inline-size:44px; min-inline-size:44px; max-inline-size:44px; }
+  /* The table uses fixed layout from its colgroup, so the first column's width must match the date column's sticky offset. */
+  .concrete-app .record-log-table colgroup col:first-child { width:44px!important; }
   .concrete-app .record-log-table :is(thead tr:first-child > th, tbody td):nth-child(2) { inset-inline-start:44px; box-shadow:3px 0 4px -2px rgb(0 0 0 / .18); }
   .concrete-app .record-log-table tbody tr.log-quick-add-row { display:none; }
   .concrete-app .log-footer-desktop { display:none; }
