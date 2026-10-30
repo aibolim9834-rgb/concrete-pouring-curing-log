@@ -44,6 +44,8 @@ export function ProgressStructure({document,buildingId,stageId,disabled,adding,o
     inputRef.current?.focus();
   },[adding]);
   const closeForm=()=>{onAdding(false);setMode(null);setError('');};
+  // Cancelling a row rename puts focus back on that row's 수정 button.
+  const cancelStageEdit=(id:string)=>{closeForm();requestAnimationFrame(()=>listRef.current?.querySelector<HTMLButtonElement>(`[data-stage-edit="${id}"]`)?.focus());};
   async function save(e: React.FormEvent) {
     e.preventDefault();if(disabled)return;setError('');
     try {
@@ -97,18 +99,25 @@ export function ProgressStructure({document,buildingId,stageId,disabled,adding,o
       {!!document.buildings.length && <><div className="structure-building-row"><select aria-label="편집할 동" value={buildingId} onChange={e=>{closeForm();onSelect(document,e.target.value);}}>{document.buildings.map(b=><option key={b.id} value={b.id}>{buildingLabel(b.name)}</option>)}</select>
       <button className="ui-button" onClick={()=>{onAdding(false);setName(building?.name||'');setMode('rename-building');setError('');}}>이름 변경</button><button className="ui-button ui-danger" onClick={()=>{setError('');setDialog('delete-building');}}>동 삭제</button></div>
       <p className="structure-selected">{buildingLabel(building?.name||'')}{selectedStage?' · '+selectedStage.name:''}</p></>}
-      {(adding||mode) && <form className="structure-form" onSubmit={save} onKeyDown={e=>{if(e.key==='Enter'&&e.nativeEvent.isComposing)e.preventDefault();}}>
+      {(adding||(mode&&mode!=='rename-stage')) && <form className="structure-form" onSubmit={save} onKeyDown={e=>{if(e.key==='Enter'&&e.nativeEvent.isComposing)e.preventDefault();}}>
         <h4>{adding?'새 동 추가':mode==='rename-building'?'동 이름 변경':mode==='add-stage'?'새 층·단계 추가':'층·단계 이름 변경'}</h4>
         <label>{adding||mode==='rename-building'?'동 이름':'층·단계 이름'}<input ref={inputRef} aria-label={adding?'새 동 이름':mode==='rename-building'?'변경할 동 이름':'층·단계 이름'} value={adding?newName:name} maxLength={80} required onChange={e=>adding?setNewName(e.target.value):setName(e.target.value)} autoFocus/></label>
         {adding && <div className="structure-two"><label>지상층 수<input aria-label="지상층 수" type="number" value={floors} min={0} max={200} step={1} required onChange={e=>setFloors(e.target.value)}/></label><label>지하층 수<input aria-label="지하층 수" type="number" value={basements} min={0} max={20} step={1} required onChange={e=>setBasements(e.target.value)}/></label></div>}
         {mode==='add-stage'&&!adding && <label>추가 위치<select aria-label="추가 위치" value={position} onChange={e=>setPosition(e.target.value)}>{[...(building?.stages||[])].sort((a,b)=>b.order-a.order).map(s=><option key={s.id} value={s.id}>{s.name} 위에 추가</option>)}<option value="">맨 아래에 추가</option></select></label>}
         <div className="structure-buttons"><button type="submit" className="ui-button ui-primary">{adding||mode==='add-stage'?'추가':'변경 저장'}</button><button type="button" className="ui-button" onClick={closeForm}>취소</button></div>
       </form>}
-      {error&&!dialog && <p role="alert" className="structure-error">{error}</p>}
+      {error&&!dialog&&mode!=='rename-stage' && <p role="alert" className="structure-error">{error}</p>}
       <div className="structure-stage-heading"><h4>층·단계 <span>({building?.stages.length||0})</span></h4><button className="ui-button ui-primary" disabled={!building} onClick={()=>{onAdding(false);setMode('add-stage');setName('');setPosition(stageId);setError('');}}>+ 층 추가</button></div>
       <div ref={listRef} className="structure-stage-list" aria-label="층·단계 목록">{[...(building?.stages||[])].sort((a,b)=>b.order-a.order).map(s=><div key={s.id} className="structure-stage-row" aria-current={s.id===stageId}>
-        <button className="structure-stage-pick" onClick={()=>{closeForm();onSelect(document,buildingId,s.id);}}>{s.name}{building?.records[s.id]?.date&&<small>실시일 {shortDate(building.records[s.id].date,'.')}</small>}</button>
-        <button className="ui-button" aria-label={`${s.name} 수정`} onClick={()=>editStage(s.id,'rename')}>수정</button><button className="ui-button ui-danger" aria-label={`${s.name} 삭제`} onClick={()=>editStage(s.id,'delete')}>삭제</button>
+        {mode==='rename-stage'&&s.id===stageId
+          // The rename happens in the row itself, so the list keeps its place.
+          ? <form className="structure-stage-edit" onSubmit={save} onKeyDown={e=>{if(e.key==='Enter'&&e.nativeEvent.isComposing)e.preventDefault();if(e.key==='Escape'){e.preventDefault();cancelStageEdit(s.id);}}}>
+            <input aria-label={`${s.name} 새 이름`} value={name} maxLength={80} required autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setName(e.target.value)} aria-invalid={!!error||undefined} aria-describedby={error?'structure-stage-edit-error':undefined}/>
+            <button type="submit" className="ui-button ui-primary">저장</button><button type="button" className="ui-button" onClick={()=>cancelStageEdit(s.id)}>취소</button>
+            {error && <p id="structure-stage-edit-error" role="alert" className="structure-error">{error}</p>}
+          </form>
+          : <><button className="structure-stage-pick" onClick={()=>{closeForm();onSelect(document,buildingId,s.id);}}>{s.name}{building?.records[s.id]?.date&&<small>실시일 {shortDate(building.records[s.id].date,'.')}</small>}</button>
+            <button className="ui-button" data-stage-edit={s.id} aria-label={`${s.name} 수정`} onClick={()=>editStage(s.id,'rename')}>수정</button><button className="ui-button ui-danger" aria-label={`${s.name} 삭제`} onClick={()=>editStage(s.id,'delete')}>삭제</button></>}
       </div>)}{!building&&<p className="ui-note">동을 추가하면 층 목록이 나타납니다.</p>}</div>
       <div className="structure-footer"><button className="ui-button" disabled={!selectedStage||document.buildings.length<2} onClick={()=>{setTargets([]);setError('');setDialog('copy');}}>다른 동에도 추가…</button><button className="ui-button" disabled={!canUndo} onClick={async()=>{closeForm();await onUndo();}}>실행 취소</button></div>
     </fieldset>

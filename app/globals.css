@@ -23,6 +23,10 @@
 .progress-structure .structure-stage-list { position:relative; flex:1 1 auto; min-height:150px; overflow:auto; border-block:1px solid #d5dfd8; }
 .progress-structure .structure-stage-row { display:flex; align-items:center; gap:6px; padding:6px 2px; border-bottom:1px solid #dde4df; }
 .progress-structure .structure-stage-row[aria-current=true] { background:#deefe3; box-shadow:inset 3px 0 #008529; }
+.progress-structure .structure-stage-edit { flex:1; display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-width:0; padding-inline-start:6px; }
+.progress-structure .structure-stage-edit > * { margin:0; }
+.progress-structure .structure-stage-edit input { flex:1 1 8rem; min-width:0; min-height:32px; }
+.progress-structure .structure-stage-edit .structure-error { flex-basis:100%; margin:0; }
 .progress-structure .structure-stage-pick { flex:1; min-width:0; text-align:left; padding:5px 8px; font-size:13px; color:var(--b-ink); }
 .progress-structure .structure-stage-pick small { display:block; font-size:12px; color:#5b6d60; }
 .progress-structure .structure-stage-row .ui-button { min-height:32px; padding:4px 8px; font-size:13px; flex-shrink:0; }

@@ -49,7 +49,7 @@ function uiHarness(file, name, props) {
   const react={useState(initial){const i=cursor++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return [states[i],v=>{states[i]=typeof v==='function'?v(states[i]):v;}];},useEffect(fn){effects.push(fn);},useCallback(fn){return fn;},useRef(value){return refs[refCursor++] ||= {current:value};}};
   const jsx=(type,props)=>({type,props});
   const events=new Map();
-  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./WateringSelect':{WateringSelect:'WateringSelect'},'./MobileLogSheet':{MobileLogSheet:'MobileLogSheet'},'./ShortDateInput':{ShortDateInput:'ShortDateInput'},'@/lib/pouring-progress':load('lib/pouring-progress.ts'),'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name})},{Node:TestNode,document:{addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
+  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./WateringSelect':{WateringSelect:'WateringSelect'},'./MobileLogSheet':{MobileLogSheet:'MobileLogSheet'},'./ShortDateInput':{ShortDateInput:'ShortDateInput'},'@/lib/progress-structure':load('lib/progress-structure.ts'),'@/lib/date-only':load('lib/date-only.ts'),'@/lib/pouring-progress':load('lib/pouring-progress.ts'),'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name})},{Node:TestNode,requestAnimationFrame:fn=>fn(),document:{addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
   return {states,events,get effects(){return effects;},render(){cursor=0;refCursor=0;effects=[];return exports[name](props);}};
 }
 (async()=>{
@@ -241,6 +241,25 @@ function uiHarness(file, name, props) {
     byId('mobile-log-volume').props.onChange({target:{value:'12a'}});await submit();assert.equal(updates.length,0);assert(JSON.stringify(h.render()).includes('타설물량은 숫자로 입력해주세요.'));
     byId('mobile-log-volume').props.onChange({target:{value:'20'}});byId('mobile-log-floor').props.onChange({target:{value:'2층'}});await submit();
     assert.equal(updates.length,1);assert.equal(updates[0][0],log.id);assert.equal(updates[0][1].floor,'2층');assert.equal(updates[0][1].volume,20);assert.equal(updates[0][1].building,'101동');
+  });
+  await check('stage 수정 renames inside its own list row and Esc cancels',async()=>{
+    const all=(node,pred)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,pred)):[...(pred(node)?[node]:[]),...all(node.props?.children,pred)];
+    const one=(tree,pred)=>all(tree,pred)[0];
+    const progressModel=load('lib/pouring-progress.ts'),doc={version:1,buildings:[{id:'b1',name:'101동',stages:progressModel.presetStages(3,1),records:{}}]};
+    let saved=null;const props={document:doc,buildingId:'b1',stageId:'f2',disabled:false,adding:false,onAdding(){},onClose(){},onSelect(next,bid,sid){props.document=next;props.stageId=sid;},commit:async next=>{saved=next;return true;},canUndo:false,onUndo:async()=>{}};
+    const h=uiHarness('components/ProgressStructure.tsx','ProgressStructure',props);
+    one(h.render(),n=>n.props?.['aria-label']==='지상 2층 수정').props.onClick();
+    let tree=h.render();
+    assert(!one(tree,n=>n.props?.className==='structure-form'));
+    const row=one(tree,n=>n.props?.className==='structure-stage-row'&&n.props['aria-current']===true);
+    const form=one(row,n=>n.type==='form');assert.equal(form.props.className,'structure-stage-edit');
+    one(form,n=>n.type==='input').props.onChange({target:{value:'기준층'}});
+    tree=h.render();await one(tree,n=>n.props?.className==='structure-stage-edit').props.onSubmit({preventDefault(){}});
+    assert.equal(saved.buildings[0].stages.find(s=>s.id==='f2').name,'기준층');
+    assert(!one(h.render(),n=>n.props?.className==='structure-stage-edit'));
+    one(h.render(),n=>n.props?.['aria-label']==='지상 3층 수정').props.onClick();saved=null;
+    one(h.render(),n=>n.props?.className==='structure-stage-edit').props.onKeyDown({key:'Escape',preventDefault(){},nativeEvent:{isComposing:false}});
+    assert(!one(h.render(),n=>n.props?.className==='structure-stage-edit'));assert.equal(saved,null);
   });
   console.log(`${count} upgrade checks passed; no network or real browser storage writes.`);
 })().catch(error=>{console.error(error);process.exitCode=1;});
