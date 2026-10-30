@@ -40,6 +40,7 @@ const ink = (hex: string) => {
   return (luminance + .05) / .05 >= 1.05 / (luminance + .05) ? '#000000' : '#ffffff';
 };
 const blankEntry = (): EntryDraft => ({ member: '슬라브', zone: '', volume: '', remarks: '' });
+const panelKey = 'cp_progress_structure_panel';
 interface Props { site: Site; onWorkPending?: (pending: boolean) => void }
 export function PouringProgress({ site, onWorkPending }: Props) {
   const [snapshot, setSnapshot] = useState<ProgressSnapshot | null>(null);
@@ -51,8 +52,10 @@ export function PouringProgress({ site, onWorkPending }: Props) {
   const lock = useRef(false);
   const [basis, setBasis] = useState(today);
   const [filter, setFilter] = useState('all');
-  // The 동·층 관리 panel opens only on request, so the table gets the full width.
-  const [panel, setPanel] = useState<'structure' | null>(null);
+  // The 동·층 관리 panel is open until the user closes it; that choice is remembered in this browser.
+  // This component first renders on the client, after the site list has loaded, so reading storage here is safe.
+  const [panel, setPanel] = useState<'structure' | null>(() => { try { return localStorage.getItem(panelKey) === 'closed' ? null : 'structure'; } catch { return 'structure'; } });
+  useEffect(() => { try { if (panel) localStorage.removeItem(panelKey); else localStorage.setItem(panelKey, 'closed'); } catch { /* the panel still works without storage */ } }, [panel]);
   const [multiple, setMultiple] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [date, setDate] = useState('');
@@ -447,7 +450,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
   return <section className="progress-page" aria-label="타설현황">
     {/* Everything above the table stays in view while the table scrolls ("틀 고정"). */}
     <div ref={stickyRef} className="progress-sticky">
-    <div className="progress-heading"><div><p className="ui-note">{site.name}</p><div className="progress-title-row"><h2 className="ui-page-title">동별 타설현황</h2><span className="progress-storage-badge ui-note print:hidden">{snapshot ? snapshot.mode === 'local' ? '브라우저 저장' : 'DB 저장' : stale ? '불러오기 실패' : '불러오는 중…'}</span></div></div>
+    <div className="progress-heading"><div><p className="ui-note">{site.name}</p><div className="progress-title-row"><h2 className="ui-page-title">동별 타설현황</h2><p className="progress-floor-note print:hidden">※ 타설일은 각 층 바닥 슬래브를 타설한 날로 입력합니다(예: 5F = 5층 바닥 타설일).</p></div></div>
       <div className="progress-actions progress-heading-actions print:hidden">
         <button className="ui-button" disabled={!history.length || saving || !!inlineEdit} onClick={undo}>실행 취소</button>
         <button className="ui-button" disabled={!snapshot || saving || !!inlineEdit} onClick={() => { setPanel('structure'); setAddingBuilding(false); showPanel(); }}>동·층 관리</button>
@@ -456,8 +459,10 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     {(error || stale) && <div className="progress-error"><p role="alert">{error || '저장된 현황을 다시 불러와주세요.'}</p>{stale && <button type="button" className="ui-button" disabled={saving || !!inlineEdit} onClick={reload}>새로 불러오기</button>}{stale && inlineEdit && <p className="ui-note">셀 입력을 취소한 뒤 다시 불러와주세요.</p>}</div>}<p className="sr-only" role="status">{saving ? '저장 중입니다.' : notice}</p>
     <fieldset disabled={!snapshot || saving || stale || !!inlineEdit} className="progress-controls print:hidden"><label>기준일<ShortDateInput label="기준일" value={basis} onChange={v=>{if(validDate(v))setBasis(v);}}/></label><label>표시할 동<select value={filter} onChange={e => { setFilter(e.target.value); setSelected([]); setNotice('표시할 동이 바뀌어 선택을 해제했습니다.'); }}><option value="all">전체 동</option>{document.buildings.map(b => <option key={b.id} value={b.id}>{buildingLabel(b.name)}</option>)}</select></label><label className="progress-check"><input type="checkbox" checked={multiple} onChange={e => { setMultiple(e.target.checked); setSelected([]); setEntryDraft(blankEntry()); }} />여러 칸 선택</label><span className="ui-note">{visible.length}개 동 표시 · {selected.length}칸 선택</span><span role="status" className="ui-note">{saving ? '저장 중…' : notice}</span></fieldset>
     <section className="progress-selection-tools print:hidden" aria-label="선택 항목 설정"><fieldset disabled={!snapshot || saving || stale || !!inlineEdit}>{renderCellEditor('bar')}</fieldset></section>
+    <div className="progress-extra-row">
     <section className="progress-selection-extra print:hidden" aria-label="선택 항목 상세"><fieldset disabled={!snapshot || saving || stale || !!inlineEdit}>{renderCellEditor('details')}</fieldset></section>
     <ProgressBuildingNav wrapRef={tableWrapRef} buildings={navBuildings}/>
+    </div>
     </div>
     <ProgressFloatingHeader wrapRef={tableWrapRef} buildings={navBuildings}/>
     <ProgressPrint buildings={visible} siteName={site.name} basis={basis} ink={ink}/>
@@ -482,7 +487,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
                   const value = (field === 'planned' ? record?.plannedDate : record?.date) || '', label = field === 'actual' && record?.dates ? pourDatesLabel(record) : value ? shortDate(value,'.') : '';
                   return <td key={field} data-date-field={field}>{inlineEdit?.key === key ? renderInlineDate() : <button
                     ref={node => { if (node) cellNodes.current.set(key,node); else cellNodes.current.delete(key); }}
-                    disabled={saving || stale} title={fieldName+' · 더블클릭 또는 Enter로 직접 수정'}
+                    disabled={saving || stale} title={(field === 'actual' ? '타설일(층 바닥 기준)' : fieldName)+' · 더블클릭 또는 Enter로 직접 수정'}
                     onDoubleClick={() => beginInline(b.id,row.id,field)}
                     onKeyDown={e => { if ((e.key === 'Enter' || e.key === 'F2') && !e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) { e.preventDefault(); beginInline(b.id,row.id,field); } else moveCell(e,b.id,row.id,field); }}
                     className={cn('progress-cell',selected.includes(recordKey) && 'is-selected')}

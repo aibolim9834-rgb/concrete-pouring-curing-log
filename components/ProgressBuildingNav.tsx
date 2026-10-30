@@ -22,16 +22,37 @@ function useFrame(callback: () => void) {
   return run;
 }
 
-// ◀ ▶ and one button per building; the buttons for buildings now on screen are marked.
+// Two-way scroll sync; each side ignores the echo of the scroll it caused. Returns the cleanup.
+function linkScroll(a: HTMLElement, b: HTMLElement) {
+  let leader: HTMLElement | null = null;
+  const follow = (from: HTMLElement, to: HTMLElement) => () => {
+    if (leader && leader !== from) return;
+    leader = from; to.scrollLeft = from.scrollLeft;
+    requestAnimationFrame(() => { leader = null; });
+  };
+  const fromA = follow(a, b), fromB = follow(b, a);
+  b.scrollLeft = a.scrollLeft;
+  a.addEventListener('scroll', fromA, { passive: true }); b.addEventListener('scroll', fromB, { passive: true });
+  return () => { a.removeEventListener('scroll', fromA); b.removeEventListener('scroll', fromB); };
+}
+
+// One button per building (the one in focus is marked) and a horizontal scrollbar that moves the table,
+// both in the fixed toolbar block so the table can be moved sideways from the top of the screen.
 export function ProgressBuildingNav({ wrapRef, buildings }: { wrapRef: React.RefObject<HTMLDivElement | null>; buildings: NavBuilding[] }) {
-  const [state, setState] = useState({ overflow: false, shown: [] as boolean[], first: 0, atStart: true, atEnd: true });
-  const chipsRef = useRef<HTMLDivElement>(null);
+  const [state, setState] = useState({ overflow: false, active: 0, left: 0, width: 0, inner: 0 });
+  const chipsRef = useRef<HTMLDivElement>(null), trackRef = useRef<HTMLDivElement>(null), picked = useRef<number | null>(null), settling = useRef(0);
   const measure = useFrame(() => {
-    const wrap = wrapRef.current, { stage, groups } = tableHeader(wrap);
+    // The scrollbar is lined up with the table relative to the row it sits in.
+    const wrap = wrapRef.current, holder = trackRef.current?.parentElement, { stage, groups } = tableHeader(wrap);
     if (!wrap || !stage) return;
-    const left = wrap.scrollLeft, view = wrap.clientWidth - stage.offsetWidth;
-    const shown = groups.map(g => { const a = g.offsetLeft - stage.offsetWidth - left, b = a + g.offsetWidth; return b > 8 && a < view - 8; });
-    const next = { overflow: wrap.scrollWidth > wrap.clientWidth + 1, shown, first: Math.max(0, shown.indexOf(true)), atStart: left <= 1, atEnd: left + wrap.clientWidth >= wrap.scrollWidth - 1 };
+    // One marked building: the one last picked while it is still at least half on screen, otherwise the one nearest the middle.
+    const from = wrap.scrollLeft + stage.offsetWidth, to = wrap.scrollLeft + wrap.clientWidth, middle = (from + to) / 2;
+    const onScreen = (g: HTMLElement) => Math.min(to, g.offsetLeft + g.offsetWidth) - Math.max(from, g.offsetLeft) >= g.offsetWidth / 2;
+    // The smooth scroll toward a picked building starts with it off screen; give it time to arrive before letting go.
+    if (picked.current !== null && performance.now() > settling.current && !(groups[picked.current] && onScreen(groups[picked.current]))) picked.current = null;
+    const nearest = groups.reduce((best, g, i) => Math.abs(g.offsetLeft + g.offsetWidth / 2 - middle) < Math.abs(groups[best].offsetLeft + groups[best].offsetWidth / 2 - middle) ? i : best, 0);
+    const next = { overflow: wrap.scrollWidth > wrap.clientWidth + 1, active: picked.current ?? nearest,
+      left: holder ? Math.round(wrap.getBoundingClientRect().left - holder.getBoundingClientRect().left) : 0, width: wrap.clientWidth, inner: wrap.scrollWidth };
     setState(prev => JSON.stringify(prev) === JSON.stringify(next) ? prev : next);
   });
   useEffect(() => {
@@ -39,38 +60,50 @@ export function ProgressBuildingNav({ wrapRef, buildings }: { wrapRef: React.Ref
     if (!wrap) return;
     const observer = new ResizeObserver(measure);
     observer.observe(wrap); const table = wrap.querySelector('table'); if (table) observer.observe(table);
-    wrap.addEventListener('scroll', measure, { passive: true });
+    wrap.addEventListener('scroll', measure, { passive: true }); window.addEventListener('resize', measure);
     measure();
-    return () => { observer.disconnect(); wrap.removeEventListener('scroll', measure); };
+    return () => { observer.disconnect(); wrap.removeEventListener('scroll', measure); window.removeEventListener('resize', measure); };
   }, [wrapRef, buildings.length, measure]);
-  // Keep the first marked button visible inside the button row without scrolling the page.
+  const visible = buildings.length > 1 && state.overflow;
+  // The navigator only exists while the table overflows; measure again once it is on screen so the scrollbar lines up.
+  useEffect(() => { if (visible) measure(); }, [visible, measure]);
   useEffect(() => {
-    const box = chipsRef.current, chip = box?.children[state.first] as HTMLElement | undefined;
+    const wrap = wrapRef.current, track = trackRef.current;
+    return wrap && track && visible ? linkScroll(wrap, track) : undefined;
+  }, [wrapRef, visible]);
+  // Keep the marked button visible inside the button row without scrolling the page.
+  useEffect(() => {
+    const box = chipsRef.current, chip = box?.children[state.active] as HTMLElement | undefined;
     if (!box || !chip) return;
     const a = chip.getBoundingClientRect(), b = box.getBoundingClientRect();
-    if (a.left < b.left || a.right > b.right) box.scrollLeft += a.left - b.left;
-  }, [state.first]);
+    if (a.left < b.left || a.right > b.right) box.scrollLeft += a.left - b.left - (b.width - a.width) / 2;
+  }, [state.active]);
+  // A picked building moves to the middle of the visible table area (the table's ends stop it at the edges).
   function goTo(index: number) {
-    const wrap = wrapRef.current, { stage, groups } = tableHeader(wrap);
-    const group = groups[Math.max(0, Math.min(groups.length - 1, index))];
+    const wrap = wrapRef.current, { stage, groups } = tableHeader(wrap), group = groups[index];
     if (!wrap || !stage || !group) return;
-    wrap.scrollTo({ left: group.offsetLeft - stage.offsetWidth, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    picked.current = index; settling.current = performance.now() + 1200;
+    const view = wrap.clientWidth - stage.offsetWidth;
+    wrap.scrollTo({ left: group.offsetLeft + group.offsetWidth / 2 - stage.offsetWidth - view / 2, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    measure();
   }
-  if (buildings.length < 2 || !state.overflow) return null;
-  return <div className="progress-building-nav" role="group" aria-label="동 이동">
-    <span className="ui-label">동 이동</span>
-    <button type="button" className="ui-button progress-building-step" aria-label="이전 동" disabled={state.atStart} onClick={() => goTo(state.first - 1)}>◀</button>
-    <div ref={chipsRef} className="progress-building-chips">{buildings.map((b, i) =>
-      <button type="button" key={b.id} className="progress-building-chip" data-shown={state.shown[i] || undefined} title={b.label} aria-label={`${b.label}${state.shown[i] ? ' · 화면에 보임' : ''}, 이 동으로 이동`} onClick={() => goTo(i)}>{b.label.replace(/\s*[(（].*$/, '') || b.label}</button>)}</div>
-    <button type="button" className="ui-button progress-building-step" aria-label="다음 동" disabled={state.atEnd} onClick={() => goTo(state.first + 1)}>▶</button>
-  </div>;
+  if (!visible) return null;
+  // Two pieces for the parent's grid: the buttons beside 작업일·구역 내역, the scrollbar on its own row under them.
+  return <>
+    <div className="progress-building-row" role="group" aria-label="동 이동">
+      <span className="ui-label">동 이동</span>
+      <div ref={chipsRef} className="progress-building-chips">{buildings.map((b, i) =>
+        <button type="button" key={b.id} className="progress-building-chip" aria-current={state.active === i || undefined} title={b.label} aria-label={`${b.label}, 가운데로 이동`} onClick={() => goTo(i)}>{b.label.replace(/\s*[(（].*$/, '') || b.label}</button>)}</div>
+    </div>
+    <div ref={trackRef} className="progress-building-scroll" aria-hidden="true" style={{ marginInlineStart: state.left, inlineSize: state.width }}><div style={{ inlineSize: state.inner }}/></div>
+  </>;
 }
 
 // A copy of the building header that sticks under the toolbar once the real header has scrolled away.
-// It scrolls sideways with the table, so it also works as a scroll handle near the top of the screen.
+// It scrolls sideways with the table (wheel or drag), without a scrollbar of its own: the toolbar block has one.
 export function ProgressFloatingHeader({ wrapRef, buildings }: { wrapRef: React.RefObject<HTMLDivElement | null>; buildings: NavBuilding[] }) {
   const [layout, setLayout] = useState<{ show: boolean; left: number; width: number; columns: number[]; groupHeight: number } | null>(null);
-  const anchorRef = useRef<HTMLDivElement>(null), stripRef = useRef<HTMLDivElement>(null), syncing = useRef<'wrap' | 'strip' | null>(null);
+  const anchorRef = useRef<HTMLDivElement>(null), stripRef = useRef<HTMLDivElement>(null);
   const measure = useFrame(() => {
     const wrap = wrapRef.current, anchor = anchorRef.current, { head, stage, groups, leaves } = tableHeader(wrap);
     if (!wrap || !anchor || !head || !stage) return;
@@ -94,19 +127,9 @@ export function ProgressFloatingHeader({ wrapRef, buildings }: { wrapRef: React.
     root.setProperty('--progress-float-height', layout?.show ? `${stripRef.current?.offsetHeight ?? 0}px` : '0px');
     return () => root.setProperty('--progress-float-height', '0px');
   }, [layout?.show, layout?.groupHeight]);
-  // Two-way scroll sync; each side ignores the echo of the scroll it caused.
   useEffect(() => {
     const wrap = wrapRef.current, strip = stripRef.current;
-    if (!wrap || !strip || !layout?.show) return;
-    strip.scrollLeft = wrap.scrollLeft;
-    const follow = (from: HTMLElement, to: HTMLElement, side: 'wrap' | 'strip') => () => {
-      if (syncing.current && syncing.current !== side) return;
-      syncing.current = side; to.scrollLeft = from.scrollLeft;
-      requestAnimationFrame(() => { syncing.current = null; });
-    };
-    const fromWrap = follow(wrap, strip, 'wrap'), fromStrip = follow(strip, wrap, 'strip');
-    wrap.addEventListener('scroll', fromWrap, { passive: true }); strip.addEventListener('scroll', fromStrip, { passive: true });
-    return () => { wrap.removeEventListener('scroll', fromWrap); strip.removeEventListener('scroll', fromStrip); };
+    return wrap && strip && layout?.show ? linkScroll(wrap, strip) : undefined;
   }, [wrapRef, layout?.show]);
   const columns = layout?.columns ?? [];
   return <div ref={anchorRef} className="progress-float-anchor print:hidden" aria-hidden="true">
