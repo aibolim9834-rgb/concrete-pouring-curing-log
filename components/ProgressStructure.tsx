@@ -46,6 +46,8 @@ export function ProgressStructure({document,buildingId,stageId,disabled,adding,o
     inputRef.current?.focus();
   },[adding]);
   const closeForm=()=>{onAdding(false);setMode(null);setError('');};
+  // New floors usually go on top of the building, so 추가 위치 starts at the floor right below 옥상.
+  const topFloorPosition=()=>{const sorted=[...(building?.stages||[])].sort((a,b)=>b.order-a.order),roof=sorted.findIndex(s=>s.name.trim()==='옥상');return (roof>=0?sorted[roof+1]?.id:undefined)??stageId;};
   // Cancelling a row rename puts focus back on that row's 수정 button.
   const cancelStageEdit=(id:string)=>{closeForm();requestAnimationFrame(()=>listRef.current?.querySelector<HTMLButtonElement>(`[data-stage-edit="${id}"]`)?.focus());};
   async function save(e: React.FormEvent) {
@@ -110,7 +112,7 @@ export function ProgressStructure({document,buildingId,stageId,disabled,adding,o
         <div className="structure-buttons"><button type="submit" className="ui-button ui-primary">{adding||mode==='add-stage'?'추가':'변경 저장'}</button><button type="button" className="ui-button" onClick={closeForm}>취소</button></div>
       </form>}
       {error&&!dialog&&mode!=='rename-stage' && <p role="alert" className="structure-error">{error}</p>}
-      <div className="structure-stage-heading"><h4>층·단계 <span>({building?.stages.length||0})</span></h4><button className="ui-button ui-primary" disabled={!building} onClick={()=>{onAdding(false);setMode('add-stage');setName('');setPosition(stageId);setError('');}}>+ 층 추가</button></div>
+      <div className="structure-stage-heading"><h4>층·단계 <span>({building?.stages.length||0})</span></h4><button className="ui-button ui-primary" disabled={!building} onClick={()=>{onAdding(false);setMode('add-stage');setName('');setPosition(topFloorPosition());setError('');}}>+ 층 추가</button></div>
       <div ref={listRef} className="structure-stage-list" aria-label="층·단계 목록">{[...(building?.stages||[])].sort((a,b)=>b.order-a.order).map(s=><div key={s.id} className="structure-stage-row" aria-current={s.id===stageId}>
         {mode==='rename-stage'&&s.id===stageId
           // The rename happens in the row itself, so the list keeps its place.
