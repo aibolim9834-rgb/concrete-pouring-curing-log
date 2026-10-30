@@ -431,7 +431,11 @@ body {
 @media(max-width:760px) { .progress-page .progress-sticky { position: static; } }
 @media print { .progress-page .progress-sticky { position: static; border: 0; } }
 /* 작업일·구역 내역 on the left, 동 이동 buttons beside them, and the table scrollbar across the full row below. */
-.progress-page .progress-extra-row { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 20px; row-gap: 6px; align-items: start; }
+.progress-page .progress-extra-row { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 20px; row-gap: 10px; align-items: start; }
+/* The 작업일·구역 내역 links share the 동 이동 row height, so both sit on one center line (their own top margin is dropped here). */
+.progress-page .progress-extra-row .progress-selection-details { margin-block-start: 0; }
+.progress-page .progress-extra-row .progress-selection-details summary, .progress-page .progress-building-row { min-block-size: 30px; line-height: 30px; }
+.progress-page .progress-building-row .progress-building-chip { line-height: 18px; }
 .progress-page .progress-extra-row > .progress-selection-extra { grid-column: 1; min-inline-size: 0; }
 .progress-page .progress-building-row { grid-column: 2; display: flex; align-items: center; gap: 6px; min-inline-size: 0; }
 .progress-page .progress-extra-row > .progress-building-scroll { grid-column: 1 / -1; }
