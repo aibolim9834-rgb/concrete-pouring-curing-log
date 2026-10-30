@@ -24,6 +24,15 @@ export function normalizeShortDate(raw:string):string|null {
   const iso=`20${match[1]}-${match[2].padStart(2,'0')}-${match[3].padStart(2,'0')}`;
   return parts(iso)?iso:null;
 }
+// Digits typed in order get their hyphens filled in: 260 → 26-0, 260820 → 26-08-20, 20260820 → 2026-08-20.
+// A middle pair above 12 can only be a four-digit year's tail. Other separators and typed YYYY- are left alone.
+export function hyphenateShortDate(raw:string):string {
+  if(!/^[\d-]*$/.test(raw) || /^\d{4}-/.test(raw))return raw;
+  const digits=raw.replace(/-/g,''),year=digits.length>=4 && Number(digits.slice(2,4))>12?4:2;
+  if(digits.length>year+4)return raw;
+  const out=[digits.slice(0,year),digits.slice(year,year+2),digits.slice(year+2)].filter(Boolean).join('-');
+  return raw.endsWith('-') && (digits.length===year || digits.length===year+2)?out+'-':out;
+}
 export function shortDate(value:string,separator='-'):string {
   return parts(value)?value.slice(2).replaceAll('-',separator):value;
 }

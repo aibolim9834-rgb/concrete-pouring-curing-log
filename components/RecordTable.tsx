@@ -5,6 +5,8 @@ import { PouringLog, PouringLogInput, Site } from '@/lib/types';
 import { newLog, reuseLogBasics, filterLogs, LogFilters, LogSort, LogSortKey } from '@/lib/log-data';
 import { WateringSelect } from './WateringSelect';
 import { MobileLogSheet } from './MobileLogSheet';
+import { ShortDateInput } from './ShortDateInput';
+import { validDate } from '@/lib/pouring-progress';
 import { normalizeWatering } from '@/lib/watering';
 import { normalizeStrength } from '@/lib/strength';
 import { 
@@ -209,8 +211,9 @@ export const RecordTable: React.FC<RecordTableProps> = ({
           if ((newRowData.building || newRowData.floor || newRowData.remicon_company || newRowData.volume !== '' || newRowData.curing_watering || newRowData.curing_protection) && !confirm('작성 중인 새 행을 초기화하고 최근 일지의 동·부위·레미콘사·강도를 불러오시겠습니까?')) return;
           setNewRowData(reuseLogBasics(latest, String(logs.length + 1))); setError('');
         }}>최근 일지 기본정보 불러오기</button>
-        <label htmlFor="logs-from">시작일<input id="logs-from" type="date" value={filters.from} onChange={e => onFiltersChange({ ...filters, from: e.target.value })} /></label>
-        <label htmlFor="logs-to">종료일<input id="logs-to" type="date" value={filters.to} onChange={e => onFiltersChange({ ...filters, to: e.target.value })} /></label>
+        {/* Half-typed dates are not applied, so the list does not flicker while a date is being typed. */}
+        <label htmlFor="logs-from">시작일<ShortDateInput id="logs-from" label="시작일" value={filters.from} onChange={v => { if (!v || validDate(v)) onFiltersChange({ ...filters, from: v }); }} /></label>
+        <label htmlFor="logs-to">종료일<ShortDateInput id="logs-to" label="종료일" value={filters.to} onChange={v => { if (!v || validDate(v)) onFiltersChange({ ...filters, to: v }); }} /></label>
         {(['building','floor','member'] as const).map((key, i) => <label key={key} htmlFor={`logs-${key}`}>{['동(구역)','층','구조부위'][i]}<select id={`logs-${key}`} value={filters[key]} onChange={e => onFiltersChange({ ...filters, [key]: e.target.value })}><option value="">전체</option>{Array.from(new Set(logs.map(log => log[key === 'member' ? 'member_type' : key]))).filter(Boolean).sort((a,b) => a.localeCompare(b, 'ko', { numeric: true })).map(value => <option key={value}>{value}</option>)}</select></label>)}
         <button className="ui-button" onClick={() => onFiltersChange({ search: '', weather: 'ALL', from: '', to: '', building: '', floor: '', member: '' })}>조회 초기화</button>
         <label htmlFor="logs-output">출력·CSV 범위<select id="logs-output" value={outputScope} onChange={e => onOutputScopeChange(e.target.value as 'filtered' | 'all')}><option value="filtered">현재 조회 결과 {filteredLogs.length}건</option><option value="all">현장 전체 {logs.length}건</option></select></label>
@@ -223,7 +226,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
           <caption className="sr-only">타설 일지. 열 제목을 누르면 오름차순 또는 내림차순으로 정렬합니다. 구분은 현재 조회 순서의 자동 번호입니다.</caption>
           <colgroup>
             {/* 번호, 일자, 동, 층, 부위, 최저·최고온도, 기상, 업체, 강도, 물량, 살수·보양, 관리 */}
-            {[2.5, 8.5, 16.5, 6.5, 6.5, 4.5, 4.5, 4.5, 6.5, 9.5, 6, 7, 10, 7].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}
+            {[2.5, 7, 18, 6.5, 6.5, 4.5, 4.5, 4.5, 6.5, 9.5, 6, 7, 10, 7].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}
           </colgroup>
           <thead>
             {/* Row 1 Headers */}
@@ -231,7 +234,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
               <th rowSpan={2} className="px-2 py-3 border-r border-slate-800 w-12">
                 구분
               </th>
-              <th scope="col" aria-sort={sortState('date')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[100px]">
+              <th scope="col" aria-sort={sortState('date')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[80px]">
                 {sortButton('일자', 'date')}
               </th>
               <th scope="colgroup" colSpan={3} className="px-3 py-2 border-r border-slate-800 bg-slate-950 text-amber-400">
@@ -282,11 +285,10 @@ export const RecordTable: React.FC<RecordTableProps> = ({
 
               {/* 일자 */}
               <td className="p-1.5 border-r border-slate-800">
-                <input
-                  type="date"
-                  aria-label="새 일지 일자"
+                <ShortDateInput
+                  label="새 일지 일자"
                   value={newRowData.date}
-                  onChange={(e) => setNewRowData({ ...newRowData, date: e.target.value })}
+                  onChange={(date) => setNewRowData({ ...newRowData, date })}
                   className="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-[11px] text-slate-200 focus:ring-1 focus:ring-amber-500"
                 />
               </td>
@@ -468,11 +470,10 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                       }}>
                     <td className="p-1 border-r border-slate-800 text-center">{index + 1}</td>
                     <td className="p-1 border-r border-slate-800 text-center">
-                      <input
-                        type="date"
-                        aria-label="수정 일지 일자"
+                      <ShortDateInput
+                        label="수정 일지 일자"
                         value={editingRowData.date}
-                        onChange={(e) => setEditingRowData({ ...editingRowData, date: e.target.value })}
+                        onChange={(date) => setEditingRowData({ ...editingRowData, date })}
                         className="w-full bg-slate-800 border border-amber-500 rounded px-1 py-1 text-[11px] text-white"
                       />
                     </td>
