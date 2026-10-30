@@ -33,6 +33,8 @@ interface RecordTableProps {
   outputScope: 'filtered' | 'all'; onOutputScopeChange: (scope: 'filtered' | 'all') => void;
   sort: LogSort; onSortChange: (sort: LogSort) => void;
   busy?: boolean; blocked?: boolean;
+  // A 종료 site: the table, search and filters still work; adding, editing and deleting do not.
+  readOnly?: boolean;
   onWorkPending?: (pending: boolean) => void;
 }
 
@@ -41,7 +43,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
   site,
   onDeleteLog,
   onQuickAddLog,
-  onQuickUpdateLog, filters, onFiltersChange, outputScope, onOutputScopeChange, sort, onSortChange, busy = false, blocked = false, onWorkPending,
+  onQuickUpdateLog, filters, onFiltersChange, outputScope, onOutputScopeChange, sort, onSortChange, busy = false, blocked = false, readOnly = false, onWorkPending,
 }) => {
   const searchQuery = filters.search, weatherFilter = filters.weather;
   const setSearchQuery = (search: string) => onFiltersChange({ ...filters, search });
@@ -108,7 +110,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
 
   // Start inline edit for a row
   const startInlineEdit = (log: PouringLog) => {
-    if (editingRowId || lock.current || busy || blocked) return;
+    if (editingRowId || lock.current || busy || blocked || readOnly) return;
     setEditingRowId(log.id);
     setEditingRowData({
       site_id: log.site_id,
@@ -211,7 +213,6 @@ export const RecordTable: React.FC<RecordTableProps> = ({
         {(['building','floor','member'] as const).map((key, i) => <label key={key} htmlFor={`logs-${key}`}>{['동(구역)','층','구조부위'][i]}<select id={`logs-${key}`} value={filters[key]} onChange={e => onFiltersChange({ ...filters, [key]: e.target.value })}><option value="">전체</option>{Array.from(new Set(logs.map(log => log[key === 'member' ? 'member_type' : key]))).filter(Boolean).sort((a,b) => a.localeCompare(b, 'ko', { numeric: true })).map(value => <option key={value}>{value}</option>)}</select></label>)}
         <button className="ui-button" onClick={() => onFiltersChange({ search: '', weather: 'ALL', from: '', to: '', building: '', floor: '', member: '' })}>조회 초기화</button>
         <label htmlFor="logs-output">출력·CSV 범위<select id="logs-output" value={outputScope} onChange={e => onOutputScopeChange(e.target.value as 'filtered' | 'all')}><option value="filtered">현재 조회 결과 {filteredLogs.length}건</option><option value="all">현장 전체 {logs.length}건</option></select></label>
-        <p className="ui-note">조회 {filteredLogs.length}건 · 물량 합계 {filteredLogs.reduce((sum, log) => sum + Number(log.volume || 0), 0).toLocaleString('ko-KR')}m³</p>
         {filters.from && filters.to && filters.from > filters.to && <p className="progress-error" role="alert">시작일이 종료일보다 늦습니다.</p>}
       </div>
       {/* Main Excel-styled Responsive Table */}
@@ -273,7 +274,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
           <tbody className="divide-y divide-slate-800">
             
             {/* ✏️ ALWAYS-AVAILABLE BLANK INPUT ROW ABOVE EXISTING RECORDS (직접 입력 빈칸 행) */}
-            <tr className="log-quick-add-row bg-amber-950/20 border-t-2 border-dashed border-amber-500/50 hover:bg-amber-950/30 transition">
+            {!readOnly && <tr className="log-quick-add-row bg-amber-950/20 border-t-2 border-dashed border-amber-500/50 hover:bg-amber-950/30 transition">
               {/* 구분 */}
               <td className="p-1.5 border-r border-slate-800 text-center text-slate-400">자동</td>
 
@@ -304,7 +305,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
               <td className="p-1.5 border-r border-slate-800">
                 <input
                   type="text"
-                  placeholder="예: 15층"
+                  placeholder="예: 15F"
                   aria-label="새 일지 층"
                   value={newRowData.floor}
                   onChange={(e) => setNewRowData({ ...newRowData, floor: e.target.value })}
@@ -447,7 +448,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                   <Plus className="w-3.5 h-3.5" /> 추가
                 </button>
               </td>
-            </tr>
+            </tr>}
 
             {/* Existing Rows */}
             {filteredLogs.map((log, index) => {
@@ -621,11 +622,11 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                 <tr
                   key={log.id}
                   onClick={(event) => {
-                    if (!isPhone() || (event.target as HTMLElement).closest('button') || busy || pending || blocked || !site || editingRowId) return;
+                    if (!isPhone() || (event.target as HTMLElement).closest('button') || busy || pending || blocked || readOnly || !site || editingRowId) return;
                     setSheetLog(log);
                   }}
                   onDoubleClick={(event) => {
-                    if (busy || pending || blocked || !site || editingRowId) return;
+                    if (busy || pending || blocked || readOnly || !site || editingRowId) return;
                     const cell = (event.target as HTMLElement).closest('td');
                     if (!cell || cell.cellIndex === 0 || cell.cellIndex === 13) return;
                     startInlineEdit(log);
@@ -696,6 +697,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                     <div className="record-row-actions flex items-center justify-center opacity-90 group-hover:opacity-100">
                       <button
                         onClick={() => isPhone() ? setSheetLog(log) : startInlineEdit(log)}
+                        disabled={readOnly}
                         title="셀 직접 수정"
                         className="p-1.5 text-slate-400 hover:text-amber-400 rounded transition"
                       >
@@ -703,6 +705,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                       </button>
                       <button
                         onClick={() => onDeleteLog(log.id)}
+                        disabled={readOnly}
                         title="삭제"
                         className="p-1.5 text-slate-400 hover:text-red-400 rounded transition"
                       >
@@ -720,6 +723,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
 
       {/* Footer info */}
       <div className="p-3 bg-slate-950 border-t border-slate-800 text-[11px] text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
+        {readOnly ? <p className="ui-note">종료된 현장이라 일지를 추가·수정·삭제할 수 없습니다. 조회·인쇄·CSV 내보내기는 그대로 됩니다.</p> : <>
         <p className="log-footer-phone">아래 <strong>+ 새 일지</strong>로 입력하고, 표의 줄을 누르면 그 일지를 고치거나 지울 수 있습니다.</p>
         <div className="log-footer-desktop flex items-center gap-2">
           <span>✏️ <strong className="text-amber-400">표 직접 입력:</strong> 표 상단의 입력 행에 직접 입력 후 <strong className="text-slate-200">[추가]</strong> 또는 엔터를 누르면 바로 기록됩니다.</span>
@@ -727,8 +731,9 @@ export const RecordTable: React.FC<RecordTableProps> = ({
         <div className="log-footer-desktop">
           등록된 데이터 칸을 더블클릭해 수정하고, 행 밖을 누르면 자동 저장됩니다.
         </div>
+        </>}
       </div>
-      <div className="log-new-dock"><button type="button" className="log-new-button" onClick={() => setSheetLog(null)}>+ 새 일지</button></div>
+      {!readOnly && <div className="log-new-dock"><button type="button" className="log-new-button" onClick={() => setSheetLog(null)}>+ 새 일지</button></div>}
 
       </fieldset>
       {sheetLog !== undefined && <MobileLogSheet key={sheetLog?.id || 'new'} log={sheetLog} logs={logs} site={site}

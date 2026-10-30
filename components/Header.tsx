@@ -77,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
                   >
                     {sites.map((site) => (
                       <option key={site.id} value={site.id}>
-                        {site.name} {site.code ? `(${site.code})` : ''}
+                        {site.status === 'closed' ? '종료 · ' : ''}{site.name} {site.code ? `(${site.code})` : ''}
                       </option>
                     ))}
                   </select>

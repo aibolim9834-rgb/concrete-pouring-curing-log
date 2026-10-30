@@ -23,7 +23,7 @@ function load(file, extras = {}, globals = {}) {
 }
 const model = load('lib/pouring-progress.ts'), data = load('lib/log-data.ts'), backup = load('lib/app-backup.ts');
 const site = { id:'site-a',name:'검증 현장' };
-const log = { ...data.newLog(site.id), id:'log-a', building:'101동',floor:'1층',date:'2026-08-01',volume:10,remarks:'특이사항' };
+const log = { ...data.newLog(site.id), id:'log-a', building:'101동',floor:'1F',date:'2026-08-01',volume:10,remarks:'특이사항' };
 const same = (a,b) => assert.equal(JSON.stringify(a),JSON.stringify(b));
 let count=0;
 async function check(name,run) { await run(); count++; console.log(`PASS ${name}`); }
@@ -40,6 +40,8 @@ function appHarness(result, local = false) {
   deps['@/lib/csv']=load('lib/csv.ts');
   deps['@/lib/watering']=load('lib/watering.ts');
   deps['@/lib/strength']=load('lib/strength.ts');
+  deps['@/lib/floor']=load('lib/floor.ts');
+  deps['@/lib/date-only']=load('lib/date-only.ts');
   for(const name of ['Header','SummaryCards','RecordTable','SiteModal','PrintView','PouringProgress','SitePhotos'])deps[`@/components/${name}`]={[name]:name};
   const app=load('components/ConcreteApp.tsx',deps,{confirm:()=>true,alert:message=>alerts.push(message),window:{location:{search:'',assign:url=>navigation.push(url)},addEventListener(){},removeEventListener(){}},URLSearchParams,setTimeout:()=>{},Blob:class{constructor(parts){csv=parts.join('');}},URL:{createObjectURL:()=> 'blob:test'},document:{createElement:()=>({setAttribute(){},click(){}}),body:{appendChild(){},removeChild(){}}}});
   return {states,navigation,alerts,get csv(){return csv;},get effects(){return effects;},render(){cursor=0;refCursor=0;effects=[];return app.ConcreteApp({initialView:arguments[0]||'logs'});}};
@@ -169,7 +171,7 @@ function uiHarness(file, name, props) {
   await check('shared input validation covers location date temperatures and quantity',()=>{data.validateLogInput(log);for(const change of [{floor:''},{building:''},{date:'2026-02-30'},{min_temp:30,max_temp:20},{volume:-1}])assert.throws(()=>data.validateLogInput({...log,...change}));});
   await check('local save persists before screen update and stale lists are rejected',()=>{storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site]));storage.setItem('cp_logs',JSON.stringify([log]));const before=data.readLocalData(storage);data.writeLocalData(storage,before,{sites:[site],logs:[{...log,floor:'2층'}]});assert.throws(()=>data.writeLocalData(storage,before,before),/다른 화면/);});
   await check('partial write failure rolls back original lists',()=>{const before=data.readLocalData(storage);const raw=storage.getItem('cp_sites');const set=storage.setItem.bind(storage);storage.setItem=(k,v)=>{if(k==='cp_logs')throw new Error('QuotaExceeded');set(k,v);};try{assert.throws(()=>data.writeLocalData(storage,before,{sites:[...before.sites,{id:'new',name:'다른 현장'}],logs:[log]}),/QuotaExceeded/);}finally{storage.setItem=set;}assert.equal(storage.getItem('cp_sites'),raw);same(data.readLocalData(storage),before);});
-  await check('filters combine date building floor member weather and remarks',()=>{const logs=[log,{...log,id:'b',date:'2026-09-01',building:'102동',volume:20}];same(data.filterLogs(logs,{...data.emptyLogFilters(),from:'2026-08-01',to:'2026-08-31',building:'101동',floor:'1층',member:'슬라브',search:'특이사항'}).map(l=>l.id),['log-a']);assert.equal(data.filterLogs(logs,{...data.emptyLogFilters(),from:'2026-10-01',to:'2026-08-01'}).length,0);});
+  await check('filters combine date building floor member weather and remarks',()=>{const logs=[log,{...log,id:'b',date:'2026-09-01',building:'102동',volume:20}];same(data.filterLogs(logs,{...data.emptyLogFilters(),from:'2026-08-01',to:'2026-08-31',building:'101동',floor:'1F',member:'슬라브',search:'특이사항'}).map(l=>l.id),['log-a']);assert.equal(data.filterLogs(logs,{...data.emptyLogFilters(),from:'2026-10-01',to:'2026-08-01'}).length,0);});
   await check('whole backup roundtrip preserves exact data and unrelated storage',()=>{storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site]));storage.setItem('cp_logs',JSON.stringify([log]));storage.setItem('cp_pouring_progress_v1:'+site.id,JSON.stringify({document:model.emptyProgress(),revision:2}));storage.setItem('cp_site_archive_v1:site-a:sample',JSON.stringify({version:1,key:'cp_site_archive_v1:site-a:sample',archivedAt:new Date().toISOString(),mode:'local',site,logs:[log],progressRaw:storage.getItem('cp_pouring_progress_v1:'+site.id)}));storage.setItem('unrelated','keep');const original=backup.parseBackup(JSON.stringify(backup.collectBackup(storage)));const other=memory();other.setItem('unrelated','keep');backup.restoreBackup(other,original,backup.collectBackup(other));same(backup.collectBackup(other).entries,original.entries);assert.equal(other.getItem('unrelated'),'keep');assert(other.getItem('cp_restore_recovery_v1'));});
   await check('legacy site archive files can be imported',()=>{const archive={version:1,site,logs:[log],mode:'local',archivedAt:new Date().toISOString(),progressRaw:null};const parsed=backup.parseBackup(JSON.stringify(archive));assert.equal(backup.backupCounts(parsed).logs,1);assert.throws(()=>backup.parseBackup(JSON.stringify({...archive,mode:'cloud'})),/DB/);});
   await check('invalid backup rejected without writes',()=>{const before=[...storage.entries];assert.throws(()=>backup.parseBackup('{'));assert.throws(()=>backup.parseBackup(JSON.stringify({format:'con1-backup',version:1,createdAt:'now',entries:[['unrelated','bad']]})));same([...storage.entries],before);});
@@ -292,6 +294,52 @@ function uiHarness(file, name, props) {
     one(h.render(),n=>n.props?.['aria-label']===site.name+' 현장명 수정').props.onClick();
     let stopped=false;one(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-rename-row')).props.onKeyDown({key:'Escape',preventDefault(){},stopPropagation(){stopped=true;},nativeEvent:{isComposing:false}});
     assert(stopped);assert(!one(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-rename-row')));assert.equal(renamed.length,1);
+  });
+  await check('log floors save as B2F and 21F while other floor text is kept',async()=>{
+    const {normalizeFloor}=load('lib/floor.ts');
+    for(const [input,expected] of [['지하 2층','B2F'],['지하2층','B2F'],['지하1F','B1F'],['B2층','B2F'],['21층','21F'],['21 층','21F'],['19층(옥상 파라펫)','19F(옥상 파라펫)'],['1~3층','1~3F'],['PH2','PH2'],['옥상','옥상'],['B1F','B1F'],['15','15'],['','']])assert.equal(normalizeFloor(input),expected);
+    const h=appHarness(null,true);storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site]));storage.setItem('cp_logs',JSON.stringify([log]));
+    await find(h.render(),'RecordTable').props.onQuickAddLog({...data.newLog(site.id,'2'),date:'2026-08-02',building:'101동',floor:'지하 2층',member_type:'슬라브'});
+    assert.equal(JSON.parse(storage.getItem('cp_logs')).find(l=>l.id!==log.id).floor,'B2F');
+  });
+  await check('site status is 진행 or 종료 with a 종료일 only while closed',()=>{
+    data.validateSites([site,{id:'b',name:'진행',status:'active',closed_at:null},{id:'c',name:'종료',status:'closed',closed_at:'2026-10-15'}]);
+    for(const bad of [{status:'closed'},{status:'closed',closed_at:'2026-13-01'},{status:'active',closed_at:'2026-10-15'},{status:'paused'}])assert.throws(()=>data.validateSites([{id:'x',name:'x',...bad}]),/진행·종료/);
+    const archive=load('lib/site-archive.ts'),sites=[site,{id:'c',name:'종료 현장',status:'closed',closed_at:'2026-10-15'}];
+    same(archive.pickerSites(sites,site.id).map(s=>s.id),[site.id]);same(archive.pickerSites(sites,'c').map(s=>s.id),[site.id,'c']);
+  });
+  await check('closing a site keeps its logs, hides it from the picker and makes it read-only until 다시 진행',async()=>{
+    const other={id:'site-b',name:'다른 현장'};
+    const h=appHarness(null,true);storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site,other]));storage.setItem('cp_logs',JSON.stringify([log]));h.states[0]=[site,other];
+    await find(h.render(),'SiteModal').props.onSetSiteStatus(site.id,'2026-10-15');
+    const stored=JSON.parse(storage.getItem('cp_sites')).find(s=>s.id===site.id);assert.equal(stored.status,'closed');assert.equal(stored.closed_at,'2026-10-15');
+    same(JSON.parse(storage.getItem('cp_logs')),[log]);assert.equal(h.states[1],other.id);
+    same(find(h.render(),'Header').props.sites.map(s=>s.id),[other.id]);
+    h.states[1]=site.id;let tree=h.render();
+    same(find(tree,'Header').props.sites.map(s=>s.id),[other.id,site.id]);assert.equal(find(tree,'RecordTable').props.readOnly,true);assert.equal(find(tree,'RecordTable').props.blocked,false);
+    await assert.rejects(find(tree,'RecordTable').props.onQuickAddLog({...data.newLog(site.id,'2'),date:'2026-08-02',building:'101동',floor:'2F'}),/읽기 전용/);
+    same(JSON.parse(storage.getItem('cp_logs')),[log]);
+    await assert.rejects(find(tree,'SiteModal').props.onSetSiteStatus(site.id,'2026-13-40'),/종료일/);
+    await find(tree,'SiteModal').props.onSetSiteStatus(site.id,null);
+    const reopened=JSON.parse(storage.getItem('cp_sites')).find(s=>s.id===site.id);assert.equal(reopened.status,'active');assert.equal(reopened.closed_at,null);
+    assert.equal(find(h.render(),'RecordTable').props.readOnly,false);
+  });
+  await check('현장 관리 tabs split 진행 and 종료, and 종료 처리 sends the chosen date',async()=>{
+    const all=(node,pred)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,pred)):[...(pred(node)?[node]:[]),...all(node.props?.children,pred)];
+    const one=(tree,pred)=>all(tree,pred)[0],closedSite={id:'c',name:'종료 현장',status:'closed',closed_at:'2026-10-15'},calls=[];
+    const props={isOpen:true,onClose(){},sites:[site,closedSite],selectedSiteId:site.id,onSelectSite(){},onAddSite:async()=>{},onRenameSite:async()=>{},onDeleteSite:async()=>{},onSetSiteStatus:async(id,date)=>{calls.push([id,date]);},archives:[],archiveError:'',canRestore:true,onRestoreSite:async()=>{}};
+    const h=uiHarness('components/SiteModal.tsx','SiteModal',props);
+    const label=n=>n.props?.['aria-label']||'';
+    let tree=h.render();assert(one(tree,n=>label(n)===site.name+' 종료 처리'));assert(!one(tree,n=>label(n)===closedSite.name+' 다시 진행'));
+    one(tree,n=>label(n)===site.name+' 종료 처리').props.onClick();
+    const form=one(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-close-row'));assert(form);
+    one(form,n=>n.type==='ShortDateInput').props.onChange('2026-10-20');
+    one(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-close-row')).props.onSubmit({preventDefault(){}});await new Promise(r=>setImmediate(r));
+    same(calls,[[site.id,'2026-10-20']]);
+    one(h.render(),n=>n.props?.role==='tab'&&[].concat(n.props.children).includes('종료')).props.onClick();
+    tree=h.render();assert(one(tree,n=>label(n)===closedSite.name+' 다시 진행'));assert(one(tree,n=>label(n)===closedSite.name+' 보기 (읽기 전용)'));assert(!one(tree,n=>label(n)===site.name+' 종료 처리'));
+    one(tree,n=>label(n)===closedSite.name+' 다시 진행').props.onClick();await new Promise(r=>setImmediate(r));
+    same(calls[1],['c',null]);
   });
   console.log(`${count} upgrade checks passed; no network or real browser storage writes.`);
 })().catch(error=>{console.error(error);process.exitCode=1;});

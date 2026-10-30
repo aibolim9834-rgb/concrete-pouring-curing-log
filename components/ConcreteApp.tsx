@@ -11,8 +11,9 @@ import { PrintView } from '@/components/PrintView';
 import { SitePhotos } from '@/components/SitePhotos';
 import { PouringProgress } from '@/components/PouringProgress';
 
-import { archiveSite, assertNewSiteName, listSiteArchives, removeLocalSite, restoreLocalSite, SiteArchive, sortSites } from '@/lib/site-archive';
-import { progressId } from '@/lib/pouring-progress';
+import { archiveSite, assertNewSiteName, isClosedSite, listSiteArchives, pickerSites, removeLocalSite, restoreLocalSite, SiteArchive, sortSites } from '@/lib/site-archive';
+import { progressId, validDate } from '@/lib/pouring-progress';
+import { shortDate } from '@/lib/date-only';
 import { readLocalData, writeLocalData, validateLogInput, filterLogs, emptyLogFilters, LogFilters, sortLogs, defaultLogSort, LogSort } from '@/lib/log-data';
 import { BackupManager } from './BackupManager';
 import { nextSiteCode } from '@/lib/site-code';
@@ -20,6 +21,7 @@ import { loadCloudLogData } from '@/lib/cloud-log-data';
 import { csvCell } from '@/lib/csv';
 import { normalizeWatering } from '@/lib/watering';
 import { normalizeStrength } from '@/lib/strength';
+import { normalizeFloor } from '@/lib/floor';
 
 export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | 'progress' | 'photos' }) {
   const [sites, setSiteList] = useState<Site[]>([]);
@@ -74,7 +76,8 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
         if (!active) return;
         const loadedSites = sortSites(loaded.sites);
         setSites(loadedSites); setLogs(loaded.logs);
-        setSelectedSiteId(loadedSites.find(site => site.id === preferred)?.id || loadedSites[0]?.id || '');
+        // A remembered 종료 site stays open (it was being viewed); otherwise start on the first 진행 site.
+        setSelectedSiteId(loadedSites.find(site => site.id === preferred)?.id || loadedSites.find(site => !isClosedSite(site))?.id || loadedSites[0]?.id || '');
         setReady(true); setDataIssue('');
       } catch (e) {
         if (active) setDataIssue(`자료를 안전하게 불러오지 못해 입력을 중지했습니다. 원본은 덮어쓰지 않습니다. ${e instanceof Error ? e.message : ''}`);
@@ -103,7 +106,10 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
     }
   }, [selectedSiteId, loading, ready, dataIssue]);
 
-  const currentSite = sites.find((s) => s.id === selectedSiteId) || (sites.length > 0 ? sites[0] : undefined);
+  const currentSite = sites.find((s) => s.id === selectedSiteId) || sites.find(s => !isClosedSite(s)) || sites[0];
+  // A 종료 site is shown read-only: viewing, printing and CSV still work, every edit path is closed.
+  const readOnly = isClosedSite(currentSite);
+  const assertOpenSite = () => { if (readOnly) throw new Error('종료된 현장은 읽기 전용입니다. 고치려면 먼저 "다시 진행"으로 바꿔주세요.'); };
   const openPage = (view: 'logs' | 'progress' | 'photos') => {
     if (!canLeavePhotos()) return;
     if (!currentSite) { alert('현장을 먼저 선택하거나 추가해주세요.'); return; }
@@ -118,12 +124,12 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
   const outputDescription = outputScope === 'all' ? '현장 전체' : `조회 결과 · ${filters.from || '처음'} ~ ${filters.to || '마지막'}`;
 
   const handleSaveLog = async (data: PouringLogInput, id?: string) => {
-    assertWritable();
+    assertWritable(); assertOpenSite();
     if (siteLock.current) throw new Error('저장 중입니다. 잠시 후 다시 시도해주세요.');
     const activeSiteId = selectedSiteId;
     if (!sites.some(site => site.id === activeSiteId)) throw new Error('등록할 현장을 선택해주세요.');
     const trimmed = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v])) as PouringLogInput;
-    const input = { ...trimmed, site_id: activeSiteId, building: trimmed.building.toUpperCase(), strength: normalizeStrength(trimmed.strength), curing_watering: normalizeWatering(trimmed.curing_watering) };
+    const input = { ...trimmed, site_id: activeSiteId, building: trimmed.building.toUpperCase(), floor: normalizeFloor(trimmed.floor), strength: normalizeStrength(trimmed.strength), curing_watering: normalizeWatering(trimmed.curing_watering) };
     validateLogInput(input);
     if (id && !siteLogs.some(log => log.id === id)) throw new Error('수정할 일지를 다시 선택해주세요.');
     siteLock.current = true; setLogBusy(true); setOperationError(''); setNotice('');
@@ -145,7 +151,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
 
   const handleDeleteLog = async (id: string) => {
     try {
-      assertWritable();
+      assertWritable(); assertOpenSite();
       if (siteLock.current) throw new Error('다른 작업을 처리 중입니다.');
       const target = siteLogs.find(log => log.id === id);
       if (!target || !confirm(`${target.date} ${target.building} ${target.floor} 일지를 삭제하시겠습니까?`)) return;
@@ -204,6 +210,29 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
     } finally { siteLock.current = false; }
   };
 
+  // 종료 처리 (closedAt = 'YYYY-MM-DD') or 다시 진행 (closedAt = null); records stay untouched either way.
+  const handleSetSiteStatus = async (id: string, closedAt: string | null) => {
+    assertWritable();
+    if (siteLock.current) throw new Error('현장 처리 중입니다. 잠시 후 다시 시도해주세요.');
+    const target = sites.find(site => site.id === id);
+    if (!target) throw new Error('상태를 바꿀 현장을 다시 선택해주세요.');
+    if (closedAt !== null && !validDate(closedAt)) throw new Error('종료일을 올바르게 입력해주세요.');
+    const change = { status: closedAt ? 'closed' as const : 'active' as const, closed_at: closedAt };
+    siteLock.current = true;
+    try {
+      const updated = sites.map(site => site.id === id ? { ...site, ...change } : site);
+      if (isSupabase && supabase) {
+        const { data, error } = await supabase.from('sites').update(change).eq('id', id).select('id').maybeSingle();
+        if (error || !data) throw new Error(`현장 ${closedAt ? '종료' : '다시 진행'} 처리에 실패했습니다. 연결과 권한을 확인해주세요.`);
+      } else {
+        writeLocalData(localStorage, { sites, logs }, { sites: updated, logs });
+      }
+      setSites(updated);
+      // Closing the site being worked on moves to the first 진행 site, so the screen does not turn read-only by surprise.
+      if (closedAt && selectedSiteId === id) setSelectedSiteId(sortSites(updated).find(site => !isClosedSite(site))?.id || id);
+    } finally { siteLock.current = false; }
+  };
+
   const handleDeleteSite = async (id: string) => {
     assertWritable();
     if (siteLock.current) throw new Error('현장 처리 중입니다. 잠시 후 다시 시도해주세요.');
@@ -227,7 +256,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
         remaining = next.sites; remainingLogs = next.logs;
       }
       setSites(remaining); setLogs(remainingLogs);
-      if (selectedSiteId === id) setSelectedSiteId(remaining[0]?.id || '');
+      if (selectedSiteId === id) setSelectedSiteId(remaining.find(site => !isClosedSite(site))?.id || remaining[0]?.id || '');
     } finally { siteLock.current = false; }
   };
 
@@ -306,7 +335,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       
       {/* Header Navigation */}
       <Header
-        sites={sites}
+        sites={pickerSites(sites, currentSite?.id || '')}
         selectedSiteId={selectedSiteId}
         onSelectSite={id => { if (!siteLock.current && canLeavePhotos()) { setSelectedSiteId(id); setFilters(emptyLogFilters()); setNotice(''); } }}
         onOpenAddSite={openSiteManager}
@@ -328,6 +357,8 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
         {dataIssue && <div className="progress-error" role="alert">{dataIssue}<button className="ui-button" onClick={() => { if (confirm('작성 중인 내용을 따로 보관하셨나요? 새로고침하면 저장하지 않은 입력은 사라집니다.')) window.location.reload(); }}>새로고침</button></div>}
         {/* DB mode has no whole-app backup, so the menu only appears for browser storage. */}
         {!loading && !isSupabase && <BackupManager cloud={isSupabase} blocked={!ready || !!dataIssue} loading={loading} siteId={selectedSiteId} />}
+        {readOnly && currentSite && <div className="site-closed-band" role="status"><span>종료된 현장입니다{currentSite.closed_at ? ` (${shortDate(currentSite.closed_at, '.')} 종료)` : ''} · 읽기 전용</span>
+          <button type="button" className="ui-button ui-primary" disabled={!ready || !!dataIssue} onClick={() => { if (confirm(`'${currentSite.name}'을(를) 다시 진행 현장으로 바꿀까요?`)) handleSetSiteStatus(currentSite.id, null).catch(e => setOperationError(e instanceof Error ? e.message : '다시 진행 처리에 실패했습니다.')); }}>다시 진행</button></div>}
         {operationError && <p className="progress-error" role="alert">{operationError}</p>}
         <p className="ui-note" role="status">{logBusy ? '저장 중입니다.' : notice}</p>
       </div>
@@ -338,7 +369,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
         {initialView === 'logs' && <SummaryCards logs={viewedLogs} />}
 
         {/* Concrete Pouring & Curing Log Table */}
-        {initialView === 'photos' ? loading ? <p role="status">현장을 불러오는 중입니다.</p> : currentSite ? <SitePhotos key={currentSite.id} site={currentSite} blocked={!ready || !!dataIssue} onWorkPending={value=>{photoWorkPending.current=value;}} /> : <div className="progress-empty">현장을 먼저 선택하거나 추가해주세요.</div> : initialView === 'progress' ? loading ? <p className="ui-note" role="status">현장을 불러오는 중입니다.</p> : currentSite ? <PouringProgress key={currentSite.id} site={currentSite} onWorkPending={value=>{progressWorkPending.current=value;}} /> : <div className="progress-empty"><h2 className="ui-page-title">현장을 먼저 추가해주세요</h2><button className="ui-button ui-primary" onClick={openSiteManager}>현장 추가</button></div> : loading ? <p role="status">일지를 불러오는 중입니다.</p> : <RecordTable
+        {initialView === 'photos' ? loading ? <p role="status">현장을 불러오는 중입니다.</p> : currentSite ? <SitePhotos key={currentSite.id} site={currentSite} blocked={!ready || !!dataIssue || readOnly} onWorkPending={value=>{photoWorkPending.current=value;}} /> : <div className="progress-empty">현장을 먼저 선택하거나 추가해주세요.</div> : initialView === 'progress' ? loading ? <p className="ui-note" role="status">현장을 불러오는 중입니다.</p> : currentSite ? <PouringProgress key={currentSite.id} site={currentSite} readOnly={readOnly} onWorkPending={value=>{progressWorkPending.current=value;}} /> : <div className="progress-empty"><h2 className="ui-page-title">현장을 먼저 추가해주세요</h2><button className="ui-button ui-primary" onClick={openSiteManager}>현장 추가</button></div> : loading ? <p role="status">일지를 불러오는 중입니다.</p> : <RecordTable
           key={currentSite?.id || 'empty'}
           logs={siteLogs}
           filters={filters}
@@ -350,6 +381,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
           busy={logBusy}
           onWorkPending={value=>{logWorkPending.current=value;}}
           blocked={!ready || !!dataIssue}
+          readOnly={readOnly}
           site={currentSite}
           onDeleteLog={handleDeleteLog}
           onQuickAddLog={(inputData) => handleSaveLog(inputData)}
@@ -368,6 +400,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
         onAddSite={handleAddSite}
         onRenameSite={handleRenameSite}
         onDeleteSite={handleDeleteSite}
+        onSetSiteStatus={handleSetSiteStatus}
         archives={archives}
         archiveError={archiveError}
         canRestore={!isSupabase}

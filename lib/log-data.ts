@@ -10,6 +10,7 @@ export function validateSites(value: unknown): asserts value is Site[] {
   const ids = new Set<string>();
   for (const s of value) {
     if (!s || typeof s.id !== 'string' || !s.id || ids.has(s.id) || typeof s.name !== 'string' || !s.name.trim() || ['code', 'address', 'created_at'].some(k => s[k] != null && typeof s[k] !== 'string')) throw new Error('현장 정보가 올바르지 않습니다.');
+    if (s.status != null && s.status !== 'active' && s.status !== 'closed' || (s.status === 'closed') !== (typeof s.closed_at === 'string' && validDate(s.closed_at)) || (s.status !== 'closed' && s.closed_at != null)) throw new Error('현장 진행·종료 상태가 올바르지 않습니다.');
     ids.add(s.id);
   }
 }

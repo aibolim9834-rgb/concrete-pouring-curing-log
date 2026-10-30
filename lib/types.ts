@@ -4,6 +4,9 @@ export interface Site {
   code?: string;
   address?: string;
   created_at?: string;
+  // 진행 (active, the default) or 종료 (closed). A closed site keeps all its records and is shown read-only.
+  status?: 'active' | 'closed';
+  closed_at?: string | null; // 종료일 (YYYY-MM-DD), set only while closed
 }
 
 export interface PouringLog {

@@ -41,8 +41,8 @@ const ink = (hex: string) => {
 };
 const blankEntry = (): EntryDraft => ({ member: '슬라브', zone: '', volume: '', remarks: '' });
 const panelKey = 'cp_progress_structure_panel';
-interface Props { site: Site; onWorkPending?: (pending: boolean) => void }
-export function PouringProgress({ site, onWorkPending }: Props) {
+interface Props { site: Site; readOnly?: boolean; onWorkPending?: (pending: boolean) => void }
+export function PouringProgress({ site, readOnly = false, onWorkPending }: Props) {
   const [snapshot, setSnapshot] = useState<ProgressSnapshot | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -169,6 +169,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
 
   async function commit(next: ProgressDocument, remember = true) {
     if (!snapshot || lock.current) return false;
+    if (readOnly) { setError('종료된 현장은 읽기 전용입니다. 고치려면 먼저 "다시 진행"으로 바꿔주세요.'); return false; }
     if (stale) { setError('다른 탭에서 변경되었습니다. 새로 불러온 뒤 다시 입력해주세요.'); return false; }
     lock.current = true; setSaving(true); setError(''); setNotice('');
     try {
@@ -202,7 +203,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     setError('');
   }
   function beginInline(bid:string,sid:string,field:'actual'|'planned',add=false) {
-    if (saving || stale || lock.current) return;
+    if (saving || stale || readOnly || lock.current) return;
     const b=document.buildings.find(b=>b.id===bid),r=b?.records[sid];
     if (!b?.stages.some(s=>s.id===sid)) return;
     setMultiple(false); selectRecord(document,bid,sid);
@@ -452,22 +453,22 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     <div ref={stickyRef} className="progress-sticky">
     <div className="progress-heading"><div><p className="ui-note">{site.name}</p><div className="progress-title-row"><h2 className="ui-page-title">동별 타설현황</h2><p className="progress-floor-note print:hidden">※ 타설일은 각 층 바닥 슬래브를 타설한 날로 입력합니다(예: 5F = 5층 바닥 타설일).</p></div></div>
       <div className="progress-actions progress-heading-actions print:hidden">
-        <button className="ui-button" disabled={!history.length || saving || !!inlineEdit} onClick={undo}>실행 취소</button>
+        <button className="ui-button" disabled={!history.length || saving || readOnly || !!inlineEdit} onClick={undo}>실행 취소</button>
         <button className="ui-button" disabled={!snapshot || saving || !!inlineEdit} onClick={() => { setPanel('structure'); setAddingBuilding(false); showPanel(); }}>동·층 관리</button>
-        <button type="button" className="ui-button ui-primary progress-add-trigger" disabled={!snapshot || saving || stale || !!inlineEdit} aria-expanded={addingBuilding} aria-controls="structure-panel" onClick={openBuildingForm}>+ 동 추가</button>
+        <button type="button" className="ui-button ui-primary progress-add-trigger" disabled={!snapshot || saving || stale || readOnly || !!inlineEdit} aria-expanded={addingBuilding} aria-controls="structure-panel" onClick={openBuildingForm}>+ 동 추가</button>
       </div></div>
     {(error || stale) && <div className="progress-error"><p role="alert">{error || '저장된 현황을 다시 불러와주세요.'}</p>{stale && <button type="button" className="ui-button" disabled={saving || !!inlineEdit} onClick={reload}>새로 불러오기</button>}{stale && inlineEdit && <p className="ui-note">셀 입력을 취소한 뒤 다시 불러와주세요.</p>}</div>}<p className="sr-only" role="status">{saving ? '저장 중입니다.' : notice}</p>
     <fieldset disabled={!snapshot || saving || stale || !!inlineEdit} className="progress-controls print:hidden"><label>기준일<ShortDateInput label="기준일" value={basis} onChange={v=>{if(validDate(v))setBasis(v);}}/></label><label>표시할 동<select value={filter} onChange={e => { setFilter(e.target.value); setSelected([]); setNotice('표시할 동이 바뀌어 선택을 해제했습니다.'); }}><option value="all">전체 동</option>{document.buildings.map(b => <option key={b.id} value={b.id}>{buildingLabel(b.name)}</option>)}</select></label><label className="progress-check"><input type="checkbox" checked={multiple} onChange={e => { setMultiple(e.target.checked); setSelected([]); setEntryDraft(blankEntry()); }} />여러 칸 선택</label><span className="ui-note">{visible.length}개 동 표시 · {selected.length}칸 선택</span><span role="status" className="ui-note">{saving ? '저장 중…' : notice}</span></fieldset>
-    <section className="progress-selection-tools print:hidden" aria-label="선택 항목 설정"><fieldset disabled={!snapshot || saving || stale || !!inlineEdit}>{renderCellEditor('bar')}</fieldset></section>
+    <section className="progress-selection-tools print:hidden" aria-label="선택 항목 설정"><fieldset disabled={!snapshot || saving || stale || readOnly || !!inlineEdit}>{renderCellEditor('bar')}</fieldset></section>
     <div className="progress-extra-row">
-    <section className="progress-selection-extra print:hidden" aria-label="선택 항목 상세"><fieldset disabled={!snapshot || saving || stale || !!inlineEdit}>{renderCellEditor('details')}</fieldset></section>
+    <section className="progress-selection-extra print:hidden" aria-label="선택 항목 상세"><fieldset disabled={!snapshot || saving || stale || readOnly || !!inlineEdit}>{renderCellEditor('details')}</fieldset></section>
     <ProgressBuildingNav wrapRef={tableWrapRef} buildings={navBuildings}/>
     </div>
     </div>
     <ProgressFloatingHeader wrapRef={tableWrapRef} buildings={navBuildings}/>
     <ProgressPrint buildings={visible} siteName={site.name} basis={basis} ink={ink}/>
     <div className={cn('progress-work', panel && 'has-panel')}>
-      <div>{!document.buildings.length ? <div className="progress-empty"><h3 className="ui-section-title">등록된 동이 없습니다</h3><p>동 이름과 지상·지하 층수를 입력하면 버림·기초·옥상·옥탑을 포함한 표가 만들어집니다.</p><button className="ui-button ui-primary" disabled={!snapshot} onClick={openBuildingForm}>+ 첫 동 추가</button></div> : <div ref={tableWrapRef} className="progress-table-wrap progress-comparison-wrap" tabIndex={0} role="region" aria-label="동별 층별 예정일 타설일 비교표">
+      <div>{!document.buildings.length ? <div className="progress-empty"><h3 className="ui-section-title">등록된 동이 없습니다</h3><p>동 이름과 지상·지하 층수를 입력하면 버림·기초·옥상·옥탑을 포함한 표가 만들어집니다.</p><button className="ui-button ui-primary" disabled={!snapshot || readOnly} onClick={openBuildingForm}>+ 첫 동 추가</button></div> : <div ref={tableWrapRef} className="progress-table-wrap progress-comparison-wrap" tabIndex={0} role="region" aria-label="동별 층별 예정일 타설일 비교표">
         <table className="progress-table progress-comparison-table" style={{ '--progress-building-count': visible.length || 1, '--progress-editor-count': inlineEdit ? 1 : 0, '--progress-extra-width': `${visible.reduce((sum, b) => sum + actualExtraWidth(b), 0)}px` } as React.CSSProperties}>
           <caption>{site.name} 타설현황 · {shortDate(basis)} 기준 · 예정일·타설일·차이</caption>
           <colgroup><col className="comparison-stage-col"/></colgroup>{visible.map(b => <colgroup key={b.id}><col className={cn('comparison-date-col',inlineEdit?.bid === b.id && inlineEdit.field === 'planned' && 'is-editing')}/><col className={cn('comparison-date-col',inlineEdit?.bid === b.id && inlineEdit.field === 'actual' && 'is-editing')} style={actualExtraWidth(b) ? { width: `calc(var(${inlineEdit?.bid === b.id && inlineEdit.field === 'actual' ? '--progress-edit-width' : '--progress-date-width'}) + ${actualExtraWidth(b)}px)` } : undefined}/><col className="comparison-gap-col"/></colgroup>)}
@@ -495,7 +496,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
                     onClick={() => selectCell(b.id,row.id)} aria-pressed={selected.includes(recordKey)}
                     aria-label={`${buildingLabel(b.name)} ${stage.name} ${fieldName} ${label || '미입력'}`}>
                     <span className="progress-cell-date">{label || '—'}</span>{field === 'actual' && !!record?.entries?.length && <span className="progress-cell-detail progress-entry-count">{record.entries.length}구역</span>}
-                  </button>}{field === 'actual' && !inlineEdit && record?.date && selected.length === 1 && selected[0] === recordKey && <button type="button" className="progress-cell-add" disabled={saving || stale}
+                  </button>}{field === 'actual' && !inlineEdit && !readOnly && record?.date && selected.length === 1 && selected[0] === recordKey && <button type="button" className="progress-cell-add" disabled={saving || stale}
                     aria-label={`${buildingLabel(b.name)} ${stage.name} 타설일 추가`} title="타설일 추가" onClick={() => beginInline(b.id,row.id,'actual',true)}>+</button>}</td>;
                 })}
                 <td className="comparison-gap comparison-group-end" data-variance={variance === null ? 'missing' : variance}>
@@ -507,7 +508,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
         </table></div>}
       <p className="sr-only">예정일·타설일은 더블클릭 또는 Enter로 수정하고, 올바른 날짜 입력 완료 후 자동 저장됩니다. 차이는 타설일에서 예정일을 뺀 일수입니다. 완료 단계는 기준일 기준이며 전체 공정률이 아닙니다.</p></div>
       {panel && <ProgressStructure document={document} buildingId={buildingId} stageId={stageId}
-        disabled={saving || !snapshot || stale || !!inlineEdit} adding={addingBuilding} onAdding={setAddingBuilding}
+        disabled={saving || !snapshot || stale || readOnly || !!inlineEdit} adding={addingBuilding} onAdding={setAddingBuilding}
         onClose={() => {setPanel(null);setAddingBuilding(false);}} onSelect={selectStructure}
         commit={commit} canUndo={!!history.length} onUndo={undo}/>}
 

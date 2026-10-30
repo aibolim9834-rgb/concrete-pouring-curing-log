@@ -8,6 +8,13 @@ export interface SiteArchive {
   version: 1; key: string; archivedAt: string; mode: 'local' | 'cloud';
   site: Site; logs: PouringLog[]; progressRaw: string | null;
 }
+export const isClosedSite = (site: Pick<Site, 'status'> | undefined) => site?.status === 'closed';
+// The header picker lists 진행 sites only; a 종료 site opened from 현장 관리 joins it while it is the one being viewed.
+// It goes last, after the 진행 sites (which keep the order they were given).
+export const pickerSites = (sites: Site[], currentId: string) => {
+  const viewing = sites.find(site => site.id === currentId && isClosedSite(site));
+  return [...sites.filter(site => !isClosedSite(site)), ...(viewing ? [viewing] : [])];
+};
 // Site lists always show in name order: numbers by value, then English, then 가나다.
 const siteNameOrder = new Intl.Collator('en', { numeric: true });
 export const sortSites = (sites: Site[]) => [...sites].sort((a, b) => siteNameOrder.compare(a.name.trim(), b.name.trim()) || a.id.localeCompare(b.id));

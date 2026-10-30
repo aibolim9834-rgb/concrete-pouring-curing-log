@@ -107,7 +107,7 @@ export function MobileLogSheet({ log, logs, site, onAdd, onUpdate, onDelete, onC
               <input id="mobile-log-date" type="date" value={draft.date} required aria-invalid={missing.includes('date') || undefined} onChange={e => set({ date: e.target.value })} />
               {missing.includes('date') && <span className="mobile-log-error">일자를 입력해주세요.</span>}
             </label>
-            <div className="mobile-log-pair">{field('building', '동(구역)', '예: 101동')}{field('floor', '층', '예: 15층')}</div>
+            <div className="mobile-log-pair">{field('building', '동(구역)', '예: 101동')}{field('floor', '층', '예: 15F')}</div>
           </fieldset>
 
           <fieldset className="mobile-log-group" id="mobile-log-member_type" tabIndex={-1} aria-invalid={missing.includes('member_type') || undefined}><legend>구조부위<span className="mobile-log-need" aria-hidden="true"> *</span></legend>

@@ -3,7 +3,10 @@
 import { Modal } from './Modal';
 import React, { useRef, useState } from 'react';
 import { Site } from '@/lib/types';
-import { assertNewSiteName, SiteArchive } from '@/lib/site-archive';
+import { assertNewSiteName, isClosedSite, SiteArchive } from '@/lib/site-archive';
+import { localToday } from '@/lib/log-data';
+import { shortDate } from '@/lib/date-only';
+import { ShortDateInput } from './ShortDateInput';
 import { downloadFile } from '@/lib/pouring-progress';
 import { nextSiteCode } from '@/lib/site-code';
 import { X, Plus, Building2, Trash2, CheckCircle } from 'lucide-react';
@@ -17,6 +20,7 @@ interface SiteModalProps {
   onAddSite: (name: string) => Promise<void>;
   onRenameSite: (id: string, name: string) => Promise<void>;
   onDeleteSite: (id: string) => Promise<void>;
+  onSetSiteStatus: (id: string, closedAt: string | null) => Promise<void>;
   archives: SiteArchive[];
   archiveError: string;
   canRestore: boolean;
@@ -32,6 +36,7 @@ export const SiteModal: React.FC<SiteModalProps> = ({
   onAddSite,
   onRenameSite,
   onDeleteSite,
+  onSetSiteStatus,
   archives, archiveError, canRestore, onRestoreSite,
 }) => {
   const [newSiteName, setNewSiteName] = useState('');
@@ -39,6 +44,10 @@ export const SiteModal: React.FC<SiteModalProps> = ({
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
+  // 진행 is the default tab; 종료 lists closed sites, 전체 shows both with a status badge.
+  const [tab, setTab] = useState<'active' | 'closed' | 'all'>('active');
+  const [closing, setClosing] = useState<{ id: string; date: string } | null>(null);
+  const inTab = (site: Site) => tab === 'all' || isClosedSite(site) === (tab === 'closed');
   const lock = useRef(false);
 
   if (!isOpen) return null;
@@ -138,10 +147,25 @@ export const SiteModal: React.FC<SiteModalProps> = ({
 
           {/* Current Site List */}
           <div>
-            <h3 className="text-xs font-bold text-slate-400 mb-2">등록된 현장 목록 ({sites.length}개)</h3>
-            <div className="space-y-1.5">
-              {sites.map((site) => {
-                const isSelected = site.id === selectedSiteId;
+            <div className="site-status-tabs" role="tablist" aria-label="현장 상태">
+              {([['active', '진행'], ['closed', '종료'], ['all', '전체']] as const).map(([key, label]) => {
+                const count = key === 'all' ? sites.length : sites.filter(site => isClosedSite(site) === (key === 'closed')).length;
+                return <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => { setTab(key); setClosing(null); setError(''); }}>{label} <small>{count}</small></button>;
+              })}
+            </div>
+            <div className="space-y-1.5 mt-2" role="tabpanel">
+              {sites.filter(inTab).map((site) => {
+                const isSelected = site.id === selectedSiteId, closed = isClosedSite(site);
+                if (closing?.id === site.id) return (
+                  <form key={site.id} className="site-close-row" onSubmit={e => { e.preventDefault(); void run(async () => { await onSetSiteStatus(site.id, closing.date); setClosing(null); }); }}
+                    onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setClosing(null); } }}>
+                    <b className="truncate">{site.name}</b>
+                    <label>종료일<ShortDateInput label={`${site.name} 종료일`} value={closing.date} onChange={date => setClosing({ id: site.id, date })}/></label>
+                    <button type="submit" className="ui-button ui-danger">종료 처리</button>
+                    <button type="button" className="ui-button" onClick={() => setClosing(null)}>취소</button>
+                    <p className="ui-note">일지·타설현황·사진은 그대로 남고, 위쪽 현장 선택에서만 빠집니다. 종료 탭에서 다시 볼 수 있습니다.</p>
+                  </form>
+                );
                 if (renaming?.id === site.id) return (
                   // Esc must cancel only the rename, not close the whole dialog.
                   <form key={site.id} onSubmit={handleRename} className="site-rename-row flex items-center gap-2 p-2 rounded-lg border bg-amber-950/40 border-amber-800/80 text-xs"
@@ -164,7 +188,7 @@ export const SiteModal: React.FC<SiteModalProps> = ({
                 return (
                   <div
                     key={site.id}
-                    className={`flex items-center justify-between p-2.5 rounded-lg border text-xs transition ${
+                    className={`site-row flex items-center justify-between p-2.5 rounded-lg border text-xs transition ${closed ? 'is-closed' : ''} ${
                       isSelected
                         ? 'bg-amber-950/40 border-amber-800/80 text-amber-300 font-semibold'
                         : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800'
@@ -178,45 +202,53 @@ export const SiteModal: React.FC<SiteModalProps> = ({
                           {site.code}
                         </span>
                       )}
+                      {closed ? <span className="site-status-badge is-closed">종료{site.closed_at ? ` ${shortDate(site.closed_at, '.')}` : ''}</span> : tab === 'all' && <span className="site-status-badge">진행</span>}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <button
-                        data-site-rename={site.id}
-                        onClick={() => { setError(''); setRenaming({ id: site.id, name: site.name }); }}
-                        aria-label={`${site.name} 현장명 수정`}
-                        className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-[11px]"
-                      >
-                        수정
-                      </button>
-                      {!isSelected && (
+                      {closed ? <>
+                        {!isSelected && <button onClick={() => { onSelectSite(site.id); onClose(); }} aria-label={`${site.name} 보기 (읽기 전용)`} className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-[11px]">보기</button>}
+                        <button onClick={() => void run(() => onSetSiteStatus(site.id, null))} aria-label={`${site.name} 다시 진행`} className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-[11px]">다시 진행</button>
                         <button
-                          onClick={() => {
-                            onSelectSite(site.id);
-                            onClose();
-                          }}
+                          onClick={() => void run(() => onDeleteSite(site.id))}
+                          title="현장 삭제"
+                          aria-label={`${site.name} ${site.code || ''} 현장 삭제`}
+                          className="p-1 text-slate-500 hover:text-red-400 transition"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </> : <>
+                        <button
+                          data-site-rename={site.id}
+                          onClick={() => { setError(''); setClosing(null); setRenaming({ id: site.id, name: site.name }); }}
+                          aria-label={`${site.name} 현장명 수정`}
                           className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-[11px]"
                         >
-                          선택
+                          수정
                         </button>
-                      )}
-                      <button
-                        onClick={() => void run(() => onDeleteSite(site.id))}
-                        title="현장 삭제"
-                        aria-label={`${site.name} ${site.code || ''} 현장 삭제`}
-                        className="p-1 text-slate-500 hover:text-red-400 transition"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                        {!isSelected && (
+                          <button
+                            onClick={() => {
+                              onSelectSite(site.id);
+                              onClose();
+                            }}
+                            className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-[11px]"
+                          >
+                            선택
+                          </button>
+                        )}
+                        <button onClick={() => { setError(''); setRenaming(null); setClosing({ id: site.id, date: localToday() }); }} aria-label={`${site.name} 종료 처리`} className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-[11px]">종료 처리</button>
+                      </>}
                     </div>
                   </div>
                 );
               })}
+              {!sites.some(inTab) && <p className="ui-note">{tab === 'closed' ? '종료된 현장이 없습니다.' : '진행 중인 현장이 없습니다.'}</p>}
             </div>
           </div>
 
           <div>
             <h3 className="text-xs font-bold text-slate-400 mb-2">보관된 현장 ({archives.length}개)</h3>
-            <p className="ui-note mb-2">삭제 전에 현장·일지·타설현황을 함께 보관합니다. 브라우저 데이터를 지우면 보관본도 사라지므로 백업 파일을 저장해주세요.</p>
+            <p className="ui-note mb-2">삭제한 현장의 브라우저 백업입니다. 삭제 전에 현장·일지·타설현황을 함께 보관합니다. 브라우저 데이터를 지우면 보관본도 사라지므로 백업 파일을 저장해주세요.</p>
             <ul className="space-y-2">
               {archives.map(archive => <li key={archive.key} className="border border-slate-700 rounded-lg p-3 space-y-2">
                 <p className="break-words">{archive.site.name}{archive.site.code ? ` (${archive.site.code})` : ''} · {archive.logs.length}건 일지 · 현황 {archive.progressRaw ? '있음' : '없음'}</p>

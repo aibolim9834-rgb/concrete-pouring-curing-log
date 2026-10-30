@@ -553,3 +553,19 @@ body {
 .mobile-log-foot > button { min-block-size:52px; border-radius:8px; font-size:16px; font-weight:700; }
 .mobile-log-secondary { border:1px solid var(--b-control, #7A8A7D); background:var(--b-surface, #fff); color:var(--b-ink, #212121); }
 .mobile-log-primary { border:0; background:var(--b-action, #007723); color:#fff; }
+
+/* 현장 진행·종료: tabs in 현장 관리, the 종료 badge and confirm row, and the read-only notice on a closed site. */
+.concrete-app .site-status-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--b-line, #334155); }
+.concrete-app .site-status-tabs button { border: 0; border-bottom: 2px solid transparent; background: none; padding: 6px 12px; color: var(--b-muted, #94a3b8); font: inherit; cursor: pointer; }
+.concrete-app .site-status-tabs button[aria-selected="true"] { border-bottom-color: var(--b-action, #f59e0b); color: var(--b-action, #f59e0b); font-weight: 700; }
+.concrete-app .site-status-tabs small { margin-inline-start: 2px; color: inherit; }
+.concrete-app .site-status-badge { flex: none; border: 1px solid var(--b-line, #475569); border-radius: 4px; padding: 0 6px; font-size: 11px; line-height: 18px; color: var(--b-muted, #94a3b8); background: var(--b-surface, #0f172a); white-space: nowrap; }
+.concrete-app .site-status-badge.is-closed { border-color: #8A8F8B; color: #5F6461; }
+.concrete-app .site-row.is-closed > :first-child > span:first-of-type { color: var(--b-muted, #94a3b8); }
+.concrete-app .site-close-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border: 1px dashed var(--b-danger, #ef4444); border-radius: 8px; }
+.concrete-app .site-close-row label { display: flex; align-items: center; gap: 6px; }
+.concrete-app .site-close-row .short-date-field { inline-size: 8.25rem; }
+.concrete-app .site-close-row .ui-note { flex-basis: 100%; margin: 0; }
+.concrete-app .site-closed-band { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-block-end: 8px; border: 1px solid #E8C766; border-radius: 6px; padding: 8px 12px; background: #FFF6DA; color: #6B4E00; font-weight: 600; }
+.concrete-app .site-closed-band .ui-button { margin-inline-start: auto; }
+@media print { .concrete-app .site-closed-band { display: none; } }

@@ -6,7 +6,11 @@ CREATE TABLE IF NOT EXISTS sites (
   name TEXT NOT NULL UNIQUE,
   code TEXT,
   address TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  -- 진행(active) / 종료(closed). 종료 현장은 자료를 그대로 두고 읽기 전용으로만 보입니다.
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'closed')),
+  closed_at DATE,
+  CONSTRAINT sites_closed_at_check CHECK ((status = 'closed') = (closed_at IS NOT NULL))
 );
 
 -- 2. 콘크리트 타설 및 양생 기록 (Pouring Logs) 테이블
