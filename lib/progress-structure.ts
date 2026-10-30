@@ -8,6 +8,9 @@ export function changeStage(document: ProgressDocument, buildingId: string, acti
   name = name.trim();
   if (action !== 'delete' && (!name || building.stages.some(s => s.id !== id && s.name.trim() === name))) throw new Error('중복되지 않는 층·단계 이름을 입력해주세요.');
   if (action === 'add') {
+    // A floor another building already has joins that row (same id and order), so its 해당 없음 cell becomes this floor.
+    const existing = sameNameRow(next, buildingId, name);
+    if (existing) { building.stages.push({ id: existing.id, name, order: existing.order }); validateProgress(next); return next; }
     const reference = building.stages.find(s => s.id === above);
     if (above && !reference) throw new Error('추가 위치를 다시 선택해주세요.');
     const orders = progressRows(next.buildings).map(s => s.order);
@@ -22,4 +25,11 @@ export function changeStage(document: ProgressDocument, buildingId: string, acti
   }
   validateProgress(next);
   return next;
+}
+// The table row of another building's floor with this name that the building has no floor for yet.
+export function sameNameRow(document: ProgressDocument, buildingId: string, name: string) {
+  const building = document.buildings.find(b => b.id === buildingId);
+  name = name.trim();
+  if (!building || !name) return undefined;
+  return progressRows(document.buildings.filter(b => b.id !== buildingId)).find(s => s.name.trim() === name && !building.stages.some(own => own.id === s.id));
 }

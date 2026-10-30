@@ -11,7 +11,7 @@ import { clearProgressColor, progressColor, recentProgressColors, setProgressCol
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Site } from '@/lib/types';
-import { buildingLabel, completedStages, downloadFile, emptyProgress, ProgressDocument, progressId, progressRows, ProgressStage, validDate } from '@/lib/pouring-progress';
+import { buildingLabel, completedStages, downloadFile, emptyProgress, ProgressDocument, progressId, progressRows, validDate } from '@/lib/pouring-progress';
 import { EntryDraft, entryFromDraft, parsePourDateList, pourDates, pourDatesLabel, progressCsv, removeProgressEntry, setPourDates, upsertProgressEntry } from '@/lib/progress-entries';
 import { loadProgress, ProgressSnapshot, saveProgress } from '@/lib/progress-storage';
 import { cloudStorageEnabled } from '@/lib/cloud-storage';
@@ -57,7 +57,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
   const [pourDraft, setPourDraft] = useState('');
   const [plannedDate, setPlannedDate] = useState('');
   const [comparisonStage, setComparisonStage] = useState('');
-  const [inlineEdit, setInlineEdit] = useState<{key:string;bid:string;sid:string;field:'actual'|'planned';value:string;error:string;add?:boolean;list?:boolean;stage?:ProgressStage}|null>(null);
+  const [inlineEdit, setInlineEdit] = useState<{key:string;bid:string;sid:string;field:'actual'|'planned';value:string;error:string;add?:boolean;list?:boolean}|null>(null);
   const workPending = saving || !!inlineEdit;
   useEffect(() => {
     onWorkPending?.(workPending);
@@ -190,20 +190,6 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     setDate(record?.date || ''); setPlannedDate(record?.plannedDate || ''); setComparisonStage(record?.comparisonStage ?? previousStage(document,editBuilding,editStage)); setColor(record?.color || defaultColor); setEntryDraft(blankEntry());
     setError('');
   }
-  // A "해당 없음" cell takes a 타설일 too: saving it adds that row's floor (same id and order) to the building.
-  function beginMissingStage(bid:string,sid:string) {
-    if (saving || stale || lock.current) return;
-    const b=document.buildings.find(b=>b.id===bid),row=rows.find(r=>r.id===sid);
-    if (!b || !row || b.stages.some(s=>s.id===sid)) return;
-    const name=row.name.trim(),clash=b.stages.find(s=>s.name.trim()===name);
-    if (clash) { setError(`${buildingLabel(b.name)}에 이미 다른 ${name} 줄이 있습니다. 그 줄에 입력하거나 동·층 관리에서 정리해주세요.`); return; }
-    setMultiple(false); setSelected([]); setError('');
-    clearInlineAutoSave();inlineKeyRef.current=bid+':'+sid+':actual';
-    setInlineEdit({key:bid+':'+sid+':actual',bid,sid,field:'actual',value:'',error:'',stage:{id:row.id,name,order:row.order}});
-    setNotice(`${buildingLabel(b.name)}에 ${name} 층을 추가합니다. 타설일을 입력하면 자동 저장됩니다. · Esc로 입력 취소`);
-  }
-  // After an edit closes without saving, a floor that was never added has nothing to select.
-  function reselect(edit:{bid:string;sid:string;stage?:ProgressStage}) { if(edit.stage) setSelected([]); else selectRecord(document,edit.bid,edit.sid); }
   function beginInline(bid:string,sid:string,field:'actual'|'planned',add=false) {
     if (saving || stale || lock.current) return;
     const b=document.buildings.find(b=>b.id===bid),r=b?.records[sid];
@@ -244,7 +230,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
   function cancelInline() {
     if(!inlineEdit || lock.current)return;
     clearInlineAutoSave();inlineKeyRef.current=null;
-    const edit=inlineEdit;setInlineEdit(null);reselect(edit);setNotice('셀 입력을 취소했습니다.');focusCell(edit.key);
+    const edit=inlineEdit;setInlineEdit(null);selectRecord(document,edit.bid,edit.sid);setNotice('셀 입력을 취소했습니다.');focusCell(edit.key);
   }
   function queueInlineSave(value:string,source:'input'|'blur'|'calendar') {
     clearInlineAutoSave();
@@ -253,7 +239,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     const record=document.buildings.find(b=>b.id===inlineEdit.bid)?.records[inlineEdit.sid];
     const previous=inlineEdit.add?'':(inlineEdit.field==='planned'?record?.plannedDate:record?.date)||'';
     // Leaving an unchanged cell (an empty one opened by mistake, say) closes it instead of keeping the table locked.
-    if(previous===value){if(source==='blur'){inlineKeyRef.current=null;setInlineEdit(null);reselect(inlineEdit);}return;}
+    if(previous===value){if(source==='blur'){inlineKeyRef.current=null;setInlineEdit(null);selectRecord(document,inlineEdit.bid,inlineEdit.sid);}return;}
     if(inlineEdit.add && pourDates(record).includes(value)){setInlineEdit(current=>current?{...current,error:'이미 넣은 타설일입니다.'}:null);return;}
     if(source==='input'){inlineAutoSaveRef.current=setTimeout(()=>{inlineAutoSaveRef.current=null;void saveInline(value);},400);}
     else void saveInline(value);
@@ -265,9 +251,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     if(!b)return;
     inlineSavingRef.current=true;
     try {
-      if(edit.stage && !edit.value){inlineKeyRef.current=null;setInlineEdit(null);reselect(edit);return;}
       const next=structuredClone(document),target=next.buildings.find(b=>b.id===edit.bid)!;
-      if(edit.stage && !target.stages.some(s=>s.id===edit.sid))target.stages.push({...edit.stage});
       if(edit.list){
         const dates=parsePourDateList(edit.value);
         if(dates.join()===pourDates(record).join()){inlineKeyRef.current=null;setInlineEdit(null);focusCell(edit.key);return;}
@@ -280,9 +264,9 @@ export function PouringProgress({ site, onWorkPending }: Props) {
         const updated=setPourDates(record,[...pourDates(record),edit.value],record?.color || defaultColor);
         if(record?.entries?.length && record.date!==updated.date && !confirm('마지막 타설일이 바뀌어 구역 내역의 공통 타설일도 함께 바뀝니다. 계속하시겠습니까?'))return;
         target.records[edit.sid]={...updated,comparisonStage:updated.comparisonStage ?? previousStage(document,edit.bid,edit.sid)};
-      } else target.records[edit.sid]=inlineDateRecord(record,edit.field,edit.value,record?.color || defaultColor,previousStage(next,edit.bid,edit.sid));
+      } else target.records[edit.sid]=inlineDateRecord(record,edit.field,edit.value,record?.color || defaultColor,previousStage(document,edit.bid,edit.sid));
       if(!edit.add && !edit.list && edit.field==='actual' && record?.entries?.length && record.date!==edit.value && !confirm('이 층·단계의 모든 구역에 공통으로 적용되는 타설일을 변경하시겠습니까?'))return;
-      if(await commit(next)){inlineKeyRef.current=null;setInlineEdit(null);selectRecord(next,edit.bid,edit.sid);setNotice(buildingLabel(b.name)+' '+(b.stages.find(s=>s.id===edit.sid)?.name || edit.stage?.name || '')+' '+(edit.list?'타설일을 저장했습니다.':edit.add?'타설일 '+shortDate(edit.value,'.')+'을 추가했습니다.':(edit.field==='planned'?'예정일':'타설일')+'을 저장했습니다.'));focusCell(edit.key);}
+      if(await commit(next)){inlineKeyRef.current=null;setInlineEdit(null);selectRecord(next,edit.bid,edit.sid);setNotice(buildingLabel(b.name)+' '+(b.stages.find(s=>s.id===edit.sid)?.name || '')+' '+(edit.list?'타설일을 저장했습니다.':edit.add?'타설일 '+shortDate(edit.value,'.')+'을 추가했습니다.':(edit.field==='planned'?'예정일':'타설일')+'을 저장했습니다.'));focusCell(edit.key);}
     } catch(e) {setInlineEdit(current=>current ? {...current,error:e instanceof Error?e.message:'날짜를 확인해주세요.'}:null);}
     finally {inlineSavingRef.current=false;}
   }
@@ -476,12 +460,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
             const names = Array.from(new Set(visible.flatMap(b => b.stages.filter(s => s.id === row.id).map(s => s.name))));
             return <tr key={row.id}><th scope="row">{names.join(' / ')}</th>{visible.map(b => {
               const stage = b.stages.find(s => s.id === row.id), record = b.records[row.id], recordKey = `${b.id}:${row.id}`, background = progressColor(record);
-              if (!stage) return <td key={b.id} colSpan={3} className="progress-na comparison-group-end">{inlineEdit?.key === `${recordKey}:actual` && inlineEdit.stage ? renderInlineDate() : <button type="button" className="progress-na-cell"
-                ref={node => { if (node) cellNodes.current.set(`${recordKey}:actual`,node); else cellNodes.current.delete(`${recordKey}:actual`); }}
-                disabled={saving || stale} title="해당 없음 · 더블클릭 또는 Enter로 이 층을 추가하고 타설일 입력"
-                aria-label={`${buildingLabel(b.name)} ${names.join(' / ')} 해당 없음, 더블클릭 또는 Enter로 타설일 입력`}
-                onDoubleClick={() => beginMissingStage(b.id,row.id)}
-                onKeyDown={e => { if ((e.key === 'Enter' || e.key === 'F2') && !e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) { e.preventDefault(); beginMissingStage(b.id,row.id); } }}>해당 없음</button>}</td>;
+              if (!stage) return <td key={b.id} colSpan={3} className="progress-na comparison-group-end">해당 없음</td>;
               const variance = difference(record?.plannedDate || '', record?.date || '');
               return <React.Fragment key={b.id}>
                 {(['planned','actual'] as const).map(field => {
