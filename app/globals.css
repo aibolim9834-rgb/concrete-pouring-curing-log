@@ -79,14 +79,15 @@ body {
   .progress-print-only { display: block; }
   .progress-print-sheet { break-before: page; }
   .progress-print-sheet:first-child { break-before: auto; }
-  .progress-print-sheet h2 { color: #111; margin: 0 0 6px; font-size: 18px; }
-  .progress-print-sheet p { color: #333; margin: 0 0 12px; font-size: 12px; }
-  .progress-print-grid { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 12px; line-height: 16px; color: #111; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  .progress-print-grid :is(th,td) { border: 1px solid #7b8780; padding: 4px; text-align: center; overflow-wrap: anywhere; }
+  .progress-print-sheet h2 { color: #111; margin: 0 0 4px; font-size: 16px; line-height: 22px; }
+  .progress-print-sheet p { color: #333; margin: 0 0 8px; font-size: 11px; line-height: 15px; }
+  /* One sheet: --print-font and --print-row come from progressPrintLayout, and cells stay on one line so rows cannot grow. */
+  .progress-print-grid { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: var(--print-font, 12px); color: #111; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .progress-print-grid :is(th,td) { block-size: var(--print-row, 20px); border: 1px solid #7b8780; padding: 0 2px; line-height: calc(var(--print-row, 20px) - 2px); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+  .progress-print-grid thead tr:first-child th { white-space: normal; line-height: 1.15; overflow-wrap: anywhere; }
   .progress-print-grid th { background: #e8efea; color: #111; }
   .progress-print-grid td { font-weight: 600; }
   .progress-print-grid thead { display: table-header-group; }
-  .progress-print-grid tr { break-inside: avoid; }
 }
 .log-print-table { table-layout: fixed; }
 .log-print-table :is(th,td) { padding-inline: 2px; white-space: normal; overflow-wrap: anywhere; }
@@ -95,11 +96,15 @@ body {
 @media print {
   @page log-report { size: A4 landscape; margin: 10mm; }
   .log-print-page { page: log-report; min-height: 0; }
-  .log-print-title { margin-bottom: 12px; padding-bottom: 8px; }
-  .log-print-table { margin-bottom: 8px; }
+  /* Rows take only the height their text needs, so a page fills before anything moves on; only what does not fit continues on the next page. */
+  .log-print-title { margin-bottom: 8px; padding-bottom: 6px; }
+  .log-print-title h1 { font-size: 20px; line-height: 28px; }
+  .log-print-table { margin-bottom: 6px; }
+  .log-print-table thead th { padding-block: 3px; line-height: 14px; }
+  .log-print-table tbody tr { height: auto; }
   .log-print-table tbody td { padding-block: 2px; line-height: 14px; }
-  .log-print-sites { margin-top: 8px; padding: 8px; break-inside: avoid; }
-  .log-print-signatures { margin-top: 12px; padding-top: 8px; break-inside: avoid; }
+  .log-print-sites { margin-top: 6px; padding: 6px 8px; break-inside: avoid; }
+  .log-print-signatures { margin-top: 10px; padding-top: 6px; break-inside: avoid; }
   @page progress-report { size: A3 landscape; margin: 10mm; }
   .progress-page { page: progress-report; }
   @page {
