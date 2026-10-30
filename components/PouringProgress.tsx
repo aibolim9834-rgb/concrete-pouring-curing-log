@@ -6,6 +6,7 @@ import { previousStageId, scheduleMetrics } from '@/lib/progress-schedule';
 import { ShortDateInput } from './ShortDateInput';
 import { ProgressPrint } from './ProgressPrint';
 import { ProgressStructure } from './ProgressStructure';
+import { NavBuilding, ProgressBuildingNav, ProgressFloatingHeader } from './ProgressBuildingNav';
 import { inlineDateRecord } from '@/lib/inline-date';
 import { clearProgressColor, progressColor, recentProgressColors, setProgressColor } from '@/lib/progress-color';
 import { clsx } from 'clsx';
@@ -50,7 +51,8 @@ export function PouringProgress({ site, onWorkPending }: Props) {
   const lock = useRef(false);
   const [basis, setBasis] = useState(today);
   const [filter, setFilter] = useState('all');
-  const [panel, setPanel] = useState<'structure' | null>('structure');
+  // The 동·층 관리 panel opens only on request, so the table gets the full width.
+  const [panel, setPanel] = useState<'structure' | null>(null);
   const [multiple, setMultiple] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [date, setDate] = useState('');
@@ -73,6 +75,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
   useEffect(()=>()=>{clearInlineAutoSave();inlineKeyRef.current=null;},[]);
   const cellNodes = useRef(new Map<string,HTMLButtonElement>());
   const colorToolsRef = useRef<HTMLDivElement>(null);
+  const stickyRef = useRef<HTMLDivElement>(null), tableWrapRef = useRef<HTMLDivElement>(null);
   useEffect(()=>{if(inlineEdit)inlineDateRef.current?.focus();},[inlineEdit?.key]);
   const [color, setColor] = useState(defaultColor);
   const [history, setHistory] = useState<ProgressDocument[]>([]);
@@ -96,10 +99,15 @@ export function PouringProgress({ site, onWorkPending }: Props) {
   useEffect(() => {
     // The selection bar sticks under the app header, whose height changes when it wraps.
     // In a short window the header scrolls away instead of sticking, so it then counts as 0.
-    const header = window.document.querySelector<HTMLElement>('.concrete-app > header'), bar = window.document.querySelector<HTMLElement>('.progress-selection-tools');
+    const header = window.document.querySelector<HTMLElement>('.concrete-app > header'), bar = stickyRef.current;
     if (!header || !bar) return;
     const root = window.document.documentElement.style;
-    const update = () => { root.setProperty('--app-header-height', `${getComputedStyle(header).position === 'sticky' ? header.offsetHeight : 0}px`); root.setProperty('--selection-bar-height', `${bar.offsetHeight}px`); };
+    // The toolbar block stops sticking when it would take over half the window (an open 구역 내역, a short window).
+    const update = () => {
+      root.setProperty('--app-header-height', `${getComputedStyle(header).position === 'sticky' ? header.offsetHeight : 0}px`);
+      bar.toggleAttribute('data-tall', bar.offsetHeight > window.innerHeight * 0.5);
+      root.setProperty('--selection-bar-height', `${getComputedStyle(bar).position === 'sticky' ? bar.offsetHeight : 0}px`);
+    };
     const observer = new ResizeObserver(update); observer.observe(header); observer.observe(bar); update();
     window.addEventListener('resize', update);
     return () => { observer.disconnect(); window.removeEventListener('resize', update); };
@@ -139,7 +147,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     let active = true;
     // Preserve local originals when importing existing records into cloud storage.
     loadProgress(site.id, cloudStorageEnabled()).then(value => { if (active) {
-      setSnapshot(value); setStale(false); resetEditor(value.document); setPanel('structure');
+      setSnapshot(value); setStale(false); resetEditor(value.document);
       const first = value.document.buildings[0];
       if (first) { const stage = completedStages(first, today())[0] || first.stages.find(s => s.id === 'f1') || first.stages[0]; if (stage) selectRecord(value.document, first.id, stage.id); }
     } }).catch(e => { if (active) { setStale(true); setError(e instanceof Error ? e.message : '현황을 불러오지 못했습니다. 원본은 유지됩니다. 새로 불러오기를 눌러주세요.'); } });
@@ -169,7 +177,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
   }
   async function reload() {
     if (lock.current) return;
-    try { const value = await loadProgress(site.id, cloudStorageEnabled()); setSnapshot(value); setStale(false); setHistory([]); setSelected([]); setPanel('structure'); setFilter('all'); resetEditor(value.document); setError(''); setNotice('최신 현황을 불러왔습니다.'); }
+    try { const value = await loadProgress(site.id, cloudStorageEnabled()); setSnapshot(value); setStale(false); setHistory([]); setSelected([]); setFilter('all'); resetEditor(value.document); setError(''); setNotice('최신 현황을 불러왔습니다.'); }
     catch(e) { setStale(true); setError(e instanceof Error ? e.message : '불러오기에 실패했습니다. 연결 또는 저장 데이터를 확인해주세요.'); }
   }
   function selectRecord(next: ProgressDocument, bid: string, sid: string) {
@@ -435,7 +443,10 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     return part === 'bar' ? bar : details;
   }
 
+  const navBuildings: NavBuilding[] = visible.map(b => { const done = completedStages(b, basis); return { id: b.id, label: buildingLabel(b.name), summary: `최고 ${done[0]?.name || '미타설'} · ${done.length}/${b.stages.length}단계 완료` }; });
   return <section className="progress-page" aria-label="타설현황">
+    {/* Everything above the table stays in view while the table scrolls ("틀 고정"). */}
+    <div ref={stickyRef} className="progress-sticky">
     <div className="progress-heading"><div><p className="ui-note">{site.name}</p><div className="progress-title-row"><h2 className="ui-page-title">동별 타설현황</h2><span className="progress-storage-badge ui-note print:hidden">{snapshot ? snapshot.mode === 'local' ? '브라우저 저장' : 'DB 저장' : stale ? '불러오기 실패' : '불러오는 중…'}</span></div></div>
       <div className="progress-actions progress-heading-actions print:hidden">
         <button className="ui-button" disabled={!history.length || saving || !!inlineEdit} onClick={undo}>실행 취소</button>
@@ -446,9 +457,12 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     <fieldset disabled={!snapshot || saving || stale || !!inlineEdit} className="progress-controls print:hidden"><label>기준일<ShortDateInput label="기준일" value={basis} onChange={v=>{if(validDate(v))setBasis(v);}}/></label><label>표시할 동<select value={filter} onChange={e => { setFilter(e.target.value); setSelected([]); setNotice('표시할 동이 바뀌어 선택을 해제했습니다.'); }}><option value="all">전체 동</option>{document.buildings.map(b => <option key={b.id} value={b.id}>{buildingLabel(b.name)}</option>)}</select></label><label className="progress-check"><input type="checkbox" checked={multiple} onChange={e => { setMultiple(e.target.checked); setSelected([]); setEntryDraft(blankEntry()); }} />여러 칸 선택</label><span className="ui-note">{visible.length}개 동 표시 · {selected.length}칸 선택</span><span role="status" className="ui-note">{saving ? '저장 중…' : notice}</span></fieldset>
     <section className="progress-selection-tools print:hidden" aria-label="선택 항목 설정"><fieldset disabled={!snapshot || saving || stale || !!inlineEdit}>{renderCellEditor('bar')}</fieldset></section>
     <section className="progress-selection-extra print:hidden" aria-label="선택 항목 상세"><fieldset disabled={!snapshot || saving || stale || !!inlineEdit}>{renderCellEditor('details')}</fieldset></section>
+    <ProgressBuildingNav wrapRef={tableWrapRef} buildings={navBuildings}/>
+    </div>
+    <ProgressFloatingHeader wrapRef={tableWrapRef} buildings={navBuildings}/>
     <ProgressPrint buildings={visible} siteName={site.name} basis={basis} ink={ink}/>
     <div className={cn('progress-work', panel && 'has-panel')}>
-      <div>{!document.buildings.length ? <div className="progress-empty"><h3 className="ui-section-title">등록된 동이 없습니다</h3><p>동 이름과 지상·지하 층수를 입력하면 버림·기초·옥상·옥탑을 포함한 표가 만들어집니다.</p><button className="ui-button ui-primary" disabled={!snapshot} onClick={openBuildingForm}>+ 첫 동 추가</button></div> : <div className="progress-table-wrap progress-comparison-wrap" tabIndex={0} role="region" aria-label="동별 층별 예정일 타설일 비교표">
+      <div>{!document.buildings.length ? <div className="progress-empty"><h3 className="ui-section-title">등록된 동이 없습니다</h3><p>동 이름과 지상·지하 층수를 입력하면 버림·기초·옥상·옥탑을 포함한 표가 만들어집니다.</p><button className="ui-button ui-primary" disabled={!snapshot} onClick={openBuildingForm}>+ 첫 동 추가</button></div> : <div ref={tableWrapRef} className="progress-table-wrap progress-comparison-wrap" tabIndex={0} role="region" aria-label="동별 층별 예정일 타설일 비교표">
         <table className="progress-table progress-comparison-table" style={{ '--progress-building-count': visible.length || 1, '--progress-editor-count': inlineEdit ? 1 : 0, '--progress-extra-width': `${visible.reduce((sum, b) => sum + actualExtraWidth(b), 0)}px` } as React.CSSProperties}>
           <caption>{site.name} 타설현황 · {shortDate(basis)} 기준 · 예정일·타설일·차이</caption>
           <colgroup><col className="comparison-stage-col"/></colgroup>{visible.map(b => <colgroup key={b.id}><col className={cn('comparison-date-col',inlineEdit?.bid === b.id && inlineEdit.field === 'planned' && 'is-editing')}/><col className={cn('comparison-date-col',inlineEdit?.bid === b.id && inlineEdit.field === 'actual' && 'is-editing')} style={actualExtraWidth(b) ? { width: `calc(var(${inlineEdit?.bid === b.id && inlineEdit.field === 'actual' ? '--progress-edit-width' : '--progress-date-width'}) + ${actualExtraWidth(b)}px)` } : undefined}/><col className="comparison-gap-col"/></colgroup>)}

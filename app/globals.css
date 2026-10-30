@@ -157,7 +157,7 @@ body {
 .concrete-app .progress-page .progress-cell:is(.is-selected,:focus-visible) { outline-color: currentColor; outline-offset: -2px; }
 .progress-page .progress-cell:hover:not(:disabled) { box-shadow: inset 0 0 0 1px currentColor; }
 /* Arrow-key moves scroll the cell clear of the sticky header, selection bar and stage column. */
-.progress-page .progress-cell { scroll-margin-block: calc(var(--app-header-height, 104px) + var(--selection-bar-height, 0px) + 8px) 8px; scroll-margin-inline-start: var(--progress-stage-width, 6rem); }
+.progress-page .progress-cell { scroll-margin-block: calc(var(--app-header-height, 104px) + var(--selection-bar-height, 0px) + var(--progress-float-height, 0px) + 8px) 8px; scroll-margin-inline-start: var(--progress-stage-width, 6rem); }
 .progress-page .progress-na { color: var(--progress-muted); background: repeating-linear-gradient(135deg,var(--progress-surface),var(--progress-surface) 5px,var(--progress-line) 5px,var(--progress-line) 6px); }
 .progress-page .progress-panel { background: var(--progress-surface); border-color: var(--progress-line); padding: 16px; border-radius: 7px; }
 .progress-page .progress-panel-heading { align-items: start; flex-wrap: wrap; gap: 6px; }
@@ -419,10 +419,32 @@ body {
 .progress-page .progress-heading-actions { align-items: start; max-inline-size: 100%; }
 .progress-page .progress-error .ui-button { margin-block-start: 8px; }
 .progress-page .progress-controls { gap: 12px; margin-block-end: 8px; }
-.progress-page .progress-selection-tools { position: sticky; top: var(--app-header-height, 104px); z-index: 25; display: grid; gap: 8px; border-block: 1px solid var(--progress-line); padding-block: 10px; background: var(--progress-surface); }
+.progress-page .progress-selection-tools { display: grid; gap: 8px; border-block: 1px solid var(--progress-line); padding-block: 10px; background: var(--progress-surface); }
 .progress-page .progress-selection-extra { margin-block-end: 12px; }
 .progress-page .progress-selection-tools > fieldset { display: grid; gap: 8px; }
-@media(max-width:760px) { .progress-page .progress-selection-tools { position: static; } }
+/* 틀 고정: the heading, controls, selection tools and 동 이동 stay under the app header while the table scrolls.
+   Phones, and a block taller than half the window (an open 구역 내역), scroll normally instead. */
+.progress-page .progress-sticky { position: sticky; top: var(--app-header-height, 104px); z-index: 25; background: var(--progress-surface); padding-block: 8px; margin-block-start: -8px; border-block-end: 1px solid var(--progress-line); margin-block-end: 12px; }
+.progress-page .progress-sticky[data-tall] { position: static; }
+.progress-page .progress-sticky .progress-selection-extra { margin-block-end: 0; }
+@media(max-width:760px) { .progress-page .progress-sticky { position: static; } }
+@media print { .progress-page .progress-sticky { position: static; border: 0; } }
+.progress-page .progress-building-nav { display: flex; align-items: center; gap: 6px; min-inline-size: 0; padding-block-start: 8px; }
+.progress-page .progress-building-nav > .ui-label { flex: none; margin-inline-end: 4px; }
+.progress-page .progress-building-step { flex: none; inline-size: 34px; min-block-size: 30px; padding: 0; }
+.progress-page .progress-building-chips { display: flex; gap: 6px; flex: 1 1 auto; min-inline-size: 0; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+.progress-page .progress-building-chip { flex: none; border: 1px solid var(--progress-line); border-radius: 999px; background: var(--progress-surface); color: var(--progress-muted); padding: 3px 11px; font: inherit; white-space: nowrap; cursor: pointer; }
+.progress-page .progress-building-chip[data-shown] { border-color: var(--progress-accent); color: var(--progress-text); font-weight: 700; background: color-mix(in srgb, var(--progress-accent) 12%, var(--progress-surface)); }
+.progress-page .progress-building-chip:focus-visible { outline: 2px solid var(--progress-accent); outline-offset: 2px; }
+/* The floating building header: a zero-height sticky anchor right under the toolbar block, so it never moves the page. */
+.progress-page .progress-float-anchor { position: sticky; top: calc(var(--app-header-height, 104px) + var(--selection-bar-height, 0px)); z-index: 24; block-size: 0; }
+.progress-page .progress-float-header { position: absolute; top: 0; overflow-x: auto; scrollbar-width: thin; background: var(--progress-surface); box-shadow: 0 3px 6px rgb(0 0 0 / .12); }
+.progress-page .progress-float-grid { display: grid; inline-size: max-content; text-align: center; font-variant-numeric: tabular-nums; }
+.progress-page .progress-float-grid > div { box-sizing: border-box; border-block-end: 1px solid var(--progress-line); border-inline-end: 1px solid var(--progress-line); padding: 5px 3px; white-space: nowrap; overflow: hidden; background: var(--b-soft, #202c3f); color: var(--progress-muted); font-size: 12px; line-height: 18px; }
+.progress-page .progress-float-grid > .progress-float-stage { grid-row: span 2; position: sticky; left: 0; z-index: 1; display: grid; place-items: center; font-weight: 700; color: var(--progress-text); background: var(--b-head, #020617); }
+.progress-page .progress-float-grid > .progress-float-building { grid-column: span 3; display: grid; align-content: center; font-weight: 700; color: var(--progress-text); background: var(--b-head, #020617); border-inline-end: 2px solid var(--b-control, #52627a); font-size: 13px; }
+.progress-page .progress-float-building small { font-weight: 400; color: var(--progress-muted); font-size: 12px; }
+.progress-page .progress-float-grid > .progress-float-end { border-inline-end: 2px solid var(--b-control, #52627a); }
 /* Desktop and tablet keep the bar on one line; the color strip scrolls sideways when it does not fit. */
 @media(min-width:761px) {
   .progress-page .progress-selection-row { flex-wrap: nowrap; }
