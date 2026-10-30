@@ -96,7 +96,7 @@ export function SitePhotos({site,blocked=false,onWorkPending}:{site:Site;blocked
         </div><p className="ui-note">JPG · PNG · WebP / 한 장당 20MB 이하</p>
       </div>
 
-      <p className="photo-status ui-note" role="status">{message||(cloudStorageEnabled()?'Supabase 저장 · 기존 브라우저 원본은 유지됩니다.':'사진은 이 브라우저에 저장됩니다. 기존 자료 백업에는 사진이 포함되지 않습니다.')}</p>
+      <p className="photo-status ui-note" role="status">{message||(cloudStorageEnabled()?'':'사진은 이 브라우저에 저장됩니다. 기존 자료 백업에는 사진이 포함되지 않습니다.')}</p>
       {!ready&&!busy&&<button type="button" className="ui-button" onClick={()=>window.location.reload()}>다시 불러오기</button>}
     </section>
     <section className="photo-panel"><div className="photo-list-header"><div className="photo-list-summary"><div className="photo-heading"><h2 className="ui-section-title">등록한 사진 <span className="ui-note font-normal">{live.length}장</span></h2></div>
