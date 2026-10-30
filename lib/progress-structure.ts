@@ -5,7 +5,7 @@ export function changeStage(document: ProgressDocument, buildingId: string, acti
   if (!building) throw new Error('편집할 동을 선택해주세요.');
   const stage = building.stages.find(s => s.id === id);
   if (action !== 'add' && !stage) throw new Error('층·단계를 다시 선택해주세요.');
-  name = name.trim();
+  name = floorName(name);
   if (action !== 'delete' && (!name || building.stages.some(s => s.id !== id && s.name.trim() === name))) throw new Error('중복되지 않는 층·단계 이름을 입력해주세요.');
   if (action === 'add') {
     // A floor another building already has joins that row (same id and order), so its 해당 없음 cell becomes this floor.
@@ -29,7 +29,13 @@ export function changeStage(document: ProgressDocument, buildingId: string, acti
 // The table row of another building's floor with this name that the building has no floor for yet.
 export function sameNameRow(document: ProgressDocument, buildingId: string, name: string) {
   const building = document.buildings.find(b => b.id === buildingId);
-  name = name.trim();
+  name = floorName(name);
   if (!building || !name) return undefined;
   return progressRows(document.buildings.filter(b => b.id !== buildingId)).find(s => s.name.trim() === name && !building.stages.some(own => own.id === s.id));
+}
+// Short floor input: 20 → 20F and B2 → B2F; anything else (옥상, 피트층, 20F) is kept as typed.
+export function floorName(name: string) {
+  name = name.trim();
+  const above = name.match(/^(\d+)[fF]?$/), below = name.match(/^[bB](\d+)[fF]?$/);
+  return above ? `${Number(above[1])}F` : below ? `B${Number(below[1])}F` : name;
 }

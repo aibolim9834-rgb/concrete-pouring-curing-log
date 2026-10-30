@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),ts=require('typescript'),vm=require('node:vm');
 function load(file,deps={}) { const module={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module,exports:module.exports,structuredClone,require:n=>deps[n]});return module.exports; }
-const model=load('lib/pouring-progress.ts'),{changeStage,sameNameRow}=load('lib/progress-structure.ts',{'./pouring-progress':model});
+const model=load('lib/pouring-progress.ts'),{changeStage,sameNameRow,floorName}=load('lib/progress-structure.ts',{'./pouring-progress':model});
 const record={date:'2026-07-24',plannedDate:'2026-07-23',status:'done',color:'#FF0000',entries:[{id:'e1',member:'슬라브',zone:'A구역',volume:12,remarks:'원본'}]};
 const doc={version:1,buildings:[{id:'a',name:'101동',stages:model.presetStages(2,1),records:{f1:record,f2:{date:'',status:'none',color:'#ffffff',comparisonStage:'f1'}}},{id:'b',name:'102동',stages:model.presetStages(2,1),records:{f1:structuredClone(record)}}]};
 const original=JSON.stringify(doc);
@@ -28,4 +28,10 @@ assert.equal(sameNameRow(rejoined,'a','1F'),undefined);
 assert.equal(sameNameRow(next,'b','피트층').id,'pit');
 assert.equal(changeStage(next,'b','add','fresh','피트층').buildings[1].stages.find(s=>s.name==='피트층').id,'pit');
 assert.equal(changeStage(next,'a','add','fresh','새 단계').buildings[0].stages.find(s=>s.name==='새 단계').id,'fresh');
-console.log('PASS structure: insertion, rename preservation, delete cleanup, duplicates, empty building, undo snapshot, same-name floors join the existing row');
+// Short floor input expands to the usual floor names, so 20 joins the 20F row and B2 becomes B2F.
+assert.deepEqual(['20','20f',' 7F ','B2','b3','B04f','옥상','피트층','PIT','B2F','1층'].map(floorName),['20F','20F','7F','B2F','B3F','B4F','옥상','피트층','PIT','B2F','1층']);
+assert.equal(changeStage(next,'a','add','fresh','1').buildings[0].stages.find(s=>s.name==='1F').id,'f1');
+assert.equal(changeStage(next,'a','add','fresh','b9').buildings[0].stages.find(s=>s.id==='fresh').name,'B9F');
+assert.throws(()=>changeStage(next,'b','add','fresh','2'),/중복/);
+assert.equal(changeStage(next,'a','rename','f2','b5').buildings[0].stages.find(s=>s.id==='f2').name,'B5F');
+console.log('PASS structure: insertion, rename preservation, delete cleanup, duplicates, empty building, undo snapshot, same-name floors join the existing row, short floor names');

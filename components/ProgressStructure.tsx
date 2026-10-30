@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { buildingLabel, presetStages, ProgressDocument, progressId, validateProgress } from '@/lib/pouring-progress';
-import { changeStage, sameNameRow } from '@/lib/progress-structure';
+import { changeStage, floorName, sameNameRow } from '@/lib/progress-structure';
 import { shortDate } from '@/lib/date-only';
 import { Modal } from './Modal';
 
@@ -107,6 +107,7 @@ export function ProgressStructure({document,buildingId,stageId,disabled,adding,o
         <h4>{adding?'새 동 추가':mode==='rename-building'?'동 이름 변경':mode==='add-stage'?'새 층·단계 추가':'층·단계 이름 변경'}</h4>
         <label>{adding||mode==='rename-building'?'동 이름':'층·단계 이름'}<input ref={inputRef} aria-label={adding?'새 동 이름':mode==='rename-building'?'변경할 동 이름':'층·단계 이름'} value={adding?newName:name} maxLength={80} required onChange={e=>adding?setNewName(e.target.value):setName(e.target.value)} autoFocus/></label>
         {adding && <div className="structure-two"><label>지상층 수<input aria-label="지상층 수" type="number" value={floors} min={0} max={200} step={1} required onChange={e=>setFloors(e.target.value)}/></label><label>지하층 수<input aria-label="지하층 수" type="number" value={basements} min={0} max={20} step={1} required onChange={e=>setBasements(e.target.value)}/></label></div>}
+        {mode==='add-stage'&&!adding&&!joinRow&&floorName(name)!==name.trim() && <p className="ui-note">{floorName(name)}(으)로 추가됩니다.</p>}
         {joinRow && <p className="ui-note">다른 동에 있는 {joinRow.name} 줄에 맞춰 추가됩니다. 그 줄의 해당 없음 칸이 이 동의 칸이 됩니다.</p>}
         {mode==='add-stage'&&!adding&&!joinRow && <label>추가 위치<select aria-label="추가 위치" value={position} onChange={e=>setPosition(e.target.value)}>{[...(building?.stages||[])].sort((a,b)=>b.order-a.order).map(s=><option key={s.id} value={s.id}>{s.name} 위에 추가</option>)}<option value="">맨 아래에 추가</option></select></label>}
         <div className="structure-buttons"><button type="submit" className="ui-button ui-primary">{adding||mode==='add-stage'?'추가':'변경 저장'}</button><button type="button" className="ui-button" onClick={closeForm}>취소</button></div>
