@@ -328,7 +328,7 @@ body {
 .concrete-app .short-date-field > .short-date-picker { position:absolute; inset-inline-end:2px; inset-block:2px; display:flex; align-items:center; justify-content:center; inline-size:28px; min-block-size:0; padding:0; border:0; border-radius:4px; background:transparent; color:#cbd5e1; }
 .concrete-app .short-date-field > .short-date-native { position:absolute; inset-inline-end:0; inset-block-end:0; inline-size:1px; block-size:1px; min-block-size:0; max-block-size:1px; padding:0; border:0; margin:0; clip-path:inset(50%); opacity:0; pointer-events:none; }
 /* YY-MM-DD dates let the log table's date column stay narrow, so its inputs use a slimmer calendar button. */
-.record-log-table .short-date-field > input[type=text] { padding-inline:3px 21px; }
+.record-log-table .short-date-field > input[type=text] { padding-inline:3px 21px; text-align:center; }
 .concrete-app .record-log-table .short-date-field > .short-date-picker { inline-size:20px; }
 .inline-cell-edit > .short-date-field { flex:1 1 110px; inline-size:110px; min-inline-size:0; }
 .progress-page .inline-cell-edit > .inline-date-list { flex:1 1 auto; inline-size:100%; min-inline-size:0; min-block-size:25px; block-size:25px; padding:2px 4px; border-radius:3px; font-size:12px; font-variant-numeric:tabular-nums; }
