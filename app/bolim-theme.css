@@ -217,4 +217,16 @@
   .concrete-app .progress-selection-row > .progress-color-tools .progress-swatches { flex-wrap:nowrap; }
   .concrete-app .progress-selection-row > .progress-color-tools > * { flex:none; }
   .concrete-app .progress-selection-row > .ui-button { min-inline-size:0; padding-inline:6px; white-space:normal; }
+
+  /* Phone text: buttons and notes 14px and labels 13px, one step above PC; data tables keep 13px and fields 16px. */
+  .concrete-app { --ui-body:.875rem; }
+  .concrete-app :is(table, table .text-xs, table [class*="text-["], table button) { font-size:13px; }
+  .concrete-app :is(.log-filters,.progress-controls,.photo-fields,.photo-filters,.mobile-log-group) label, .concrete-app .mobile-log-group > legend,
+  .concrete-app .summary-card-compact, .concrete-app .progress-page :is(.progress-pour-chip,details > summary,.structure-stage-pick small) { font-size:13px; }
+  .concrete-app .progress-page :is(.progress-selection-name,.progress-controls > :is(.progress-check,.ui-note),.structure-stage-pick,.structure-selected,.progress-structure h4,.progress-structure .ui-button), .concrete-app .mobile-log-group .mobile-log-chip { font-size:14px; }
+  /* The dock's own 16px was lost to the generic button size. */
+  .concrete-app .log-new-dock .log-new-button { font-size:16px; }
+  /* Photo form: the date takes its own row so the 동·구역 hint is not cut off at 16px. */
+  .concrete-app .photo-fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .concrete-app .photo-fields > label:first-child { grid-column:1 / -1; }
 }
