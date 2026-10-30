@@ -85,6 +85,8 @@ body {
   .progress-print-grid { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: var(--print-font, 12px); color: #111; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .progress-print-grid :is(th,td) { block-size: var(--print-row, 20px); border: 1px solid #7b8780; padding: 0 2px; line-height: calc(var(--print-row, 20px) - 2px); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: clip; }
   .progress-print-grid thead tr:first-child th { white-space: normal; line-height: 1.15; overflow-wrap: anywhere; }
+  /* Several pour dates (25.09.26, 10.10) take two half-height lines inside the same row instead of being cut off. */
+  .progress-print-grid td.is-multi { white-space: normal; line-height: calc((var(--print-row, 20px) - 2px) / 2); font-size: min(var(--print-font, 12px), calc((var(--print-row, 20px) - 2px) / 2)); }
   .progress-print-grid th { background: #e8efea; color: #111; }
   .progress-print-grid td { font-weight: 600; }
   .progress-print-grid thead { display: table-header-group; }

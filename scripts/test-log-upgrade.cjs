@@ -248,7 +248,7 @@ function uiHarness(file, name, props) {
     const progressModel=load('lib/pouring-progress.ts'),doc={version:1,buildings:[{id:'b1',name:'101동',stages:progressModel.presetStages(3,1),records:{}}]};
     let saved=null;const props={document:doc,buildingId:'b1',stageId:'f2',disabled:false,adding:false,onAdding(){},onClose(){},onSelect(next,bid,sid){props.document=next;props.stageId=sid;},commit:async next=>{saved=next;return true;},canUndo:false,onUndo:async()=>{}};
     const h=uiHarness('components/ProgressStructure.tsx','ProgressStructure',props);
-    one(h.render(),n=>n.props?.['aria-label']==='지상 2층 수정').props.onClick();
+    one(h.render(),n=>n.props?.['aria-label']==='2F 수정').props.onClick();
     let tree=h.render();
     assert(!one(tree,n=>n.props?.className==='structure-form'));
     const row=one(tree,n=>n.props?.className==='structure-stage-row'&&n.props['aria-current']===true);
@@ -257,7 +257,7 @@ function uiHarness(file, name, props) {
     tree=h.render();await one(tree,n=>n.props?.className==='structure-stage-edit').props.onSubmit({preventDefault(){}});
     assert.equal(saved.buildings[0].stages.find(s=>s.id==='f2').name,'기준층');
     assert(!one(h.render(),n=>n.props?.className==='structure-stage-edit'));
-    one(h.render(),n=>n.props?.['aria-label']==='지상 3층 수정').props.onClick();saved=null;
+    one(h.render(),n=>n.props?.['aria-label']==='3F 수정').props.onClick();saved=null;
     one(h.render(),n=>n.props?.className==='structure-stage-edit').props.onKeyDown({key:'Escape',preventDefault(){},nativeEvent:{isComposing:false}});
     assert(!one(h.render(),n=>n.props?.className==='structure-stage-edit'));assert.equal(saved,null);
   });

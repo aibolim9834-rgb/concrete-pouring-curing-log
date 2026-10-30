@@ -8,8 +8,8 @@ export const buildingLabel = (name: string) => /^\d+$/.test(name.trim()) ? `${na
 export const progressId = () => globalThis.crypto?.randomUUID?.() || `progress-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 export function presetStages(floors: number, basements: number): ProgressStage[] {
   return [{ id: 'blinding', name: '버림', order: -102 }, { id: 'foundation', name: '기초', order: -101 },
-    ...Array.from({ length: basements }, (_, i) => ({ id: `b${i + 1}`, name: `지하 ${i + 1}층`, order: -(i + 1) })),
-    ...Array.from({ length: floors }, (_, i) => ({ id: `f${i + 1}`, name: `지상 ${i + 1}층`, order: i + 1 })),
+    ...Array.from({ length: basements }, (_, i) => ({ id: `b${i + 1}`, name: `B${i + 1}F`, order: -(i + 1) })),
+    ...Array.from({ length: floors }, (_, i) => ({ id: `f${i + 1}`, name: `${i + 1}F`, order: i + 1 })),
     { id: 'roof', name: '옥상', order: 1001 }, { id: 'penthouse', name: '옥탑', order: 1002 }];
 }
 export function validDate(value: string) {

@@ -6,7 +6,7 @@ const doc={version:1,buildings:[{id:'a',name:'101동',stages:model.presetStages(
 const original=JSON.stringify(doc);
 let next=changeStage(doc,'a','rename','f1','기준층');
 assert.equal(JSON.stringify(next.buildings[0].records),JSON.stringify(doc.buildings[0].records));
-assert.equal(next.buildings[1].stages.find(s=>s.id==='f1').name,'지상 1층');
+assert.equal(next.buildings[1].stages.find(s=>s.id==='f1').name,'1F');
 next=changeStage(next,'a','add','pit','피트층','f1');
 assert(next.buildings[0].stages.find(s=>s.id==='pit').order>1);
 assert(next.buildings[0].stages.find(s=>s.id==='pit').order<2);

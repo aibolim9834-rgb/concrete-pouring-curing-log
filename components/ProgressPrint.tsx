@@ -26,7 +26,7 @@ export function ProgressPrint({ buildings, siteName, basis, ink }: {
           const style = background ? { backgroundColor: background, color: ink(background) } : undefined;
           return <React.Fragment key={b.id}>
             <td style={style}>{record?.plannedDate ? shortDate(record.plannedDate, '.') : '—'}</td>
-            <td style={style}>{record?.date ? pourDatesLabel(record) : '—'}</td>
+            <td style={style} className={record?.dates && record.dates.length > 1 ? 'is-multi' : undefined}>{record?.date ? pourDatesLabel(record) : '—'}</td>
             <td>{!record?.date && !record?.plannedDate ? '—' : gap(difference(record?.plannedDate || '', record?.date || ''))}</td>
           </React.Fragment>;
         })}</tr>)}</tbody>
