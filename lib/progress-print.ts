@@ -1,18 +1,27 @@
-import { ProgressBuilding, progressRows } from './pouring-progress';
+import { ProgressBuilding, ProgressStage } from './pouring-progress';
 
-// The printed sheet is A3 landscape with 10mm margins: 400 x 277mm, which is 1512 x 1047 CSS px.
-export const PRINT_PAGE = { width: 1512, height: 1047, title: 50 };
+// The printed sheet is A4 portrait with 10mm margins: 190 x 277mm, which is 718 x 1047 CSS px.
+export const PRINT_PAGE = { width: 718, height: 1047, title: 50, rowGap: 12, columnGap: 10 };
 
-// Every building and stage goes on one sheet; text size, row height and the stage column shrink to fit.
+export interface PrintBlock { building: ProgressBuilding; stages: ProgressStage[] }
+
+// Each building is its own block of floors and 타설일. Blocks fill a row left to right and wrap to the next row;
+// the number per row is the one that leaves the largest readable text with everything on one sheet.
 export function progressPrintLayout(buildings: ProgressBuilding[]) {
-  const rows = progressRows(buildings);
-  // Body rows plus two header rows, where long building names may wrap to a second line.
-  const lines = rows.length + 3;
-  const rowHeight = Math.max(8, Math.min(26, Math.floor((PRINT_PAGE.height * 0.97 - PRINT_PAGE.title) / lines)));
-  // A date such as 26.10.30 is about 4.6em wide and a stage name such as 25F or a custom one about 6em.
-  const dateWidth = (size: number) => (PRINT_PAGE.width - (size * 6 + 8)) / Math.max(1, buildings.length * 3);
-  let fontSize = Math.min(13, Math.floor(rowHeight * 0.62));
-  while (fontSize > 5 && dateWidth(fontSize) < fontSize * 4.6 + 4) fontSize--;
-  fontSize = Math.max(5, fontSize);
-  return { rows, rowHeight, fontSize, stageWidth: Math.ceil(fontSize * 6 + 8) };
+  if (!buildings.length) return null;
+  const blocks: PrintBlock[] = buildings.map(building => ({ building, stages: [...building.stages].sort((a, b) => b.order - a.order) }));
+  let best: { groups: PrintBlock[][]; rowHeight: number; fontSize: number; blockWidth: number; floorWidth: number } | null = null;
+  for (let perRow = 1; perRow <= blocks.length; perRow++) {
+    const groups: PrintBlock[][] = [];
+    for (let i = 0; i < blocks.length; i += perRow) groups.push(blocks.slice(i, i + perRow));
+    // Each block row adds its two header rows; the building name may wrap once, so it counts as two lines.
+    const lines = groups.reduce((sum, group) => sum + Math.max(...group.map(block => block.stages.length)) + 3, 0);
+    const rowHeight = Math.max(6, Math.min(24, Math.floor((PRINT_PAGE.height * 0.97 - PRINT_PAGE.title - (groups.length - 1) * PRINT_PAGE.rowGap) / lines)));
+    const blockWidth = (PRINT_PAGE.width - (perRow - 1) * PRINT_PAGE.columnGap) / perRow;
+    // The floor column takes about 4.2em (B1F, 옥탑) and a date such as 25.09.26 about 4.8em.
+    let fontSize = Math.min(13, Math.floor(rowHeight * 0.62));
+    while (fontSize > 4 && blockWidth - (fontSize * 4.2 + 6) < fontSize * 4.8 + 4) fontSize--;
+    if (!best || fontSize > best.fontSize || (fontSize === best.fontSize && rowHeight > best.rowHeight)) best = { groups, rowHeight, fontSize, blockWidth, floorWidth: fontSize * 4.2 + 6 };
+  }
+  return best;
 }

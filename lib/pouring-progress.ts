@@ -35,7 +35,7 @@ export function validateProgressRecord(record: ProgressRecord) {
   // Multi-day pours keep every pour date; `date` stays the last one so completion and variance use it.
   if (record.dates !== undefined && (!Array.isArray(record.dates) || record.dates.length < 2 || record.dates.length > 100
     || record.dates.some((d, i) => typeof d !== 'string' || !validDate(d) || (i > 0 && d <= record.dates![i - 1]))
-    || record.dates[record.dates.length - 1] !== record.date)) throw new Error('여러 타설일은 날짜순으로, 마지막 날짜가 실시일과 같아야 합니다.');
+    || record.dates[record.dates.length - 1] !== record.date)) throw new Error('여러 타설일은 날짜순으로, 마지막 날짜가 대표 타설일과 같아야 합니다.');
   if (record.entries !== undefined) {
     if (!Array.isArray(record.entries) || record.entries.length > 200) throw new Error('한 층·단계의 구역 내역은 200건까지 기록할 수 있습니다.');
     const ids = new Set<string>();

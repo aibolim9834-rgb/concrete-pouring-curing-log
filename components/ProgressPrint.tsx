@@ -3,33 +3,32 @@ import { ProgressBuilding, buildingLabel } from '@/lib/pouring-progress';
 import { progressPrintLayout } from '@/lib/progress-print';
 import { progressColor } from '@/lib/progress-color';
 import { pourDatesLabel } from '@/lib/progress-entries';
-import { difference, gap, shortDate } from '@/lib/date-only';
+import { shortDate } from '@/lib/date-only';
 
 export function ProgressPrint({ buildings, siteName, basis, ink }: {
   buildings: ProgressBuilding[]; siteName: string; basis: string; ink: (color: string) => string;
 }) {
-  if (!buildings.length) return null;
-  const { rows, rowHeight, fontSize, stageWidth } = progressPrintLayout(buildings);
-  return <div className="progress-print-only"><section className="progress-print-sheet">
+  const layout = progressPrintLayout(buildings);
+  if (!layout) return null;
+  const { groups, rowHeight, fontSize, blockWidth, floorWidth } = layout;
+  return <div className="progress-print-only"><section className="progress-print-sheet" style={{ '--print-font': `${fontSize}px`, '--print-row': `${rowHeight}px` } as React.CSSProperties}>
     <h2>{siteName} · 동별 타설현황</h2>
-    <p>{shortDate(basis)} 기준 · {buildings.length}개 동 · 층·단계 {rows.length}개</p>
-    <table className="progress-print-grid" style={{ '--print-font': `${fontSize}px`, '--print-row': `${rowHeight}px` } as React.CSSProperties}>
-      <colgroup><col style={{ width: `${stageWidth}px` }}/></colgroup>
-      {buildings.map(b => <colgroup key={b.id}><col/><col/><col/></colgroup>)}
-      <thead><tr><th rowSpan={2}>층 / 단계</th>{buildings.map(b => <th key={b.id} colSpan={3}>{buildingLabel(b.name)}</th>)}</tr>
-        <tr>{buildings.map(b => <React.Fragment key={b.id}><th>예정일</th><th>실시일</th><th>차이</th></React.Fragment>)}</tr></thead>
-      <tbody>{rows.map(row => <tr key={row.id}>
-        <th>{Array.from(new Set(buildings.flatMap(b => b.stages.filter(s => s.id === row.id).map(s => s.name)))).join(' / ')}</th>
-        {buildings.map(b => {
-          if (!b.stages.some(s => s.id === row.id)) return <td key={b.id} colSpan={3}>해당 없음</td>;
-          const record = b.records[row.id], background = progressColor(record);
-          const style = background ? { backgroundColor: background, color: ink(background) } : undefined;
-          return <React.Fragment key={b.id}>
-            <td style={style}>{record?.plannedDate ? shortDate(record.plannedDate, '.') : '—'}</td>
-            <td style={style} className={record?.dates && record.dates.length > 1 ? 'is-multi' : undefined}>{record?.date ? pourDatesLabel(record) : '—'}</td>
-            <td>{!record?.date && !record?.plannedDate ? '—' : gap(difference(record?.plannedDate || '', record?.date || ''))}</td>
-          </React.Fragment>;
-        })}</tr>)}</tbody>
-    </table>
+    <p>{shortDate(basis)} 기준 · {buildings.length}개 동</p>
+    {groups.map((group, index) => {
+      // Blocks in a row share a height; shorter buildings leave the top empty so 버림·기초·1F line up.
+      const height = Math.max(...group.map(block => block.stages.length));
+      return <div className="progress-print-row" key={index}>{group.map(({ building: b, stages }) => <table className="progress-print-block" key={b.id} style={{ width: `${blockWidth}px` }}>
+        <colgroup><col style={{ width: `${floorWidth}px` }}/><col/></colgroup>
+        <thead><tr><th colSpan={2}>{buildingLabel(b.name)}</th></tr><tr><th>층</th><th>타설일</th></tr></thead>
+        <tbody>
+          {Array.from({ length: height - stages.length }, (_, i) => <tr key={`pad-${i}`} className="is-pad"><th/><td/></tr>)}
+          {stages.map(s => {
+            const record = b.records[s.id], background = progressColor(record);
+            return <tr key={s.id}><th>{s.name}</th>
+              <td className={record?.dates && record.dates.length > 1 ? 'is-multi' : undefined} style={background ? { backgroundColor: background, color: ink(background) } : undefined}>{record?.date ? pourDatesLabel(record) : ''}</td></tr>;
+          })}
+        </tbody>
+      </table>)}</div>;
+    })}
   </section></div>;
 }

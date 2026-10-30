@@ -265,21 +265,21 @@ export function PouringProgress({ site, onWorkPending }: Props) {
         if(record?.entries?.length && record.date!==updated.date && !confirm('마지막 타설일이 바뀌어 구역 내역의 공통 타설일도 함께 바뀝니다. 계속하시겠습니까?'))return;
         target.records[edit.sid]={...updated,comparisonStage:updated.comparisonStage ?? previousStage(document,edit.bid,edit.sid)};
       } else target.records[edit.sid]=inlineDateRecord(record,edit.field,edit.value,record?.color || defaultColor,previousStage(document,edit.bid,edit.sid));
-      if(!edit.add && !edit.list && edit.field==='actual' && record?.entries?.length && record.date!==edit.value && !confirm('이 층·단계의 모든 구역에 공통으로 적용되는 실시일을 변경하시겠습니까?'))return;
-      if(await commit(next)){inlineKeyRef.current=null;setInlineEdit(null);selectRecord(next,edit.bid,edit.sid);setNotice(buildingLabel(b.name)+' '+(b.stages.find(s=>s.id===edit.sid)?.name || '')+' '+(edit.list?'타설일을 저장했습니다.':edit.add?'타설일 '+shortDate(edit.value,'.')+'을 추가했습니다.':(edit.field==='planned'?'예정일':'실시일')+'을 저장했습니다.'));focusCell(edit.key);}
+      if(!edit.add && !edit.list && edit.field==='actual' && record?.entries?.length && record.date!==edit.value && !confirm('이 층·단계의 모든 구역에 공통으로 적용되는 타설일을 변경하시겠습니까?'))return;
+      if(await commit(next)){inlineKeyRef.current=null;setInlineEdit(null);selectRecord(next,edit.bid,edit.sid);setNotice(buildingLabel(b.name)+' '+(b.stages.find(s=>s.id===edit.sid)?.name || '')+' '+(edit.list?'타설일을 저장했습니다.':edit.add?'타설일 '+shortDate(edit.value,'.')+'을 추가했습니다.':(edit.field==='planned'?'예정일':'타설일')+'을 저장했습니다.'));focusCell(edit.key);}
     } catch(e) {setInlineEdit(current=>current ? {...current,error:e instanceof Error?e.message:'날짜를 확인해주세요.'}:null);}
     finally {inlineSavingRef.current=false;}
   }
   function renderInlineDate() {
     if(!inlineEdit)return null;
-    const field=inlineEdit.field==='planned'?'예정일':inlineEdit.add?'추가할 타설일':'실시일';
+    const field=inlineEdit.field==='planned'?'예정일':inlineEdit.add?'추가할 타설일':'타설일';
     return <><form className="inline-cell-edit" aria-label={field+' 셀 직접 편집'} onSubmit={e=>{e.preventDefault();void saveInline();}} onKeyDown={e=>{
       if(e.key==='Escape'){e.preventDefault();e.stopPropagation();cancelInline();}
       if(e.key==='Enter' && e.target===inlineDateRef.current){e.preventDefault();e.stopPropagation();if(e.nativeEvent.isComposing || e.nativeEvent.keyCode===229)return;void saveInline();}
     }}>
       <span id="inline-cell-help" className="sr-only">올바른 날짜 입력 완료 후 자동 저장됩니다. Enter로 바로 저장, Escape로 입력을 취소합니다.</span><label className="sr-only" htmlFor="inline-cell-date">셀 {field}</label>
       {inlineEdit.add && <span className="inline-add-prev"><span className="sr-only">기존 타설일 </span>{pourDatesLabel(document.buildings.find(b=>b.id===inlineEdit.bid)?.records[inlineEdit.sid])},</span>}
-      {inlineEdit.list ? <input id="inline-cell-date" ref={inlineDateRef} type="text" className="inline-date-list" inputMode="numeric" autoComplete="off" spellCheck={false} aria-label="셀 실시일 목록, 쉼표로 구분" aria-describedby={inlineEdit.error?'inline-cell-error':'inline-cell-help'} aria-invalid={!!inlineEdit.error} disabled={saving || stale} value={inlineEdit.value} onChange={e=>setInlineEdit(current=>current?{...current,value:e.target.value,error:''}:null)} onBlur={()=>{void saveInline();}}/>
+      {inlineEdit.list ? <input id="inline-cell-date" ref={inlineDateRef} type="text" className="inline-date-list" inputMode="numeric" autoComplete="off" spellCheck={false} aria-label="셀 타설일 목록, 쉼표로 구분" aria-describedby={inlineEdit.error?'inline-cell-error':'inline-cell-help'} aria-invalid={!!inlineEdit.error} disabled={saving || stale} value={inlineEdit.value} onChange={e=>setInlineEdit(current=>current?{...current,value:e.target.value,error:''}:null)} onBlur={()=>{void saveInline();}}/>
         : <ShortDateInput id="inline-cell-date" inputRef={inlineDateRef} label={'셀 '+field} value={inlineEdit.value} onChange={setInlineValue} onCommit={queueInlineSave} disabled={saving || stale} describedBy={inlineEdit.error?'inline-cell-error':'inline-cell-help'} invalid={!!inlineEdit.error}/>}
     </form>{inlineEdit.error && <p id="inline-cell-error" role="alert" className="inline-cell-error">{inlineEdit.error}</p>}</>;
   }
@@ -448,13 +448,13 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     <section className="progress-selection-extra print:hidden" aria-label="선택 항목 상세"><fieldset disabled={!snapshot || saving || stale || !!inlineEdit}>{renderCellEditor('details')}</fieldset></section>
     <ProgressPrint buildings={visible} siteName={site.name} basis={basis} ink={ink}/>
     <div className={cn('progress-work', panel && 'has-panel')}>
-      <div>{!document.buildings.length ? <div className="progress-empty"><h3 className="ui-section-title">등록된 동이 없습니다</h3><p>동 이름과 지상·지하 층수를 입력하면 버림·기초·옥상·옥탑을 포함한 표가 만들어집니다.</p><button className="ui-button ui-primary" disabled={!snapshot} onClick={openBuildingForm}>+ 첫 동 추가</button></div> : <div className="progress-table-wrap progress-comparison-wrap" tabIndex={0} role="region" aria-label="동별 층별 예정일 실시일 비교표">
+      <div>{!document.buildings.length ? <div className="progress-empty"><h3 className="ui-section-title">등록된 동이 없습니다</h3><p>동 이름과 지상·지하 층수를 입력하면 버림·기초·옥상·옥탑을 포함한 표가 만들어집니다.</p><button className="ui-button ui-primary" disabled={!snapshot} onClick={openBuildingForm}>+ 첫 동 추가</button></div> : <div className="progress-table-wrap progress-comparison-wrap" tabIndex={0} role="region" aria-label="동별 층별 예정일 타설일 비교표">
         <table className="progress-table progress-comparison-table" style={{ '--progress-building-count': visible.length || 1, '--progress-editor-count': inlineEdit ? 1 : 0, '--progress-extra-width': `${visible.reduce((sum, b) => sum + actualExtraWidth(b), 0)}px` } as React.CSSProperties}>
-          <caption>{site.name} 타설현황 · {shortDate(basis)} 기준 · 예정일·실시일·차이</caption>
+          <caption>{site.name} 타설현황 · {shortDate(basis)} 기준 · 예정일·타설일·차이</caption>
           <colgroup><col className="comparison-stage-col"/></colgroup>{visible.map(b => <colgroup key={b.id}><col className={cn('comparison-date-col',inlineEdit?.bid === b.id && inlineEdit.field === 'planned' && 'is-editing')}/><col className={cn('comparison-date-col',inlineEdit?.bid === b.id && inlineEdit.field === 'actual' && 'is-editing')} style={actualExtraWidth(b) ? { width: `calc(var(${inlineEdit?.bid === b.id && inlineEdit.field === 'actual' ? '--progress-edit-width' : '--progress-date-width'}) + ${actualExtraWidth(b)}px)` } : undefined}/><col className="comparison-gap-col"/></colgroup>)}
           <thead>
             <tr><th scope="col" rowSpan={2}>층 / 단계</th>{visible.map(b => { const done = completedStages(b, basis); return <th scope="colgroup" colSpan={3} key={b.id} className="comparison-building-header"><span>{buildingLabel(b.name)}</span><small>최고 {done[0]?.name || '미타설'} · {done.length}/{b.stages.length}단계 완료</small></th>; })}</tr>
-            <tr>{visible.map(b => <React.Fragment key={b.id}><th scope="col">예정일</th><th scope="col">실시일</th><th scope="col" className="comparison-group-end">차이</th></React.Fragment>)}</tr>
+            <tr>{visible.map(b => <React.Fragment key={b.id}><th scope="col">예정일</th><th scope="col">타설일</th><th scope="col" className="comparison-group-end">차이</th></React.Fragment>)}</tr>
           </thead>
           <tbody>{rows.map(row => {
             const names = Array.from(new Set(visible.flatMap(b => b.stages.filter(s => s.id === row.id).map(s => s.name))));
@@ -464,7 +464,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
               const variance = difference(record?.plannedDate || '', record?.date || '');
               return <React.Fragment key={b.id}>
                 {(['planned','actual'] as const).map(field => {
-                  const key = `${recordKey}:${field}`, fieldName = field === 'planned' ? '예정일' : '실시일';
+                  const key = `${recordKey}:${field}`, fieldName = field === 'planned' ? '예정일' : '타설일';
                   const value = (field === 'planned' ? record?.plannedDate : record?.date) || '', label = field === 'actual' && record?.dates ? pourDatesLabel(record) : value ? shortDate(value,'.') : '';
                   return <td key={field} data-date-field={field}>{inlineEdit?.key === key ? renderInlineDate() : <button
                     ref={node => { if (node) cellNodes.current.set(key,node); else cellNodes.current.delete(key); }}
@@ -480,13 +480,13 @@ export function PouringProgress({ site, onWorkPending }: Props) {
                     aria-label={`${buildingLabel(b.name)} ${stage.name} 타설일 추가`} title="타설일 추가" onClick={() => beginInline(b.id,row.id,'actual',true)}>+</button>}</td>;
                 })}
                 <td className="comparison-gap comparison-group-end" data-variance={variance === null ? 'missing' : variance}>
-                  <span className={cn(variance !== null && variance > 0 && 'is-late',variance !== null && variance < 0 && 'is-early')} title="실시일 − 예정일 · 두 날짜가 있어야 계산됩니다.">{!record?.date && !record?.plannedDate ? '—' : gap(variance)}</span>
+                  <span className={cn(variance !== null && variance > 0 && 'is-late',variance !== null && variance < 0 && 'is-early')} title="타설일 − 예정일 · 두 날짜가 있어야 계산됩니다.">{!record?.date && !record?.plannedDate ? '—' : gap(variance)}</span>
                 </td>
               </React.Fragment>;
             })}</tr>;
           })}</tbody>
         </table></div>}
-      <p className="sr-only">예정일·실시일은 더블클릭 또는 Enter로 수정하고, 올바른 날짜 입력 완료 후 자동 저장됩니다. 차이는 실시일에서 예정일을 뺀 일수입니다. 완료 단계는 기준일 기준이며 전체 공정률이 아닙니다.</p></div>
+      <p className="sr-only">예정일·타설일은 더블클릭 또는 Enter로 수정하고, 올바른 날짜 입력 완료 후 자동 저장됩니다. 차이는 타설일에서 예정일을 뺀 일수입니다. 완료 단계는 기준일 기준이며 전체 공정률이 아닙니다.</p></div>
       {panel && <ProgressStructure document={document} buildingId={buildingId} stageId={stageId}
         disabled={saving || !snapshot || stale || !!inlineEdit} adding={addingBuilding} onAdding={setAddingBuilding}
         onClose={() => {setPanel(null);setAddingBuilding(false);}} onSelect={selectStructure}

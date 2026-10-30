@@ -79,17 +79,21 @@ body {
   .progress-print-only { display: block; }
   .progress-print-sheet { break-before: page; }
   .progress-print-sheet:first-child { break-before: auto; }
-  .progress-print-sheet h2 { color: #111; margin: 0 0 4px; font-size: 16px; line-height: 22px; }
-  .progress-print-sheet p { color: #333; margin: 0 0 8px; font-size: 11px; line-height: 15px; }
-  /* One sheet: --print-font and --print-row come from progressPrintLayout, and cells stay on one line so rows cannot grow. */
-  .progress-print-grid { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: var(--print-font, 12px); color: #111; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  .progress-print-grid :is(th,td) { block-size: var(--print-row, 20px); border: 1px solid #7b8780; padding: 0 2px; line-height: calc(var(--print-row, 20px) - 2px); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: clip; }
-  .progress-print-grid thead tr:first-child th { white-space: normal; line-height: 1.15; overflow-wrap: anywhere; }
+  .progress-print-sheet h2 { color: #111; margin: 0 0 4px; font-size: 16px; line-height: 22px; text-align: center; }
+  .progress-print-sheet p { color: #333; margin: 0 0 8px; font-size: 11px; line-height: 15px; text-align: center; }
+  /* One A4 portrait sheet: building blocks wrap into rows; --print-font and --print-row come from progressPrintLayout and cells stay on one line so rows cannot grow. */
+  .progress-print-row { display: flex; gap: 10px; align-items: flex-start; }
+  .progress-print-row + .progress-print-row { margin-top: 12px; }
+  .progress-print-block { flex: none; table-layout: fixed; border-collapse: collapse; font-size: var(--print-font, 12px); color: #111; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .progress-print-block :is(th,td) { block-size: var(--print-row, 20px); border: 1px solid #7b8780; padding: 0 2px; line-height: calc(var(--print-row, 20px) - 2px); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+  .progress-print-block thead tr:first-child th { white-space: normal; line-height: 1.15; word-break: keep-all; overflow-wrap: anywhere; }
   /* Several pour dates (25.09.26, 10.10) take two half-height lines inside the same row instead of being cut off. */
-  .progress-print-grid td.is-multi { white-space: normal; line-height: calc((var(--print-row, 20px) - 2px) / 2); font-size: min(var(--print-font, 12px), calc((var(--print-row, 20px) - 2px) / 2)); }
-  .progress-print-grid th { background: #e8efea; color: #111; }
-  .progress-print-grid td { font-weight: 600; }
-  .progress-print-grid thead { display: table-header-group; }
+  .progress-print-block td.is-multi { white-space: normal; line-height: calc((var(--print-row, 20px) - 2px) / 2); font-size: min(var(--print-font, 12px), calc((var(--print-row, 20px) - 2px) / 2)); }
+  .progress-print-block thead th { background: #e8efea; color: #111; }
+  .progress-print-block tbody th { background: #f1f4f1; color: #111; font-weight: 600; }
+  .progress-print-block td { font-weight: 600; }
+  /* "none" loses every border conflict, so the empty area stays blank and the first real row keeps its top line. */
+  .progress-print-block tr.is-pad :is(th,td) { border-style: none; background: none; }
 }
 .log-print-table { table-layout: fixed; }
 .log-print-table :is(th,td) { padding-inline: 2px; white-space: normal; overflow-wrap: anywhere; }
@@ -107,7 +111,7 @@ body {
   .log-print-table tbody td { padding-block: 2px; line-height: 14px; }
   .log-print-sites { margin-top: 6px; padding: 6px 8px; break-inside: avoid; }
   .log-print-signatures { margin-top: 10px; padding-top: 6px; break-inside: avoid; }
-  @page progress-report { size: A3 landscape; margin: 10mm; }
+  @page progress-report { size: A4 portrait; margin: 10mm; }
   .progress-page { page: progress-report; }
   @page {
     size: A4 portrait;

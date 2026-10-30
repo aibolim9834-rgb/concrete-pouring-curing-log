@@ -116,7 +116,7 @@ export function ProgressStructure({document,buildingId,stageId,disabled,adding,o
             <button type="submit" className="ui-button ui-primary">저장</button><button type="button" className="ui-button" onClick={()=>cancelStageEdit(s.id)}>취소</button>
             {error && <p id="structure-stage-edit-error" role="alert" className="structure-error">{error}</p>}
           </form>
-          : <><button className="structure-stage-pick" onClick={()=>{closeForm();onSelect(document,buildingId,s.id);}}>{s.name}{building?.records[s.id]?.date&&<small>실시일 {shortDate(building.records[s.id].date,'.')}</small>}</button>
+          : <><button className="structure-stage-pick" onClick={()=>{closeForm();onSelect(document,buildingId,s.id);}}>{s.name}{building?.records[s.id]?.date&&<small>타설일 {shortDate(building.records[s.id].date,'.')}</small>}</button>
             <button className="ui-button" data-stage-edit={s.id} aria-label={`${s.name} 수정`} onClick={()=>editStage(s.id,'rename')}>수정</button><button className="ui-button ui-danger" aria-label={`${s.name} 삭제`} onClick={()=>editStage(s.id,'delete')}>삭제</button></>}
       </div>)}{!building&&<p className="ui-note">동을 추가하면 층 목록이 나타납니다.</p>}</div>
       <div className="structure-footer"><button className="ui-button" disabled={!selectedStage||document.buildings.length<2} onClick={()=>{setTargets([]);setError('');setDialog('copy');}}>다른 동에도 추가…</button><button className="ui-button" disabled={!canUndo} onClick={async()=>{closeForm();await onUndo();}}>실행 취소</button></div>

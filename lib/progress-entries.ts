@@ -21,7 +21,7 @@ export function updateProgressRecord(record: ProgressRecord | undefined, date: s
 export function upsertProgressEntry(record: ProgressRecord | undefined, entry: ProgressEntry, date: string, color: string): ProgressRecord {
   validateProgressEntry(entry);
   if (!validDate(date)) throw new Error('공통 타설일을 먼저 입력해주세요.');
-  if (record?.date && record.date !== date) throw new Error('공통 타설일이 바뀌었습니다. 먼저 표의 실시일을 저장해주세요.');
+  if (record?.date && record.date !== date) throw new Error('공통 타설일이 바뀌었습니다. 먼저 표의 타설일을 저장해주세요.');
   const entries = record?.entries || [];
   const next: ProgressRecord = { ...record, date, color: record?.color || color, status: 'done', entries: entries.some(e => e.id === entry.id) ? entries.map(e => e.id === entry.id ? entry : e) : [...entries, entry] };
   validateProgressRecord(next);
@@ -53,7 +53,7 @@ export const pourDates = (record: ProgressRecord | undefined) => record?.dates |
 export function setPourDates(record: ProgressRecord | undefined, dates: string[], color: string): ProgressRecord {
   const list = Array.from(new Set(dates)).sort();
   if (list.some(d => !validDate(d))) throw new Error('올바른 날짜를 입력해주세요.');
-  if (!list.length && record?.entries?.length) throw new Error('구역 내역이 있는 실시일은 비울 수 없습니다.');
+  if (!list.length && record?.entries?.length) throw new Error('구역 내역이 있는 타설일은 비울 수 없습니다.');
   const next: ProgressRecord = { ...(record || { color }), date: list[list.length - 1] || '', status: list.length ? 'done' : 'none', color: record?.color || color };
   if (list.length > 1) next.dates = list; else delete next.dates;
   validateProgressRecord(next);
