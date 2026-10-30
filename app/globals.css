@@ -452,7 +452,7 @@ body {
 .mobile-log-group { display:grid; gap:10px; margin:0; padding:0; border:0; min-inline-size:0; }
 .mobile-log-group > legend { padding:0; margin-block-end:8px; font-size:12px; font-weight:700; color:var(--b-muted, #59635D); }
 .mobile-log-group label { display:grid; gap:5px; font-size:12px; font-weight:500; color:var(--b-muted, #59635D); min-inline-size:0; }
-.concrete-app .mobile-log-group :is(input:not([type=radio]),select) { inline-size:100%; min-block-size:48px!important; padding:0 12px; font-size:16px; color:var(--b-ink, #212121); }
+.concrete-app .mobile-log-group :is(input:not([type=radio]),select) { inline-size:100%; min-block-size:48px!important; padding:0 12px; border:1px solid var(--b-control, #7A8A7D); border-radius:5px; background:#fff; font-size:16px; color:var(--b-ink, #212121); }
 .mobile-log-pair { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
 .mobile-log-unit { position:relative; display:block; }
 .mobile-log-unit > input { padding-inline-end:40px!important; }

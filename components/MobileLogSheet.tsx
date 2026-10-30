@@ -82,7 +82,7 @@ export function MobileLogSheet({ log, logs, site, onAdd, onUpdate, onDelete, onC
 
   const field = (key: 'building' | 'floor' | 'remicon_company' | 'curing_protection', label: string, placeholder = '') => {
     const need = required.some(([name]) => name === key), bad = missing.includes(key);
-    return <label htmlFor={`mobile-log-${key}`}>{label}{need && <span className="mobile-log-need" aria-hidden="true"> *</span>}
+    return <label htmlFor={`mobile-log-${key}`}><span>{label}{need && <span className="mobile-log-need" aria-hidden="true"> *</span>}</span>
       <input id={`mobile-log-${key}`} type="text" value={draft[key]} placeholder={placeholder} required={need} aria-invalid={bad || undefined} aria-describedby={bad ? `mobile-log-${key}-error` : undefined}
         onChange={e => set({ [key]: e.target.value })} />
       {bad && <span id={`mobile-log-${key}-error`} className="mobile-log-error">{`${label}을 입력해주세요.`}</span>}
@@ -109,7 +109,7 @@ export function MobileLogSheet({ log, logs, site, onAdd, onUpdate, onDelete, onC
           {error && <p className="mobile-log-alert" role="alert">{error}</p>}
 
           <fieldset className="mobile-log-group"><legend>날짜·위치</legend>
-            <label htmlFor="mobile-log-date">일자<span className="mobile-log-need" aria-hidden="true"> *</span>
+            <label htmlFor="mobile-log-date"><span>일자<span className="mobile-log-need" aria-hidden="true"> *</span></span>
               <input id="mobile-log-date" type="date" value={draft.date} required aria-invalid={missing.includes('date') || undefined} onChange={e => set({ date: e.target.value })} />
               {missing.includes('date') && <span className="mobile-log-error">일자를 입력해주세요.</span>}
             </label>
