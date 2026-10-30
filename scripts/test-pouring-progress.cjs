@@ -63,6 +63,12 @@ const document = () => ({ version: 1, buildings: [{ id: 'b1', name: '101동', st
     assert.throws(() => archive.assertNewSiteName(sites, ' 검증   현장 '));
     archive.assertNewSiteName(sites, '다른 현장'); assert.equal(sites.length, 2);
   });
+  await check('site list sorts by name: numbers by value, then English, then 가나다', () => {
+    const names = ['평택 고덕 대우 민간참여(1공구)', '대구 범어 자이 S&D', 'LG U+파주 전산 2동', '10현장', '9현장', '노량진 SK'];
+    const input = names.map((name, i) => ({ id: 's' + i, name }));
+    assert.equal(JSON.stringify(archive.sortSites(input).map(s => s.name)), JSON.stringify(['9현장', '10현장', 'LG U+파주 전산 2동', '노량진 SK', '대구 범어 자이 S&D', '평택 고덕 대우 민간참여(1공구)']));
+    assert.equal(input[0].name, names[0], 'input list unchanged');
+  });
   const sites = [{ id: 'archive-a', name: '같은 현장' }, { id: 'archive-b', name: '같은 현장' }];
   const logs = [{ ...logData.newLog('archive-a'), id: 'log-a', remarks: '보관 확인' }, { ...logData.newLog('archive-b'), id: 'log-b' }];
   let savedArchive;

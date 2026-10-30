@@ -11,7 +11,7 @@ import { PrintView } from '@/components/PrintView';
 import { SitePhotos } from '@/components/SitePhotos';
 import { PouringProgress } from '@/components/PouringProgress';
 
-import { archiveSite, assertNewSiteName, listSiteArchives, removeLocalSite, restoreLocalSite, SiteArchive } from '@/lib/site-archive';
+import { archiveSite, assertNewSiteName, listSiteArchives, removeLocalSite, restoreLocalSite, SiteArchive, sortSites } from '@/lib/site-archive';
 import { progressId } from '@/lib/pouring-progress';
 import { readLocalData, writeLocalData, validateLogInput, filterLogs, emptyLogFilters, LogFilters, sortLogs, defaultLogSort, LogSort } from '@/lib/log-data';
 import { BackupManager } from './BackupManager';
@@ -22,7 +22,9 @@ import { normalizeWatering } from '@/lib/watering';
 import { normalizeStrength } from '@/lib/strength';
 
 export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | 'progress' | 'photos' }) {
-  const [sites, setSites] = useState<Site[]>([]);
+  const [sites, setSiteList] = useState<Site[]>([]);
+  // Every change to the list (load, add, rename, delete, restore) goes through here, so it stays in name order.
+  const setSites = (update: Site[] | ((prev: Site[]) => Site[])) => setSiteList(prev => sortSites(typeof update === 'function' ? update(prev) : update));
   const [selectedSiteId, setSelectedSiteId] = useState<string>('');
   const [logs, setLogs] = useState<PouringLog[]>([]);
   
@@ -70,8 +72,9 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
           loaded = await loadCloudLogData();
         } else loaded = readLocalData(localStorage);
         if (!active) return;
-        setSites(loaded.sites); setLogs(loaded.logs);
-        setSelectedSiteId(loaded.sites.find(site => site.id === preferred)?.id || loaded.sites[0]?.id || '');
+        const loadedSites = sortSites(loaded.sites);
+        setSites(loadedSites); setLogs(loaded.logs);
+        setSelectedSiteId(loadedSites.find(site => site.id === preferred)?.id || loadedSites[0]?.id || '');
         setReady(true); setDataIssue('');
       } catch (e) {
         if (active) setDataIssue(`자료를 안전하게 불러오지 못해 입력을 중지했습니다. 원본은 덮어쓰지 않습니다. ${e instanceof Error ? e.message : ''}`);

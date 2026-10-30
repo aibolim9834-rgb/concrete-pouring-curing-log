@@ -94,7 +94,8 @@ export const SiteModal: React.FC<SiteModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+        {/* One scroll area for the whole body: a second, nested list scroller made the wheel jump between the two. */}
+        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto overscroll-contain">
           {(error || archiveError) && <p className="progress-error" role="alert">{error || archiveError}</p>}
           <fieldset disabled={busy} className="space-y-6">
           
@@ -138,7 +139,7 @@ export const SiteModal: React.FC<SiteModalProps> = ({
           {/* Current Site List */}
           <div>
             <h3 className="text-xs font-bold text-slate-400 mb-2">등록된 현장 목록 ({sites.length}개)</h3>
-            <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+            <div className="space-y-1.5">
               {sites.map((site) => {
                 const isSelected = site.id === selectedSiteId;
                 if (renaming?.id === site.id) return (

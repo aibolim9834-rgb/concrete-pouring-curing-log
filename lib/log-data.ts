@@ -5,9 +5,6 @@ export const localToday = () => { const d = new Date(); return `${d.getFullYear(
 export function newLog(siteId = '', category = '1'): PouringLogInput {
   return { site_id: siteId, category, date: localToday(), building: '', floor: '', member_type: '슬라브', min_temp: null, max_temp: null, weather: '', remicon_company: '', strength: '', volume: '', curing_watering: '', curing_protection: '', remarks: '' };
 }
-export function reuseLogBasics(log: PouringLog, category: string): PouringLogInput {
-  return { ...newLog(log.site_id, category), building: log.building, member_type: log.member_type, remicon_company: log.remicon_company, strength: log.strength || '' };
-}
 export function validateSites(value: unknown): asserts value is Site[] {
   if (!Array.isArray(value)) throw new Error('현장 목록 형식을 확인해주세요.');
   const ids = new Set<string>();

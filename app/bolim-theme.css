@@ -148,6 +148,9 @@
   .concrete-app .record-log-table tbody tr.record-display-row:nth-child(odd) > td { background-color:#F7F8F7; }
   .concrete-app .record-log-table tbody tr.record-display-row:hover > td { background-color:var(--b-selected); }
   .concrete-app .record-row-actions button:hover { background:var(--b-surface); }
+  /* The edit row's save button is the one filled action, so its white check stays visible on the white row buttons' theme. */
+  .concrete-app .record-row-actions .record-save-button { background:var(--b-action); border-color:var(--b-action); color:var(--b-surface); }
+  .concrete-app .record-row-actions .record-save-button:hover:not(:disabled) { background:var(--b-action-hover); border-color:var(--b-action-hover); }
   /* Strengthen journal text contrast without changing backgrounds or action buttons. */
   .concrete-app .record-log-table { --b-muted:#46534B; }
   .concrete-app .record-log-table tbody td.text-amber-300,

@@ -274,6 +274,9 @@ body {
 .app-modal { padding: 1rem; border: 0; background: transparent; color: inherit; width: 100%; max-width: none; max-height: 100dvh; }
 .app-modal[open] { display: flex; justify-content: center; align-items: center; }
 .app-modal::backdrop { background: rgb(2 6 23 / .8); backdrop-filter: blur(4px); }
+/* Scrolling inside a modal or over its backdrop must not scroll the page underneath, which would re-blur the backdrop every frame. */
+.app-modal:modal { overscroll-behavior: contain; }
+.app-modal::backdrop { overflow: hidden; overscroll-behavior: contain; }
 .app-modal > div { min-width: 0; }
 .app-modal fieldset { min-width: 0; }
 .concrete-app fieldset { min-inline-size: 0; }
@@ -489,7 +492,6 @@ body {
 .mobile-log-head small { display:block; font-size:12px; line-height:18px; font-weight:400; color:var(--b-muted, #59635D); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .mobile-log-close { flex:none; inline-size:44px; block-size:44px; border:1px solid var(--b-line, #D8DFD9); border-radius:8px; background:var(--b-surface, #fff); font-size:22px; line-height:1; }
 .mobile-log-body { flex:1; min-block-size:0; overflow-y:auto; overscroll-behavior:contain; display:grid; align-content:start; gap:18px; margin:0; border:0; padding:14px 16px 24px; }
-.mobile-log-reuse { min-block-size:44px; border:1px dashed var(--b-control, #7A8A7D); border-radius:8px; background:#f7faf7; color:var(--b-action-hover, #005C1A); font-weight:600; }
 .mobile-log-group { display:grid; gap:10px; margin:0; padding:0; border:0; min-inline-size:0; }
 .mobile-log-group > legend { padding:0; margin-block-end:8px; font-size:12px; font-weight:700; color:var(--b-muted, #59635D); }
 .mobile-log-group label { display:grid; gap:5px; font-size:12px; font-weight:500; color:var(--b-muted, #59635D); min-inline-size:0; }

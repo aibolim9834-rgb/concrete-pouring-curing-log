@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PouringLog, PouringLogInput, Site } from '@/lib/types';
-import { newLog, reuseLogBasics, filterLogs, LogFilters, LogSort, LogSortKey } from '@/lib/log-data';
+import { newLog, filterLogs, LogFilters, LogSort, LogSortKey } from '@/lib/log-data';
 import { WateringSelect } from './WateringSelect';
 import { MobileLogSheet } from './MobileLogSheet';
 import { ShortDateInput } from './ShortDateInput';
@@ -205,12 +205,6 @@ export const RecordTable: React.FC<RecordTableProps> = ({
         조회 조건 {filtersOpen ? '접기' : '펼치기'}<span className="ui-note">적용 {activeFilterCount}개</span>
       </button>
       <div id="log-filters" className={`log-filters${filtersOpen ? '' : ' is-collapsed'}`}>
-        <button className="ui-button" disabled={!logs.length} onClick={() => {
-          const latest = [...logs].sort((a,b) => b.date.localeCompare(a.date))[0];
-          if (!latest) return;
-          if ((newRowData.building || newRowData.floor || newRowData.remicon_company || newRowData.volume !== '' || newRowData.curing_watering || newRowData.curing_protection) && !confirm('작성 중인 새 행을 초기화하고 최근 일지의 동·부위·레미콘사·강도를 불러오시겠습니까?')) return;
-          setNewRowData(reuseLogBasics(latest, String(logs.length + 1))); setError('');
-        }}>최근 일지 기본정보 불러오기</button>
         {/* Half-typed dates are not applied, so the list does not flicker while a date is being typed. */}
         <label htmlFor="logs-from">시작일<ShortDateInput id="logs-from" label="시작일" value={filters.from} onChange={v => { if (!v || validDate(v)) onFiltersChange({ ...filters, from: v }); }} /></label>
         <label htmlFor="logs-to">종료일<ShortDateInput id="logs-to" label="종료일" value={filters.to} onChange={v => { if (!v || validDate(v)) onFiltersChange({ ...filters, to: v }); }} /></label>
@@ -467,6 +461,13 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                     <tr key={log.id} ref={editingRowRef} className="bg-amber-950/30 border-2 border-amber-500/60"
                       onBlur={(event) => {
                         if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) void saveInlineEdit(log.id);
+                      }}
+                      // Enter in any field saves the row, like the new-entry row; an Enter that confirms Korean input is left alone.
+                      onKeyDown={(event) => {
+                        if (event.key !== 'Enter' || !(event.target as HTMLElement).matches('input, select')) return;
+                        event.preventDefault();
+                        if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229 || event.repeat) return;
+                        void saveInlineEdit(log.id);
                       }}>
                     <td className="p-1 border-r border-slate-800 text-center">{index + 1}</td>
                     <td className="p-1 border-r border-slate-800 text-center">
@@ -594,8 +595,8 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                       <div className="record-row-actions flex items-center justify-center">
                         <button
                           onClick={() => saveInlineEdit(log.id)}
-                          title="저장"
-                          className="p-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded shadow transition"
+                          title="저장" aria-label="저장"
+                          className="record-save-button p-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded shadow transition"
                         >
                           <Check className="w-3.5 h-3.5" />
                         </button>
@@ -604,7 +605,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                             setEditingRowId(null);
                             setEditingRowData(null);
                           }}
-                          title="취소"
+                          title="취소" aria-label="취소"
                           className="p-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition"
                         >
                           <X className="w-3.5 h-3.5" />

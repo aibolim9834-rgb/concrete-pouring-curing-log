@@ -8,6 +8,9 @@ export interface SiteArchive {
   version: 1; key: string; archivedAt: string; mode: 'local' | 'cloud';
   site: Site; logs: PouringLog[]; progressRaw: string | null;
 }
+// Site lists always show in name order: numbers by value, then English, then 가나다.
+const siteNameOrder = new Intl.Collator('en', { numeric: true });
+export const sortSites = (sites: Site[]) => [...sites].sort((a, b) => siteNameOrder.compare(a.name.trim(), b.name.trim()) || a.id.localeCompare(b.id));
 // exceptId leaves out the site being renamed, so keeping its own name is not a clash.
 export function assertNewSiteName(sites: Site[], name: string, exceptId?: string) {
   const normalized = name.trim().normalize('NFKC').replace(/\s+/g, ' ').toLocaleLowerCase();

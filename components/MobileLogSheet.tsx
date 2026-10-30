@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { PouringLog, PouringLogInput, Site } from '@/lib/types';
-import { newLog, reuseLogBasics } from '@/lib/log-data';
+import { newLog } from '@/lib/log-data';
 import { normalizeStrength } from '@/lib/strength';
 import { WateringSelect } from './WateringSelect';
 
@@ -100,12 +100,6 @@ export function MobileLogSheet({ log, logs, site, onAdd, onUpdate, onDelete, onC
           <button type="button" className="mobile-log-close" aria-label="닫기" onClick={requestClose}>×</button>
         </header>
         <fieldset className="mobile-log-body" disabled={saving}>
-          {!log && <button type="button" className="mobile-log-reuse" disabled={!logs.length} onClick={() => {
-            const latest = [...logs].sort((a, b) => b.date.localeCompare(a.date))[0];
-            if (!latest || (dirty && !confirm('작성 중인 내용을 최근 일지 기본정보로 바꿀까요?'))) return;
-            const next = reuseLogBasics(latest, String(logs.length + 1));
-            setDraft(next); setMinText(''); setMaxText(''); setMissing([]);
-          }}>최근 일지 기본정보 불러오기</button>}
           {error && <p className="mobile-log-alert" role="alert">{error}</p>}
 
           <fieldset className="mobile-log-group"><legend>날짜·위치</legend>
