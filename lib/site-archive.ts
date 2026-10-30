@@ -8,10 +8,11 @@ export interface SiteArchive {
   version: 1; key: string; archivedAt: string; mode: 'local' | 'cloud';
   site: Site; logs: PouringLog[]; progressRaw: string | null;
 }
-export function assertNewSiteName(sites: Site[], name: string) {
+// exceptId leaves out the site being renamed, so keeping its own name is not a clash.
+export function assertNewSiteName(sites: Site[], name: string, exceptId?: string) {
   const normalized = name.trim().normalize('NFKC').replace(/\s+/g, ' ').toLocaleLowerCase();
   if (!normalized) throw new Error('현장명을 입력해주세요.');
-  if (sites.some(site => site.name.trim().normalize('NFKC').replace(/\s+/g, ' ').toLocaleLowerCase() === normalized)) {
+  if (sites.some(site => site.id !== exceptId && site.name.trim().normalize('NFKC').replace(/\s+/g, ' ').toLocaleLowerCase() === normalized)) {
     throw new Error('같은 이름의 현장이 있습니다. 현장 목록에서 선택하거나 다른 이름을 입력해주세요.');
   }
 }

@@ -180,6 +180,27 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
     } finally { siteLock.current = false; }
   };
 
+  const handleRenameSite = async (id: string, name: string) => {
+    assertWritable();
+    if (siteLock.current) throw new Error('현장 처리 중입니다. 잠시 후 다시 시도해주세요.');
+    const target = sites.find(site => site.id === id);
+    if (!target) throw new Error('이름을 바꿀 현장을 다시 선택해주세요.');
+    const nextName = name.trim();
+    if (nextName === target.name) return;
+    assertNewSiteName(sites, nextName, id);
+    siteLock.current = true;
+    try {
+      const renamed = sites.map(site => site.id === id ? { ...site, name: nextName } : site);
+      if (isSupabase && supabase) {
+        const { data, error } = await supabase.from('sites').update({ name: nextName }).eq('id', id).select('id').maybeSingle();
+        if (error || !data) throw new Error('현장명 변경에 실패했습니다. 입력 내용은 유지됩니다. 연결과 권한을 확인해주세요.');
+      } else {
+        writeLocalData(localStorage, { sites, logs }, { sites: renamed, logs });
+      }
+      setSites(renamed);
+    } finally { siteLock.current = false; }
+  };
+
   const handleDeleteSite = async (id: string) => {
     assertWritable();
     if (siteLock.current) throw new Error('현장 처리 중입니다. 잠시 후 다시 시도해주세요.');
@@ -342,6 +363,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
         selectedSiteId={selectedSiteId}
         onSelectSite={id => { if (!siteLock.current && canLeavePhotos()) { setSelectedSiteId(id); setFilters(emptyLogFilters()); setNotice(''); } }}
         onAddSite={handleAddSite}
+        onRenameSite={handleRenameSite}
         onDeleteSite={handleDeleteSite}
         archives={archives}
         archiveError={archiveError}

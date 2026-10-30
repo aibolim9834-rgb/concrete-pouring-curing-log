@@ -130,5 +130,12 @@ const document = () => ({ version: 1, buildings: [{ id: 'b1', name: '101동', st
     assert.throws(() => archive.archiveSite(storage, { id: 'broken-site', name: '손상 현장' }, [], 'local'));
     assert.deepEqual([...entries], before);
   });
+  await check('cloud save tells a network failure apart from a newer revision elsewhere', async () => {
+    const withResult = result => load('lib/progress-storage.ts', { './supabase': { supabase: { from() { const q = { update() { return q; }, eq() { return q; }, select() { return q; }, maybeSingle: async () => result }; return q; } } }, './pouring-progress': model, './cloud-storage': load('lib/cloud-storage.ts') });
+    const current = { document: document(), revision: 3, mode: 'cloud' };
+    await assert.rejects(withResult({ data: null, error: { message: 'TypeError: Failed to fetch', code: '' } }).saveProgress('site-a', current, document()), /DB 저장에 실패/);
+    await assert.rejects(withResult({ data: null, error: null }).saveProgress('site-a', current, document()), /다른 화면에서 변경/);
+    assert.equal((await withResult({ data: { revision: 4 }, error: null }).saveProgress('site-a', current, document())).revision, 4);
+  });
   console.log(`${count} checks passed; no network calls.`);
 })().catch(error => { console.error(error); process.exitCode = 1; });

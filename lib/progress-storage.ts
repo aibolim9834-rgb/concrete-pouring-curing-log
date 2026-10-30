@@ -37,7 +37,8 @@ export async function saveProgress(site: string, current: ProgressSnapshot, docu
     const result = current.revision === 0
       ? await supabase.from('pouring_progress').insert({ site_id: site, document, revision }).select('revision').single()
       : await supabase.from('pouring_progress').update({ document, revision }).eq('site_id', site).eq('revision', current.revision).select('revision').maybeSingle();
-    if (result.error || !result.data) throw new Error(result.error?.code === '23505' || !result.data ? '다른 화면에서 변경되었습니다. 새로 불러온 뒤 다시 입력해주세요.' : 'DB 저장에 실패했습니다. 입력 내용은 유지됩니다.');
+    // No row back without an error means the revision moved on elsewhere; any other error (network included) is a failed save.
+    if (result.error || !result.data) throw new Error(result.error && result.error.code !== '23505' ? 'DB 저장에 실패했습니다. 연결 상태를 확인해주세요. 입력 내용은 유지됩니다.' : '다른 화면에서 변경되었습니다. 새로 불러온 뒤 다시 입력해주세요.');
   } else {
     const saved = localStorage.getItem(storageKey(site));
     if ((saved ? JSON.parse(saved).revision : 0) !== current.revision) throw new Error('다른 탭에서 변경되었습니다. 새로 불러온 뒤 다시 입력해주세요.');

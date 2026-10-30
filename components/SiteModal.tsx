@@ -15,6 +15,7 @@ interface SiteModalProps {
   selectedSiteId: string;
   onSelectSite: (id: string) => void;
   onAddSite: (name: string) => Promise<void>;
+  onRenameSite: (id: string, name: string) => Promise<void>;
   onDeleteSite: (id: string) => Promise<void>;
   archives: SiteArchive[];
   archiveError: string;
@@ -29,6 +30,7 @@ export const SiteModal: React.FC<SiteModalProps> = ({
   selectedSiteId,
   onSelectSite,
   onAddSite,
+  onRenameSite,
   onDeleteSite,
   archives, archiveError, canRestore, onRestoreSite,
 }) => {
@@ -36,6 +38,7 @@ export const SiteModal: React.FC<SiteModalProps> = ({
   const newSiteCode = nextSiteCode([...sites, ...archives.map(archive => archive.site)]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
   const lock = useRef(false);
 
   if (!isOpen) return null;
@@ -46,6 +49,19 @@ export const SiteModal: React.FC<SiteModalProps> = ({
     try { await action(); }
     catch (error) { setError(error instanceof Error ? error.message : '처리에 실패했습니다. 입력과 저장 공간을 확인해주세요.'); }
     finally { lock.current = false; setBusy(false); }
+  };
+  // Cancelling a rename puts focus back on that site's 수정 button.
+  const cancelRename = (id: string) => {
+    setRenaming(null); setError('');
+    requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`[data-site-rename="${id}"]`)?.focus());
+  };
+  const handleRename = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!renaming) return;
+    const { id, name } = renaming;
+    // The list is disabled while saving, which drops focus; put it back so Enter and Esc keep working.
+    void run(async () => { await onRenameSite(id, name); setRenaming(null); })
+      .then(() => requestAnimationFrame(() => (document.querySelector<HTMLElement>('.site-rename-row input') ?? document.querySelector<HTMLElement>(`[data-site-rename="${id}"]`))?.focus()));
   };
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,6 +141,25 @@ export const SiteModal: React.FC<SiteModalProps> = ({
             <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
               {sites.map((site) => {
                 const isSelected = site.id === selectedSiteId;
+                if (renaming?.id === site.id) return (
+                  // Esc must cancel only the rename, not close the whole dialog.
+                  <form key={site.id} onSubmit={handleRename} className="site-rename-row flex items-center gap-2 p-2 rounded-lg border bg-amber-950/40 border-amber-800/80 text-xs"
+                    onKeyDown={(e) => { if (e.key === 'Enter' && e.nativeEvent.isComposing) e.preventDefault(); if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancelRename(site.id); } }}>
+                    <input
+                      type="text"
+                      aria-label={`${site.name} 새 현장명`}
+                      value={renaming.name}
+                      onChange={(e) => setRenaming({ id: site.id, name: e.target.value })}
+                      onFocus={(e) => e.currentTarget.select()}
+                      maxLength={100}
+                      required
+                      autoFocus
+                      className="flex-1 min-w-0 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                    <button type="submit" className="ui-button ui-primary">저장</button>
+                    <button type="button" className="ui-button" onClick={() => cancelRename(site.id)}>취소</button>
+                  </form>
+                );
                 return (
                   <div
                     key={site.id}
@@ -144,6 +179,14 @@ export const SiteModal: React.FC<SiteModalProps> = ({
                       )}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        data-site-rename={site.id}
+                        onClick={() => { setError(''); setRenaming({ id: site.id, name: site.name }); }}
+                        aria-label={`${site.name} 현장명 수정`}
+                        className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-[11px]"
+                      >
+                        수정
+                      </button>
                       {!isSelected && (
                         <button
                           onClick={() => {

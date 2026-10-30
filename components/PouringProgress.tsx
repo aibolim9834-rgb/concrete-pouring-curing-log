@@ -17,7 +17,6 @@ import { loadProgress, ProgressSnapshot, saveProgress } from '@/lib/progress-sto
 import { cloudStorageEnabled } from '@/lib/cloud-storage';
 
 import { progressEditor, visibleSelection } from '@/lib/progress-editor';
-import { parseProgressBackup, serializeProgressBackup } from '@/lib/progress-backup';
 
 const cn = (...values: (string | false | null | undefined)[]) => twMerge(clsx(values));
 const defaultColor = '#ffffff';
@@ -49,7 +48,6 @@ export function PouringProgress({ site, onWorkPending }: Props) {
   const [stale, setStale] = useState(false);
   const [entryDraft, setEntryDraft] = useState<EntryDraft>(blankEntry);
   const lock = useRef(false);
-  const importRef = useRef<HTMLInputElement>(null);
   const [basis, setBasis] = useState(today);
   const [filter, setFilter] = useState('all');
   const [panel, setPanel] = useState<'structure' | null>('structure');
@@ -106,6 +104,20 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     window.addEventListener('resize', update);
     return () => { observer.disconnect(); window.removeEventListener('resize', update); };
   }, []);
+  const editingCell = !!inlineEdit;
+  useEffect(() => {
+    if (!editingCell) return;
+    // Pressing outside the cell editor closes or saves it on blur, which re-enables the toolbars at once.
+    // The click that follows must not then act on a button that was disabled when it was pressed (a color swatch, say).
+    const press = (e: PointerEvent) => {
+      if (!(e.target instanceof Element) || !e.target.closest(':disabled')) return;
+      const swallow = (c: MouseEvent) => { c.preventDefault(); c.stopPropagation(); };
+      window.document.addEventListener('click', swallow, { capture: true, once: true });
+      window.setTimeout(() => window.document.removeEventListener('click', swallow, true), 1000);
+    };
+    window.document.addEventListener('pointerdown', press, true);
+    return () => window.document.removeEventListener('pointerdown', press, true);
+  }, [editingCell]);
   useEffect(() => {
     // When the one-row color strip overflows, a plain mouse wheel scrolls it sideways; at either end the page scrolls as usual.
     const strip = colorToolsRef.current;
@@ -226,7 +238,8 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     if(value && !validDate(value)){if(source==='blur')setInlineEdit(current=>current?{...current,error:'올바른 날짜를 입력해주세요.'}:null);return;}
     const record=document.buildings.find(b=>b.id===inlineEdit.bid)?.records[inlineEdit.sid];
     const previous=inlineEdit.add?'':(inlineEdit.field==='planned'?record?.plannedDate:record?.date)||'';
-    if(previous===value)return;
+    // Leaving an unchanged cell (an empty one opened by mistake, say) closes it instead of keeping the table locked.
+    if(previous===value){if(source==='blur'){inlineKeyRef.current=null;setInlineEdit(null);selectRecord(document,inlineEdit.bid,inlineEdit.sid);}return;}
     if(inlineEdit.add && pourDates(record).includes(value)){setInlineEdit(current=>current?{...current,error:'이미 넣은 타설일입니다.'}:null);return;}
     if(source==='input'){inlineAutoSaveRef.current=setTimeout(()=>{inlineAutoSaveRef.current=null;void saveInline(value);},400);}
     else void saveInline(value);
@@ -350,20 +363,6 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     if (!snapshot) { setError('타설현황을 불러온 뒤 CSV로 내보내주세요.'); return; }
     downloadFile(`${site.name}_타설현황.csv`, progressCsv(document, filter, basis), 'text/csv;charset=utf-8');
   }
-  function exportBackup() {
-    try { downloadFile(`${site.name}_타설현황_백업.json`, serializeProgressBackup(site.name, document), 'application/json'); }
-    catch (error) { setError(error instanceof Error ? error.message : '백업을 만들지 못했습니다. 저장 데이터는 유지됩니다.'); }
-  }
-  async function importJSON(file?: File) {
-    if (!file) return;
-    try {
-      if (file.size > 5 * 1024 * 1024) throw new Error('5MB 이하의 백업 파일을 선택해주세요.');
-      const parsed = parseProgressBackup(await file.text());
-      if (!confirm(`백업 '${parsed.siteName || '현장'}'의 ${parsed.document.buildings.length}개 동으로 현재 현황을 교체하시겠습니까? 기존 일지는 변경되지 않습니다.`)) return;
-      if (await commit(parsed.document)) { setSelected([]); setPanel(null); setFilter('all'); resetEditor(parsed.document); }
-    } catch (e) { setError(e instanceof Error ? e.message : '백업 파일을 확인해주세요.'); }
-    finally { if (importRef.current) importRef.current.value = ''; }
-  }
 
   // Each extra pour date shown on one line widens that building's actual-date column.
   function extraDateWidth(b: ProgressDocument['buildings'][number]) {
@@ -439,9 +438,6 @@ export function PouringProgress({ site, onWorkPending }: Props) {
   return <section className="progress-page" aria-label="타설현황">
     <div className="progress-heading"><div><p className="ui-note">{site.name}</p><div className="progress-title-row"><h2 className="ui-page-title">동별 타설현황</h2><span className="progress-storage-badge ui-note print:hidden">{snapshot ? snapshot.mode === 'local' ? '브라우저 저장' : 'DB 저장' : stale ? '불러오기 실패' : '불러오는 중…'}</span></div></div>
       <div className="progress-actions progress-heading-actions print:hidden">
-        <button type="button" className="ui-button" disabled={!snapshot || saving} onClick={exportBackup}>백업 저장</button>
-        <button type="button" className="ui-button" disabled={!snapshot || saving || !!inlineEdit || stale} onClick={() => importRef.current?.click()}>백업 불러오기</button>
-        <input hidden type="file" accept=".json,application/json" ref={importRef} onChange={e => importJSON(e.target.files?.[0])} aria-label="타설현황 백업 파일" />
         <button className="ui-button" disabled={!history.length || saving || !!inlineEdit} onClick={undo}>실행 취소</button>
         <button className="ui-button" disabled={!snapshot || saving || !!inlineEdit} onClick={() => { setPanel('structure'); setAddingBuilding(false); showPanel(); }}>동·층 관리</button>
         <button type="button" className="ui-button ui-primary progress-add-trigger" disabled={!snapshot || saving || stale || !!inlineEdit} aria-expanded={addingBuilding} aria-controls="structure-panel" onClick={openBuildingForm}>+ 동 추가</button>

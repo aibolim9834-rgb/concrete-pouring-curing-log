@@ -49,7 +49,7 @@ function uiHarness(file, name, props) {
   const react={useState(initial){const i=cursor++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return [states[i],v=>{states[i]=typeof v==='function'?v(states[i]):v;}];},useEffect(fn){effects.push(fn);},useCallback(fn){return fn;},useRef(value){return refs[refCursor++] ||= {current:value};}};
   const jsx=(type,props)=>({type,props});
   const events=new Map();
-  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./WateringSelect':{WateringSelect:'WateringSelect'},'./MobileLogSheet':{MobileLogSheet:'MobileLogSheet'},'./ShortDateInput':{ShortDateInput:'ShortDateInput'},'@/lib/progress-structure':load('lib/progress-structure.ts'),'@/lib/date-only':load('lib/date-only.ts'),'@/lib/pouring-progress':load('lib/pouring-progress.ts'),'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name})},{Node:TestNode,requestAnimationFrame:fn=>fn(),document:{addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
+  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./WateringSelect':{WateringSelect:'WateringSelect'},'./MobileLogSheet':{MobileLogSheet:'MobileLogSheet'},'./ShortDateInput':{ShortDateInput:'ShortDateInput'},'@/lib/progress-structure':load('lib/progress-structure.ts'),'@/lib/site-archive':load('lib/site-archive.ts'),'@/lib/site-code':load('lib/site-code.ts'),'@/lib/date-only':load('lib/date-only.ts'),'@/lib/pouring-progress':load('lib/pouring-progress.ts'),'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name})},{Node:TestNode,requestAnimationFrame:fn=>fn(),document:{querySelector:()=>null,addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
   return {states,events,get effects(){return effects;},render(){cursor=0;refCursor=0;effects=[];return exports[name](props);}};
 }
 (async()=>{
@@ -260,6 +260,29 @@ function uiHarness(file, name, props) {
     one(h.render(),n=>n.props?.['aria-label']==='지상 3층 수정').props.onClick();saved=null;
     one(h.render(),n=>n.props?.className==='structure-stage-edit').props.onKeyDown({key:'Escape',preventDefault(){},nativeEvent:{isComposing:false}});
     assert(!one(h.render(),n=>n.props?.className==='structure-stage-edit'));assert.equal(saved,null);
+  });
+  await check('site rename saves the trimmed name, keeps the id and rejects failures and duplicates',async()=>{
+    const ok=appHarness({data:{id:site.id},error:null});await find(ok.render(),'SiteModal').props.onRenameSite(site.id,'  새 현장명 ');
+    assert.equal(JSON.stringify(ok.states[0]),JSON.stringify([{...site,name:'새 현장명'}]));
+    const failed=appHarness({data:null,error:{message:'offline'}});
+    await assert.rejects(find(failed.render(),'SiteModal').props.onRenameSite(site.id,'다른 이름'),/현장명 변경에 실패/);assert.deepEqual(failed.states[0],[site]);
+    const dup=appHarness({data:{id:site.id},error:null});dup.states[0]=[site,{id:'site-b',name:'다른 현장'}];
+    await assert.rejects(find(dup.render(),'SiteModal').props.onRenameSite(site.id,' 다른  현장 '),/같은 이름/);assert.equal(dup.states[0][0].name,site.name);
+  });
+  await check('site list 수정 edits the name in its own row and Esc cancels',async()=>{
+    const all=(node,pred)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,pred)):[...(pred(node)?[node]:[]),...all(node.props?.children,pred)];
+    const one=(tree,pred)=>all(tree,pred)[0];const renamed=[];
+    const props={isOpen:true,onClose(){},sites:[site],selectedSiteId:site.id,onSelectSite(){},onAddSite:async()=>{},onRenameSite:async(id,name)=>{renamed.push([id,name]);},onDeleteSite:async()=>{},archives:[],archiveError:'',canRestore:true,onRestoreSite:async()=>{}};
+    const h=uiHarness('components/SiteModal.tsx','SiteModal',props);
+    one(h.render(),n=>n.props?.['aria-label']===site.name+' 현장명 수정').props.onClick();
+    let form=one(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-rename-row'));assert(form);
+    one(form,n=>n.type==='input').props.onChange({target:{value:'바뀐 현장'}});
+    form=one(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-rename-row'));
+    form.props.onSubmit({preventDefault(){}});await new Promise(r=>setImmediate(r));
+    assert.deepEqual(renamed,[[site.id,'바뀐 현장']]);assert(!one(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-rename-row')));
+    one(h.render(),n=>n.props?.['aria-label']===site.name+' 현장명 수정').props.onClick();
+    let stopped=false;one(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-rename-row')).props.onKeyDown({key:'Escape',preventDefault(){},stopPropagation(){stopped=true;},nativeEvent:{isComposing:false}});
+    assert(stopped);assert(!one(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-rename-row')));assert.equal(renamed.length,1);
   });
   console.log(`${count} upgrade checks passed; no network or real browser storage writes.`);
 })().catch(error=>{console.error(error);process.exitCode=1;});
