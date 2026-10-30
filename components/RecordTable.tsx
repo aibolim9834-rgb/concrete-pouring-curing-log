@@ -226,7 +226,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
           <caption className="sr-only">타설 일지. 열 제목을 누르면 오름차순 또는 내림차순으로 정렬합니다. 구분은 현재 조회 순서의 자동 번호입니다.</caption>
           <colgroup>
             {/* 번호, 일자, 동, 층, 부위, 최저·최고온도, 기상, 업체, 강도, 물량, 살수·보양, 관리 */}
-            {[2.5, 7, 18, 6.5, 6.5, 4.5, 4.5, 4.5, 6.5, 9.5, 6, 7, 10, 7].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}
+            {[3, 7, 17.5, 6.5, 6.5, 5.5, 5.5, 4.5, 6.5, 7.5, 6, 7, 10, 7].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}
           </colgroup>
           <thead>
             {/* Row 1 Headers */}

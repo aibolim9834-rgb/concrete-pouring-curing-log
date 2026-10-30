@@ -93,7 +93,10 @@
   .concrete-app .record-log-table tbody :is(td:nth-child(5),td:nth-child(9),td:nth-child(12),td:nth-child(13)),
   .concrete-app .record-log-table tbody :is(td:nth-child(5),td:nth-child(9),td:nth-child(12),td:nth-child(13)) :is(input,select) { text-align:center; }
   .concrete-app .record-log-table tbody :is(td:nth-child(12),td:nth-child(13)) span { padding-inline:4px; white-space:normal; word-break:keep-all; overflow:visible; overflow-wrap:anywhere; text-overflow:clip; }
-  .concrete-app .log-sort-button { display:inline-flex; align-items:center; justify-content:center; gap:4px; inline-size:100%; min-block-size:32px; padding:3px 2px; border:0; border-radius:3px; background:transparent; color:inherit; font-weight:600; cursor:pointer; }
+  /* Group headers keep the header gray; the generic bg-slate-950 mapping would turn them white. */
+  .concrete-app .record-log-table thead th[scope="colgroup"] { background:var(--b-head)!important; }
+  /* In a narrow window the sort arrow drops below the label instead of running into the next column. */
+  .concrete-app .log-sort-button { display:inline-flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:0 4px; word-break:keep-all; inline-size:100%; min-block-size:32px; padding:3px 2px; border:0; border-radius:3px; background:transparent; color:inherit; font-weight:600; cursor:pointer; }
   .concrete-app .log-sort-button:hover { background:var(--b-selected); }
   .concrete-app .log-sort-button:focus-visible { outline:2px solid var(--b-action); outline-offset:2px; }
   .concrete-app .log-sort-icon { font-size:11px; }
