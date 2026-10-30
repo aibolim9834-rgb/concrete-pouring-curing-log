@@ -74,6 +74,7 @@ export function PouringProgress({ site, onWorkPending }: Props) {
   function clearInlineAutoSave() { if(inlineAutoSaveRef.current!==null){clearTimeout(inlineAutoSaveRef.current);inlineAutoSaveRef.current=null;} }
   useEffect(()=>()=>{clearInlineAutoSave();inlineKeyRef.current=null;},[]);
   const cellNodes = useRef(new Map<string,HTMLButtonElement>());
+  const colorToolsRef = useRef<HTMLDivElement>(null);
   useEffect(()=>{if(inlineEdit)inlineDateRef.current?.focus();},[inlineEdit?.key]);
   const [color, setColor] = useState(defaultColor);
   const [history, setHistory] = useState<ProgressDocument[]>([]);
@@ -96,12 +97,26 @@ export function PouringProgress({ site, onWorkPending }: Props) {
 
   useEffect(() => {
     // The selection bar sticks under the app header, whose height changes when it wraps.
+    // In a short window the header scrolls away instead of sticking, so it then counts as 0.
     const header = window.document.querySelector<HTMLElement>('.concrete-app > header'), bar = window.document.querySelector<HTMLElement>('.progress-selection-tools');
     if (!header || !bar) return;
     const root = window.document.documentElement.style;
-    const update = () => { root.setProperty('--app-header-height', `${header.offsetHeight}px`); root.setProperty('--selection-bar-height', `${bar.offsetHeight}px`); };
+    const update = () => { root.setProperty('--app-header-height', `${getComputedStyle(header).position === 'sticky' ? header.offsetHeight : 0}px`); root.setProperty('--selection-bar-height', `${bar.offsetHeight}px`); };
     const observer = new ResizeObserver(update); observer.observe(header); observer.observe(bar); update();
-    return () => observer.disconnect();
+    window.addEventListener('resize', update);
+    return () => { observer.disconnect(); window.removeEventListener('resize', update); };
+  }, []);
+  useEffect(() => {
+    // When the one-row color strip overflows, a plain mouse wheel scrolls it sideways; at either end the page scrolls as usual.
+    const strip = colorToolsRef.current;
+    if (!strip) return;
+    const wheel = (e: WheelEvent) => {
+      if (e.deltaX || e.shiftKey || e.ctrlKey || strip.scrollWidth <= strip.clientWidth) return;
+      const before = strip.scrollLeft; strip.scrollLeft += e.deltaY;
+      if (strip.scrollLeft !== before) e.preventDefault();
+    };
+    strip.addEventListener('wheel', wheel, { passive: false });
+    return () => strip.removeEventListener('wheel', wheel);
   }, []);
   useEffect(() => {
     window.addEventListener('cp-progress-export', exportCSV);
@@ -311,9 +326,13 @@ export function PouringProgress({ site, onWorkPending }: Props) {
       if (await commit(next)) setEntryDraft(blankEntry());
     } catch (e) { setError(e instanceof Error ? e.message : '구역 내역을 삭제하지 못했습니다.'); }
   }
+  // Below 1200px the panel sits under the table, so opening it brings it into view.
+  function showPanel() {
+    if (window.matchMedia('(max-width: 1200px)').matches) requestAnimationFrame(() => window.document.getElementById('structure-panel')?.scrollIntoView({ block: 'start' }));
+  }
   function openBuildingForm() {
     if (saving || stale || inlineEdit) return;
-    setPanel('structure'); setAddingBuilding(true);
+    setPanel('structure'); setAddingBuilding(true); showPanel();
   }
   function selectStructure(next: ProgressDocument, bid: string, sid = '') {
     if (filter !== 'all' && filter !== bid) setFilter('all');
@@ -371,13 +390,12 @@ export function PouringProgress({ site, onWorkPending }: Props) {
     const bar = <>
       <div className="progress-selection-row">
         <h3 className="ui-label">선택 항목</h3><span className="progress-selection-name">{single ? `${buildingLabel(selectedBuilding?.name || '')} · ${selectedStage?.name}` : selected.length ? `${selected.length}칸 선택` : '선택한 칸 없음'}</span>
-        <div className="progress-color-tools" role="group" aria-label="칸 배경색">
+        <div ref={colorToolsRef} className="progress-color-tools" role="group" aria-label="칸 배경색">
           <label htmlFor="progress-cell-color" className="progress-color-picker"><span className="sr-only">사용자 지정 배경색</span><input id="progress-cell-color" type="color" value={color} disabled={!selected.length} onInput={e => { void chooseColor(e.currentTarget.value); }} /></label>
           <div className="progress-swatches" role="group" aria-label="표준색">{standardColors.map(c => swatch(c.value, `표준색 ${c.name}`, `${c.name} (${c.value})`))}</div>
           {recentColors.length > 0 && <div className="progress-swatches progress-recent-swatches" role="group" aria-label="최근 사용 색"><span className="progress-recent-label" aria-hidden="true">최근</span>{recentColors.map(c => swatch(c, `최근 사용 색 ${c}`, c))}</div>}
         </div>
         <button type="button" className="ui-button" disabled={!selected.length} onClick={() => applyRecords('clear-color')}>색상만 지우기</button>
-        <button type="button" className="ui-button ui-primary progress-add-trigger" aria-expanded={addingBuilding} aria-controls="structure-panel" onClick={openBuildingForm}>+ 동 추가</button>
         <button type="button" className="ui-button ui-danger progress-clear-record" disabled={!selected.length} onClick={() => applyRecords('clear')}><span><span className="long-text">선택 </span>기록 지우기</span></button>
       </div>
       {single && <div className="progress-pour-dates" role="group" aria-label="타설일 목록">
@@ -425,7 +443,8 @@ export function PouringProgress({ site, onWorkPending }: Props) {
         <button type="button" className="ui-button" disabled={!snapshot || saving || !!inlineEdit || stale} onClick={() => importRef.current?.click()}>백업 불러오기</button>
         <input hidden type="file" accept=".json,application/json" ref={importRef} onChange={e => importJSON(e.target.files?.[0])} aria-label="타설현황 백업 파일" />
         <button className="ui-button" disabled={!history.length || saving || !!inlineEdit} onClick={undo}>실행 취소</button>
-        <button className="ui-button" disabled={!snapshot || saving || !!inlineEdit} onClick={() => { setPanel('structure'); setAddingBuilding(false); }}>동·층 관리</button>
+        <button className="ui-button" disabled={!snapshot || saving || !!inlineEdit} onClick={() => { setPanel('structure'); setAddingBuilding(false); showPanel(); }}>동·층 관리</button>
+        <button type="button" className="ui-button ui-primary progress-add-trigger" disabled={!snapshot || saving || stale || !!inlineEdit} aria-expanded={addingBuilding} aria-controls="structure-panel" onClick={openBuildingForm}>+ 동 추가</button>
       </div></div>
     {(error || stale) && <div className="progress-error"><p role="alert">{error || '저장된 현황을 다시 불러와주세요.'}</p>{stale && <button type="button" className="ui-button" disabled={saving || !!inlineEdit} onClick={reload}>새로 불러오기</button>}{stale && inlineEdit && <p className="ui-note">셀 입력을 취소한 뒤 다시 불러와주세요.</p>}</div>}<p className="sr-only" role="status">{saving ? '저장 중입니다.' : notice}</p>
     <fieldset disabled={!snapshot || saving || stale || !!inlineEdit} className="progress-controls print:hidden"><label>기준일<ShortDateInput label="기준일" value={basis} onChange={v=>{if(validDate(v))setBasis(v);}}/></label><label>표시할 동<select value={filter} onChange={e => { setFilter(e.target.value); setSelected([]); setNotice('표시할 동이 바뀌어 선택을 해제했습니다.'); }}><option value="all">전체 동</option>{document.buildings.map(b => <option key={b.id} value={b.id}>{buildingLabel(b.name)}</option>)}</select></label><label className="progress-check"><input type="checkbox" checked={multiple} onChange={e => { setMultiple(e.target.checked); setSelected([]); setEntryDraft(blankEntry()); }} />여러 칸 선택</label><span className="ui-note">{visible.length}개 동 표시 · {selected.length}칸 선택</span><span role="status" className="ui-note">{saving ? '저장 중…' : notice}</span></fieldset>

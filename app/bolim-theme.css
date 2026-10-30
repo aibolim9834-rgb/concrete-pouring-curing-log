@@ -162,6 +162,11 @@
 @media screen and (forced-colors:active) { .concrete-app { --b-canvas:Canvas; --b-surface:Canvas; --b-soft:Canvas; --b-ink:CanvasText; --b-muted:CanvasText; --b-line:CanvasText; --b-control:ButtonText; --b-action:LinkText; --b-selected:Canvas; } }
 
 @media screen and (pointer:coarse) { .concrete-app .app-header-actions { --header-action-size:48px; } }
+/* Medium windows: print and CSV keep only their icons (named by aria-label and title) so the header fits one row. */
+@media screen and (min-width:761px) and (max-width:1200px) {
+  .concrete-app .app-header-actions > button.app-header-icon-action { inline-size:var(--header-action-size); padding-inline:0; justify-content:center; }
+  .concrete-app .app-header-action-label { position:absolute; inline-size:1px; block-size:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+}
 
 /* Touch devices: 16px fields stop iOS from zooming on focus, and controls get a 44px tap height.
    Table internals, in-cell editors, swatches and the picker icon inside date fields keep their compact sizes. */
@@ -205,8 +210,8 @@
   .concrete-app:has(.log-new-dock) > main { padding-bottom:96px; }
   .concrete-app .record-display-row { cursor:pointer; }
 
-  /* Progress: swatches slide sideways in one line, and the three record actions share one row. */
-  .concrete-app .progress-selection-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+  /* Progress: swatches slide sideways in one line, and the two record actions share one row. */
+  .concrete-app .progress-selection-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
   .concrete-app .progress-selection-row > .progress-selection-name { grid-column:2 / -1; }
   .concrete-app .progress-selection-row > .progress-color-tools { grid-column:1 / -1; flex-wrap:nowrap; overflow-x:auto; overscroll-behavior-x:contain; scrollbar-width:thin; padding-block:4px; }
   .concrete-app .progress-selection-row > .progress-color-tools .progress-swatches { flex-wrap:nowrap; }

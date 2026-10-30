@@ -265,7 +265,6 @@ body {
 .log-filters label { display: flex; flex-direction: column; gap: .375rem; font-size: .75rem; font-weight: 500; min-width: 0; }
 .log-filters :is(input, select) { background: #1e293b; border: 1px solid #475569; padding: .5rem; border-radius: .5rem; max-width: 100%; min-height: 2.25rem; }
 .app-modal :is(input, select) { min-width: 0; max-width: 100%; }
-@media(max-width: 1100px) { .app-header-layout { flex-direction: column; align-items: stretch; } }
 @media(max-width: 760px) { .progress-work.has-panel { grid-template-columns: minmax(0,1fr); } .progress-panel { grid-row: 1; } }
 @media(pointer: coarse) { .concrete-app :is(input:not([type=checkbox]),select,textarea) { font-size: 1rem; } .ui-button, .progress-cell { min-height: 2.75rem; } }
 @media print {
@@ -399,6 +398,21 @@ body {
 .progress-page .progress-selection-extra { margin-block-end: 12px; }
 .progress-page .progress-selection-tools > fieldset { display: grid; gap: 8px; }
 @media(max-width:760px) { .progress-page .progress-selection-tools { position: static; } }
+/* Desktop and tablet keep the bar on one line; the color strip scrolls sideways when it does not fit. */
+@media(min-width:761px) {
+  .progress-page .progress-selection-row { flex-wrap: nowrap; }
+  .progress-page .progress-selection-row > :not(.progress-color-tools) { flex: none; }
+  .progress-page .progress-selection-row > .progress-color-tools { flex: 0 1 auto; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding: 3px; }
+  .progress-page .progress-selection-row > .progress-color-tools > * { flex: none; }
+  .progress-page .progress-selection-tools .progress-swatches { flex-wrap: nowrap; }
+}
+/* Below 1200px the 동·층 관리 panel moves under the table so the table keeps the full width. */
+@media(max-width:1200px) {
+  .progress-page .progress-work.has-panel:has(> .progress-structure) { grid-template-columns: minmax(0,1fr); }
+  .progress-page .progress-structure { position: static; max-height: none; scroll-margin-block-start: calc(var(--app-header-height, 0px) + var(--selection-bar-height, 0px) + 8px); }
+}
+/* In a short window the app header scrolls away so the table keeps the height. */
+@media(max-height:700px) { .concrete-app > header { position: static; } }
 .progress-selection-row, .progress-color-tools, .progress-selection-details { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-inline-size: 0; }
 .progress-selection-row > h3 { margin: 0; color: var(--progress-muted); }
 .progress-selection-name { font-weight: 600; overflow-wrap: anywhere; }
@@ -408,7 +422,7 @@ body {
 .progress-page .progress-selection-tools .progress-swatches button { inline-size: 28px; block-size: 28px; min-block-size: 28px; }
 .progress-page .progress-selection-tools .progress-recent-swatches { align-items: center; padding-inline-start: 8px; border-inline-start: 1px solid var(--progress-line); }
 .progress-recent-label { font-size: 11px; color: var(--progress-muted); }
-.progress-add-trigger { margin-inline-start: auto; }
+.progress-clear-record { margin-inline-start: auto; }
 .progress-selection-details { gap: 8px 24px; margin-block-start: 8px; align-items: start; }
 .progress-pour-dates { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 .progress-pour-chip { display: inline-flex; align-items: center; gap: 2px; padding: 2px 2px 2px 10px; border: 1px solid var(--progress-line); border-radius: 16px; font-variant-numeric: tabular-nums; }
@@ -427,7 +441,7 @@ body {
 .progress-selection-details .progress-entry-form { grid-template-columns: repeat(auto-fit,minmax(min(100%,180px),1fr)); align-items: start; }
 .progress-selection-details .progress-entry-form h4, .progress-selection-details .progress-entry-form .progress-actions { grid-column: 1 / -1; }
 @media(max-width:760px) {
-  .progress-add-trigger { margin-inline-start: 0; }
+  .progress-clear-record { margin-inline-start: 0; }
   .progress-color-tools { flex-basis: 100%; }
 }
 @media(pointer:coarse) {
