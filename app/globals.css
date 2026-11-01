@@ -6,7 +6,7 @@
 .progress-page .progress-work.has-panel:has(> .progress-structure) { grid-template-columns: minmax(0,1fr) 320px; }
 /* The panel fills the viewport height so the stage list, not the page, absorbs the spare space. */
 /* Sits below the sticky app header and selection bar, whose heights are measured in PouringProgress. */
-.progress-page .progress-structure { align-self:start; position:sticky; top:calc(var(--app-header-height, 104px) + var(--selection-bar-height, 0px) + 8px); background:#fff; display:flex; flex-direction:column; max-height:calc(100vh - var(--app-header-height, 104px) - var(--selection-bar-height, 0px) - 24px); overflow-y:auto; }
+.progress-page .progress-structure { align-self:start; position:sticky; top:calc(var(--app-header-height, 104px) + var(--selection-bar-height, 0px) + 8px); background:#fff; display:flex; flex-direction:column; max-height:calc(100vh - var(--app-header-height, 104px) - var(--selection-bar-height, 0px) - 72px); overflow-y:auto; }
 .progress-structure > fieldset { display:flex; flex-direction:column; flex:1; min-height:0; }
 .progress-structure .structure-building-row { display:flex; align-items:center; gap:6px; }
 .progress-page .progress-structure .structure-building-row select { flex:1; min-width:0; width:auto; }
@@ -339,19 +339,10 @@ body {
 /* Progress comparison: retain each building, with dates and variance together. */
 /* Let the whole page scroll vertically; only wide building groups scroll inside the table. */
 .progress-page .progress-comparison-wrap { max-height:none; max-block-size:none; overflow-x:auto; }
-/* A larger native drag target for the comparison table's horizontal scrollbar. */
-.progress-page .progress-comparison-wrap { --scrollbar-thumb:#94a3b8; --scrollbar-track:#0f172a; scrollbar-width:auto; scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track); }
-@supports selector(::-webkit-scrollbar) {
-  /* Standard colors override WebKit sizing in Blink; use one styling path at a time. */
-  .progress-page .progress-comparison-wrap { scrollbar-color:auto; }
-  .progress-page .progress-comparison-wrap::-webkit-scrollbar { height:24px; }
-  .progress-page .progress-comparison-wrap::-webkit-scrollbar-track:horizontal { background:var(--scrollbar-track); }
-  .progress-page .progress-comparison-wrap::-webkit-scrollbar-thumb:horizontal { min-width:64px; border:4px solid var(--scrollbar-track); border-radius:12px; background:var(--scrollbar-thumb); }
-  .progress-page .progress-comparison-wrap::-webkit-scrollbar-thumb:horizontal:hover { background:#bfdbfe; }
-  .progress-page .progress-comparison-wrap::-webkit-scrollbar-thumb:horizontal:active { background:#60a5fa; }
-}
-@media(prefers-contrast:more) { .progress-page .progress-comparison-wrap { --scrollbar-thumb:#f8fafc; --scrollbar-track:#020617; } }
-@media(forced-colors:active) { .progress-page .progress-comparison-wrap { --scrollbar-thumb:ButtonText; --scrollbar-track:Canvas; } }
+/* The table's own horizontal scrollbar is hidden: the 동 이동 row's scrollbar in the fixed toolbar moves it instead.
+   Wheel, trackpad, touch and arrow keys still scroll the table sideways. */
+.progress-page .progress-comparison-wrap { scrollbar-width:none; }
+.progress-page .progress-comparison-wrap::-webkit-scrollbar { display:none; }
 .progress-page .progress-comparison-table {
   --progress-stage-width:72px;
   --progress-date-width:96px;
