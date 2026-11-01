@@ -560,3 +560,28 @@ body {
 .concrete-app .site-closed-band { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-block-end: 8px; border: 1px solid #E8C766; border-radius: 6px; padding: 8px 12px; background: #FFF6DA; color: #6B4E00; font-weight: 600; }
 .concrete-app .site-closed-band .ui-button { margin-inline-start: auto; }
 @media print { .concrete-app .site-closed-band { display: none; } }
+
+/* 동·층 관리, compact on PC: one line per floor (타설일 on the right), smaller buttons and spacing so more floors fit.
+   Phones keep the larger touch sizes. */
+@media (min-width: 761px) {
+  .concrete-app .progress-page .progress-structure { padding: 10px 12px; }
+  .concrete-app .progress-page .progress-structure .progress-panel-heading { margin-bottom: 8px; align-items: center; }
+  .concrete-app .progress-page .progress-structure .progress-panel-heading .ui-section-title { font-size: 14px; }
+  .concrete-app .progress-page .progress-structure fieldset > * { margin-bottom: 8px; }
+  .concrete-app .progress-page .progress-structure .ui-button { min-block-size: 28px; min-height: 28px; padding: 2px 10px; }
+  .concrete-app .progress-page .progress-structure .progress-panel-heading .ui-button { min-block-size: 26px; min-height: 26px; }
+  .concrete-app .progress-page .progress-structure .structure-building-row { gap: 4px; }
+  .concrete-app .progress-page .progress-structure .structure-building-row :is(select, .ui-button) { min-block-size: 28px; min-height: 28px; padding-block: 2px; }
+  .concrete-app .progress-page .progress-structure .structure-stage-heading { padding-top: 8px; }
+  .concrete-app .progress-page .progress-structure .structure-stage-row { gap: 4px; padding: 2px; }
+  .concrete-app .progress-page .progress-structure .structure-stage-row .ui-button { min-block-size: 24px; min-height: 24px; padding: 0 7px; }
+  .concrete-app .progress-page .progress-structure .structure-stage-pick { display: flex; align-items: baseline; gap: 8px; padding: 3px 6px; }
+  .concrete-app .progress-page .progress-structure .structure-stage-pick small { margin-inline-start: auto; white-space: nowrap; }
+  .concrete-app .progress-page .progress-structure .structure-stage-edit input { min-height: 26px; min-block-size: 26px; }
+}
+/* Beside the table the panel takes the whole height it may use and only the floor list scrolls,
+   so the 동 picker and buttons above it stay put. */
+@media (min-width: 1201px) {
+  .progress-page .progress-structure { height: calc(100vh - var(--app-header-height, 104px) - var(--selection-bar-height, 0px) - 72px); }
+  .progress-page .progress-structure .structure-stage-list { flex: 1 1 0; }
+}
