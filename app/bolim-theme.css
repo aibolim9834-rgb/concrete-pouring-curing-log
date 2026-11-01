@@ -272,3 +272,16 @@
   .concrete-app .photo-drop p { margin: 4px 0; }
   .concrete-app .photo-upload-actions .ui-button { min-block-size: 30px; min-height: 30px; padding-block: 2px; }
 }
+
+/* Button heights on PC (2026-11-02), four steps with 12px text: 34px page navigation, 30px ordinary buttons,
+   28px buttons inside panels and lists, 24px per-row buttons. Touch screens keep their larger sizes. */
+@media (min-width: 761px) and (pointer: fine) {
+  .concrete-app .app-header-actions { --header-action-size: 34px; }
+}
+@media (min-width: 761px) {
+  .concrete-app .progress-entry-form .ui-button,
+  .concrete-app .site-photos :is(.photo-filters, .photo-list-summary) .ui-button { min-block-size: 30px; min-height: 30px; padding-block: 2px; }
+  .concrete-app .site-status-tabs button { font-size: 12px; min-block-size: 30px; min-height: 30px; padding-block: 4px; }
+  .concrete-app .app-modal form button[type="submit"]:not(.ui-button) { min-block-size: 30px; padding-block: 4px; }
+  .concrete-app .app-modal .text-right > button { min-block-size: 30px; padding-block: 4px; }
+}
