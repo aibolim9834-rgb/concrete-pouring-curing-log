@@ -451,7 +451,7 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
   return <section className="progress-page" aria-label="타설현황">
     {/* Everything above the table stays in view while the table scrolls ("틀 고정"). */}
     <div ref={stickyRef} className="progress-sticky">
-    <div className="progress-heading"><div><p className="ui-note">{site.name}</p><div className="progress-title-row"><h2 className="ui-page-title">동별 타설현황</h2><p className="progress-floor-note print:hidden">※ 타설일은 각 층 바닥 슬래브를 타설한 날로 입력합니다(예: 5F = 5층 바닥 타설일).</p></div></div>
+    <div className="progress-heading"><div><div className="progress-title-row"><h2 className="ui-page-title">동별 타설현황</h2><span className="ui-note progress-site-name">{site.name}</span><p className="progress-floor-note print:hidden">※ 타설일은 각 층 바닥 슬래브를 타설한 날로 입력합니다(예: 5F = 5층 바닥 타설일).</p></div></div>
       <div className="progress-actions progress-heading-actions print:hidden">
         <button className="ui-button" disabled={!history.length || saving || readOnly || !!inlineEdit} onClick={undo}>실행 취소</button>
         <button className="ui-button" disabled={!snapshot || saving || !!inlineEdit} onClick={() => { setPanel('structure'); setAddingBuilding(false); showPanel(); }}>동·층 관리</button>

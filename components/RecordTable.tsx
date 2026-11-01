@@ -160,7 +160,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
       {error && <p className="progress-error" role="alert">{error}</p>}
       <fieldset disabled={busy || pending || blocked || !site}>
       {/* Table Top Toolbar */}
-      <div className="p-4 border-b border-slate-800 bg-slate-900/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="log-toolbar p-4 border-b border-slate-800 bg-slate-900/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-baseline gap-2.5">
           <h2 className="ui-section-title">타설 일지</h2>
           <span className="text-xs text-slate-400 font-medium">

@@ -232,3 +232,43 @@
   .concrete-app .photo-fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .concrete-app .photo-fields > label:first-child { grid-column:1 / -1; }
 }
+
+/* Denser PC layout (2026-11-02): same 12px text, less padding and lower controls so more rows fit on one screen.
+   Phones keep their own, larger touch sizes. */
+@media (min-width: 761px) {
+  /* 타설 일지: summary cards, toolbar, filters with labels beside their fields, and 29px rows. */
+  .concrete-app .summary-cards { gap: 10px; margin-bottom: 10px; }
+  .concrete-app .summary-cards > .summary-card-full { padding: 10px 14px; }
+  .concrete-app .summary-cards > .summary-card-full .mt-3 { margin-top: 6px; }
+  .concrete-app .summary-cards > .summary-card-full .p-2 { padding: 4px; }
+  .concrete-app .log-toolbar { padding: 8px 14px; }
+  .concrete-app .log-toolbar input { padding-block: 4px; }
+  .concrete-app .log-filters { padding: 8px 14px; gap: 8px 12px; align-items: center; }
+  .concrete-app .log-filters label { flex-direction: row; align-items: center; gap: 6px; }
+  .concrete-app .log-filters :is(input, select, .ui-button) { min-height: 30px; min-block-size: 30px; padding-block: 2px; }
+  .concrete-app .log-filters .short-date-field { inline-size: 8.5rem; }
+  .concrete-app .record-log-table .record-display-row > td { padding-block: 2px; }
+  .concrete-app .record-log-table .record-display-row > td span[class*="py-0.5"] { padding-block: 0; line-height: 20px; }
+  .concrete-app .record-log-table .record-row-actions button { width: 24px; height: 24px; }
+  .concrete-app .record-log-table .log-quick-add-row > td { padding-block: 3px; }
+  .concrete-app .record-log-table .log-quick-add-row :is(input, select, button) { min-height: 28px; min-block-size: 28px; padding-block: 2px; }
+
+  /* 타설현황: site name beside the title, lower controls and color row, slimmer building header; the table caption
+     repeats the page title, so it stays for screen readers only. */
+  .concrete-app .progress-page .progress-heading { margin-block-end: 4px; }
+  .concrete-app .progress-page .progress-site-name { font-size: 12px; }
+  .concrete-app .progress-page .progress-controls { margin-block-end: 4px; }
+  .concrete-app .progress-page .progress-controls :is(input, select) { min-height: 30px; min-block-size: 30px; padding-block: 2px; }
+  .concrete-app .progress-page .progress-heading-actions .ui-button { min-block-size: 30px; min-height: 30px; padding-block: 2px; }
+  .concrete-app .progress-page .progress-selection-tools { padding-block: 4px; }
+  .concrete-app .progress-page .progress-selection-row .ui-button { min-block-size: 30px; min-height: 30px; padding-block: 2px; }
+  .concrete-app .progress-page .progress-comparison-table caption { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .concrete-app .progress-page .progress-comparison-table thead tr:first-child th { padding-block: 4px; }
+  .concrete-app .progress-page .progress-comparison-table thead small { margin-top: 0; }
+
+  /* 알폼핀 체결 사진: a shorter drop zone so the photo list starts higher. */
+  .concrete-app .photo-panel { padding: 14px 16px; }
+  .concrete-app .photo-drop { padding: 10px; }
+  .concrete-app .photo-drop p { margin: 4px 0; }
+  .concrete-app .photo-upload-actions .ui-button { min-block-size: 30px; min-height: 30px; padding-block: 2px; }
+}
