@@ -1,11 +1,11 @@
 import { PouringLog, PouringLogInput, Site } from './types';
 import { validDate } from './pouring-progress';
+import { remiconTrucks } from './remicon';
+import { validateReportOptions } from './daily-report';
 
-// One ready-mix truck carries 6 m³; a part load still counts as a truck, so 7 m³ is 2대.
-const REMICON_TRUCK_M3 = 6;
 export function volumeText(volume: PouringLog['volume']) {
   if (volume === null || volume === undefined || volume === '') return '';
-  return `${volume} m³${Number(volume) > 0 ? ` (${Math.ceil(Number(volume) / REMICON_TRUCK_M3)}대)` : ''}`;
+  return `${volume} m³${Number(volume) > 0 ? ` (${remiconTrucks(Number(volume))}대)` : ''}`;
 }
 
 export const localToday =() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -18,6 +18,7 @@ export function validateSites(value: unknown): asserts value is Site[] {
   for (const s of value) {
     if (!s || typeof s.id !== 'string' || !s.id || ids.has(s.id) || typeof s.name !== 'string' || !s.name.trim() || ['code', 'address', 'created_at'].some(k => s[k] != null && typeof s[k] !== 'string')) throw new Error('현장 정보가 올바르지 않습니다.');
     if (s.status != null && s.status !== 'active' && s.status !== 'closed' || (s.status === 'closed') !== (typeof s.closed_at === 'string' && validDate(s.closed_at)) || (s.status !== 'closed' && s.closed_at != null)) throw new Error('현장 진행·종료 상태가 올바르지 않습니다.');
+    validateReportOptions(s.report_options);
     ids.add(s.id);
   }
 }

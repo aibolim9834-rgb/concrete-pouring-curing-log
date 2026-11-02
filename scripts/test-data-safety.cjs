@@ -6,7 +6,7 @@ function load(file,deps={},globals={}) {
  const code=ts.transpileModule(fs.readFileSync(path.join(root,file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
  vm.runInNewContext(code,{module,exports:module.exports,require(id){if(id in deps)return deps[id];throw Error('Unexpected dependency '+id);},process:{env:{}},...globals});return module.exports;
 }
-const model=load('lib/pouring-progress.ts'),data=load('lib/log-data.ts',{'./pouring-progress':model});
+const model=load('lib/pouring-progress.ts'),remicon=load('lib/remicon.ts'),report=load('lib/daily-report.ts',{'./remicon':remicon}),data=load('lib/log-data.ts',{'./pouring-progress':model,'./remicon':remicon,'./daily-report':report});
 const logged=[],dbError=load('lib/db-error.ts',{},{console:{error:(...args)=>logged.push(args)}});
 const requestTimeout=load('lib/request-timeout.ts',{},{AbortSignal,AbortController,setTimeout,clearTimeout});
 // The same module with a 30 ms deadline, so stalled-request checks finish quickly.

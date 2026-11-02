@@ -17,7 +17,8 @@ const requestTimeout = load('lib/request-timeout.ts');
 const persistence = load('lib/progress-storage.ts', { './supabase': { supabase: { from() { throw new Error('Network must not be used'); } } }, './pouring-progress': model, './request-timeout': requestTimeout, './cloud-storage': load('lib/cloud-storage.ts') });
 const editor = load('lib/progress-editor.ts');
 const backup = load('lib/progress-backup.ts', { './pouring-progress': model });
-const logData = load('lib/log-data.ts', { './pouring-progress': model });
+const remicon = load('lib/remicon.ts');
+const logData = load('lib/log-data.ts', { './pouring-progress': model, './remicon': remicon, './daily-report': load('lib/daily-report.ts', { './remicon': remicon }) });
 const archive = load('lib/site-archive.ts', { './pouring-progress': model, './log-data': logData });
 let count = 0;
 async function check(name, run) { await run(); count++; console.log(`PASS ${name}`); }

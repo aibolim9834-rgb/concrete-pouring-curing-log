@@ -1,3 +1,5 @@
+import type { ReportOptions } from './daily-report';
+
 export interface Site {
   id: string;
   name: string;
@@ -7,6 +9,7 @@ export interface Site {
   // 진행 (active, the default) or 종료 (closed). A closed site keeps all its records and is shown read-only.
   status?: 'active' | 'closed';
   closed_at?: string | null; // 종료일 (YYYY-MM-DD), set only while closed
+  report_options?: ReportOptions | null; // 일일 보고 문구 창에서 이 현장에 마지막으로 고른 형식·항목
 }
 
 export interface PouringLog {

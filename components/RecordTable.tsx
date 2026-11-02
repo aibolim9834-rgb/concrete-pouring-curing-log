@@ -7,6 +7,8 @@ import { WateringSelect } from './WateringSelect';
 import { MobileLogSheet } from './MobileLogSheet';
 import { ShortDateInput } from './ShortDateInput';
 import { LogPhotos } from './LogPhotos';
+import { DailyReportDialog } from './DailyReportDialog';
+import { ReportOptions } from '@/lib/daily-report';
 import { listPhotos, SitePhoto } from '@/lib/site-photos-cloud';
 import { validDate } from '@/lib/pouring-progress';
 import { normalizeWatering } from '@/lib/watering';
@@ -23,7 +25,8 @@ import {
   Filter,
   Check,
   X,
-  Camera
+  Camera,
+  ClipboardCopy
 } from 'lucide-react';
 
 interface RecordTableProps {
@@ -39,6 +42,8 @@ interface RecordTableProps {
   // A 종료 site: the table, search and filters still work; adding, editing and deleting do not.
   readOnly?: boolean;
   onWorkPending?: (pending: boolean) => void;
+  // Keeps the 일일 보고 문구 format and items on the site.
+  onSaveReportOptions?: (options: ReportOptions | null) => Promise<void>;
 }
 
 export const RecordTable: React.FC<RecordTableProps> = ({
@@ -46,7 +51,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
   site,
   onDeleteLog,
   onQuickAddLog,
-  onQuickUpdateLog, filters, onFiltersChange, outputScope, onOutputScopeChange, sort, onSortChange, busy = false, blocked = false, readOnly = false, onWorkPending,
+  onQuickUpdateLog, filters, onFiltersChange, outputScope, onOutputScopeChange, sort, onSortChange, busy = false, blocked = false, readOnly = false, onWorkPending, onSaveReportOptions,
 }) => {
   const searchQuery = filters.search, weatherFilter = filters.weather;
   const setSearchQuery = (search: string) => onFiltersChange({ ...filters, search });
@@ -71,6 +76,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
   const [photos, setPhotos] = useState<SitePhoto[]>([]);
   const [photoError, setPhotoError] = useState('');
   const [photoLogId, setPhotoLogId] = useState('');
+  const [reportOpen, setReportOpen] = useState(false);
   const siteId = site?.id;
   const loadPhotos = useCallback(async () => {
     if (!siteId) return;
@@ -226,6 +232,10 @@ export const RecordTable: React.FC<RecordTableProps> = ({
             </select>
           </div>
 
+          <button type="button" className="ui-button log-report-button" onClick={() => setReportOpen(true)} disabled={!logs.length}
+            title={logs.length ? '선택한 날짜의 일지로 카톡·문자용 보고 문구 만들기' : '일지가 있어야 보고 문구를 만들 수 있습니다'}>
+            <ClipboardCopy className="w-4 h-4" aria-hidden="true" />보고 문구
+          </button>
         </div>
       </div>
 
@@ -780,6 +790,9 @@ export const RecordTable: React.FC<RecordTableProps> = ({
         photoCount={sheetLog ? photoCounts.get(sheetLog.id) || 0 : 0} onOpenPhotos={sheetLog && !blocked ? () => setPhotoLogId(sheetLog.id) : undefined} />}
       {site && photoLog && <LogPhotos key={`photos-${photoLog.id}`}site={site} log={photoLog} photos={photos.filter(p => p.logId === photoLog.id)} loadError={photoError}
         readOnly={readOnly || blocked} onChanged={loadPhotos} onClose={() => setPhotoLogId('')} />}
+      {site && reportOpen && <DailyReportDialog site={site} logs={logs} canSave={!readOnly && !blocked && !!onSaveReportOptions}
+        onSaveOptions={async options => { if (!onSaveReportOptions) throw new Error('저장 경로를 확인해주세요.'); await onSaveReportOptions(options); }}
+        onClose={() => setReportOpen(false)} />}
     </div>
   );
 };

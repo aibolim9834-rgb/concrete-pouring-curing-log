@@ -10,7 +10,10 @@ CREATE TABLE IF NOT EXISTS sites (
   -- 진행(active) / 종료(closed). 종료 현장은 자료를 그대로 두고 읽기 전용으로만 보입니다.
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'closed')),
   closed_at DATE,
-  CONSTRAINT sites_closed_at_check CHECK ((status = 'closed') = (closed_at IS NOT NULL))
+  -- 일일 보고 문구의 형식·넣을 항목 ({"format":"A","items":{"date":true,...}}). NULL이면 앱 기본값.
+  report_options JSONB,
+  CONSTRAINT sites_closed_at_check CHECK ((status = 'closed') = (closed_at IS NOT NULL)),
+  CONSTRAINT sites_report_options_check CHECK (report_options IS NULL OR (jsonb_typeof(report_options) = 'object' AND report_options->>'format' IN ('A', 'B') AND jsonb_typeof(report_options->'items') = 'object'))
 );
 
 -- 2. 콘크리트 타설 및 양생 기록 (Pouring Logs) 테이블

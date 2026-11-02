@@ -295,7 +295,24 @@ body {
 .log-filters label { display: flex; flex-direction: column; gap: .375rem; font-size: .75rem; font-weight: 500; min-width: 0; }
 .log-filters :is(input, select) { background: #1e293b; border: 1px solid #475569; padding: .5rem; border-radius: .5rem; max-width: 100%; min-height: 2.25rem; }
 .app-modal :is(input, select) { min-width: 0; max-width: 100%; }
-@media(max-width: 760px) { .progress-work.has-panel { grid-template-columns: minmax(0,1fr); } .progress-panel { grid-row: 1; } }
+/* 일일 보고 문구 window: header stays put, the body scrolls inside the window on short screens. */
+.daily-report { display: flex; flex-direction: column; max-block-size: calc(100dvh - 2rem); overflow: hidden; }
+.daily-report-head { display: flex; align-items: center; gap: .5rem; padding: .75rem 1rem; border-bottom: 1px solid var(--b-line, #D8DFD9); background: var(--b-head, #E8EDE9); }
+.daily-report-head .ui-note { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.daily-report-body { display: grid; gap: .75rem; padding: 1rem; overflow-y: auto; overscroll-behavior: contain; }
+.daily-report-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; }
+.daily-report-row > span:first-child, .daily-report-items legend { min-width: 3.5rem; color: var(--b-muted, #59635D); font-weight: 600; }
+.daily-report select { background: var(--b-surface, #fff); color: var(--b-ink, #212121); border: 1px solid var(--b-control, #7A8A7D); border-radius: 5px; padding: .25rem .5rem; min-height: 2rem; }
+.daily-report-seg { display: inline-flex; border: 1px solid var(--b-control, #7A8A7D); border-radius: 5px; overflow: hidden; }
+.daily-report-seg button { padding: .25rem .875rem; min-height: 2rem; background: var(--b-surface, #fff); color: var(--b-ink, #212121); }
+.daily-report-seg button + button { border-left: 1px solid var(--b-control, #7A8A7D); }
+.daily-report-seg button[aria-pressed=true] { background: var(--b-action, #007723); color: var(--b-surface, #fff); font-weight: 700; }
+.daily-report-items { display: flex; flex-wrap: wrap; gap: .375rem .875rem; border: 0; padding: 0; margin: 0; }
+.daily-report-items legend { padding: 0; margin-bottom: .375rem; }
+.concrete-app .daily-report-items label { display: inline-flex; align-items: center; gap: .3rem; cursor: pointer; color: var(--b-ink, #212121); }
+.daily-report-items input { accent-color: var(--b-action, #007723); }
+.daily-report textarea { width: 100%; min-height: 12rem; resize: vertical; background: var(--b-soft, #F1F1F1); color: var(--b-ink, #212121); border: 1px solid var(--b-control, #7A8A7D); border-radius: .5rem; padding: .75rem; line-height: 1.65; white-space: pre-wrap; }
+.daily-report-actions { display: flex; flex-wrap: wrap; gap: .5rem; }@media(max-width: 760px) { .progress-work.has-panel { grid-template-columns: minmax(0,1fr); } .progress-panel { grid-row: 1; } }
 @media(pointer: coarse) { .concrete-app :is(input:not([type=checkbox]),select,textarea) { font-size: 1rem; } .ui-button, .progress-cell { min-height: 2.75rem; } }
 @media print {
   .progress-page { color: black; }

@@ -27,6 +27,7 @@ import { normalizeStrength } from '@/lib/strength';
 import { normalizeFloor } from '@/lib/floor';
 import { listPhotos, markPhotosDeleted, SitePhoto } from '@/lib/site-photos-cloud';
 import { cloudStorageEnabled } from '@/lib/cloud-storage';
+import { ReportOptions } from '@/lib/daily-report';
 
 export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | 'progress' | 'photos' }) {
   const [sites, setSiteList] = useState<Site[]>([]);
@@ -268,6 +269,22 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
     } finally { siteLock.current = false; }
   };
 
+  // 일일 보고 문구 format and items for one site (null = back to the defaults). Saves arrive one after another from the
+  // report window while other state may not have re-rendered yet, so the browser copy is read fresh and the list updated by function.
+  const handleSaveReportOptions = async (id: string, report_options: ReportOptions | null) => {
+    assertWritable();
+    const target = sites.find(site => site.id === id);
+    if (!target || isClosedSite(target)) throw new Error('진행 중인 현장에서만 보고 문구 항목을 저장합니다.');
+    if (isSupabase) {
+      const { data, error } = await timed(signal => supabase.from('sites').update({ report_options }).eq('id', id).abortSignal(signal).select('id').maybeSingle(), WRITE_TIMEOUT_MESSAGE);
+      if (error || !data) throw dbError('보고 문구 항목을 저장하지 못했습니다. 이번 문구에는 그대로 쓸 수 있습니다.', error);
+    } else {
+      const stored = readLocalData(localStorage);
+      writeLocalData(localStorage, stored, { sites: stored.sites.map(site => site.id === id ? { ...site, report_options } : site), logs: stored.logs });
+    }
+    setSites(prev => prev.map(site => site.id === id ? { ...site, report_options } : site));
+  };
+
   const handleDeleteSite = async (id: string) => {
     assertWritable();
     if (siteLock.current) throw new Error('현장 처리 중입니다. 잠시 후 다시 시도해주세요.');
@@ -423,6 +440,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
           onDeleteLog={handleDeleteLog}
           onQuickAddLog={(inputData) => handleSaveLog(inputData)}
           onQuickUpdateLog={(id, inputData) => handleSaveLog(inputData, id)}
+          onSaveReportOptions={currentSite ? options => handleSaveReportOptions(currentSite.id, options) : undefined}
         />}
 
       </main>
