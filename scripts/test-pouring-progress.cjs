@@ -7,13 +7,14 @@ const ts = require('typescript');
 function load(file, dependencies = {}) {
   const code = ts.transpileModule(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
   const module = { exports: {} };
-  vm.runInNewContext(code, { module, exports: module.exports, require(id) { if (id in dependencies) return dependencies[id]; throw new Error(`Unexpected dependency: ${id}`); }, process: { env: {} }, localStorage: storage, TextEncoder, crypto: require('node:crypto').webcrypto });
+  vm.runInNewContext(code, { module, exports: module.exports, require(id) { if (id in dependencies) return dependencies[id]; throw new Error(`Unexpected dependency: ${id}`); }, process: { env: {} }, localStorage: storage, TextEncoder, crypto: require('node:crypto').webcrypto, AbortSignal, AbortController, setTimeout, clearTimeout });
   return module.exports;
 }
 const entries = new Map();
 const storage = { getItem: key => entries.get(key) || null, setItem(key, value) { entries.set(key, value); }, removeItem(key) { entries.delete(key); }, key(index) { return [...entries.keys()][index] ?? null; }, get length() { return entries.size; } };
 const model = load('lib/pouring-progress.ts');
-const persistence = load('lib/progress-storage.ts', { './supabase': { supabase: { from() { throw new Error('Network must not be used'); } } }, './pouring-progress': model, './cloud-storage': load('lib/cloud-storage.ts') });
+const requestTimeout = load('lib/request-timeout.ts');
+const persistence = load('lib/progress-storage.ts', { './supabase': { supabase: { from() { throw new Error('Network must not be used'); } } }, './pouring-progress': model, './request-timeout': requestTimeout, './cloud-storage': load('lib/cloud-storage.ts') });
 const editor = load('lib/progress-editor.ts');
 const backup = load('lib/progress-backup.ts', { './pouring-progress': model });
 const logData = load('lib/log-data.ts', { './pouring-progress': model });
@@ -137,7 +138,7 @@ const document = () => ({ version: 1, buildings: [{ id: 'b1', name: '101동', st
     assert.deepEqual([...entries], before);
   });
   await check('cloud save tells a network failure apart from a newer revision elsewhere', async () => {
-    const withResult = result => load('lib/progress-storage.ts', { './supabase': { supabase: { from() { const q = { update() { return q; }, eq() { return q; }, select() { return q; }, maybeSingle: async () => result }; return q; } } }, './pouring-progress': model, './cloud-storage': load('lib/cloud-storage.ts') });
+    const withResult = result => load('lib/progress-storage.ts', { './supabase': { supabase: { from() { const q = { update() { return q; }, eq() { return q; }, select() { return q; }, abortSignal() { return q; }, maybeSingle: async () => result }; return q; } } }, './pouring-progress': model, './request-timeout': requestTimeout, './cloud-storage': load('lib/cloud-storage.ts') });
     const current = { document: document(), revision: 3, mode: 'cloud' };
     await assert.rejects(withResult({ data: null, error: { message: 'TypeError: Failed to fetch', code: '' } }).saveProgress('site-a', current, document()), /DB 저장에 실패/);
     await assert.rejects(withResult({ data: null, error: null }).saveProgress('site-a', current, document()), /다른 화면에서 변경/);

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { cloudStorageEnabled } from './cloud-storage';
 import { dbError } from './db-error';
+import { READ_TIMEOUT_MESSAGE, timed } from './request-timeout';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://uibxoupqmjhotswsgcdn.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpYnhvdXBxbWpob3Rzd3NnY2RuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4NjQwMzIsImV4cCI6MjEwMTQ0MDAzMn0.8H_dn-EJ8cdTi558UWP6tPyZisJYEqk3heXj-xlidgc';
@@ -15,7 +16,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, localOnly ? {
 export const checkSupabaseHealth = async (): Promise<boolean> => {
   if (localOnly) return false;
   try {
-    const { error } = await supabase.from('sites').select('id').limit(1);
+    const { error } = await timed(signal => supabase.from('sites').select('id').abortSignal(signal).limit(1), READ_TIMEOUT_MESSAGE);
     if (error) throw error;
     return true;
   } catch (e) {

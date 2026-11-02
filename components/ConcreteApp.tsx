@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Site, PouringLog, PouringLogInput } from '@/lib/types';
 import { supabase, checkSupabaseHealth } from '@/lib/supabase';
 import { dbError } from '@/lib/db-error';
+import { RequestTimeoutError, timed, WRITE_TIMEOUT_MESSAGE } from '@/lib/request-timeout';
 import { Header } from '@/components/Header';
 import { SummaryCards } from '@/components/SummaryCards';
 import { RecordTable } from '@/components/RecordTable';
@@ -49,6 +50,25 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
   const photoWorkPending = useRef(false);
   const logWorkPending = useRef(false);
   const progressWorkPending = useRef(false);
+  // A timed-out insert may still have landed. Resending the same input reuses its id, so the retry meets 23505 and
+  // adopts the stored row instead of adding a twin; any definite answer from the server forgets the id.
+  const pendingInserts = useRef(new Map<string, string>());
+  async function insertOnce(key: string, table: 'pouring_logs' | 'sites', row: Record<string, unknown>) {
+    const id = pendingInserts.current.get(key) ?? crypto.randomUUID();
+    pendingInserts.current.set(key, id);
+    try {
+      let result: { data: any; error: { code: string; message: string } | null } = await timed(signal => supabase.from(table).insert({ ...row, id }).abortSignal(signal).select('*').single(), WRITE_TIMEOUT_MESSAGE);
+      if (result.error?.code === '23505') {
+        const stored = await timed(signal => supabase.from(table).select('*').eq('id', id).abortSignal(signal).maybeSingle(), WRITE_TIMEOUT_MESSAGE);
+        if (stored.data) result = stored;
+      }
+      pendingInserts.current.delete(key);
+      return result;
+    } catch (e) {
+      if (!(e instanceof RequestTimeoutError)) pendingInserts.current.delete(key);
+      throw e;
+    }
+  }
   function canLeavePhotos() {
     if (photoWorkPending.current) { alert('사진 저장이 완료된 뒤 이동해주세요.'); return false; }
     if (siteLock.current || logWorkPending.current || progressWorkPending.current) { alert('편집 중인 내용을 저장하거나 취소한 뒤 이동해주세요.'); return false; }
@@ -139,8 +159,8 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       let saved: PouringLog = { ...input, id: id || `log-${progressId()}` };
       if (isSupabase) {
         const result = id
-          ? await supabase.from('pouring_logs').update(input).eq('id', id).eq('site_id', activeSiteId).select('*').maybeSingle()
-          : await supabase.from('pouring_logs').insert(input).select('*').single();
+          ? await timed(signal => supabase.from('pouring_logs').update(input).eq('id', id).eq('site_id', activeSiteId).abortSignal(signal).select('*').maybeSingle(), WRITE_TIMEOUT_MESSAGE)
+          : await insertOnce(`log:${JSON.stringify(input)}`, 'pouring_logs', input);
         if (result.error || !result.data) throw dbError('일지 저장에 실패했습니다. 입력은 유지됩니다. 연결·권한 또는 다른 화면의 변경을 확인해주세요.', result.error);
         saved = { ...result.data, remicon_company: result.data.remicon_company ?? '', curing_watering: result.data.curing_watering ?? '', curing_protection: result.data.curing_protection ?? '' };
       }
@@ -161,8 +181,9 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       siteLock.current = true; setLogBusy(true); setOperationError(''); setNotice('');
       try {
         if (isSupabase) {
-          const result = await supabase.from('pouring_logs').delete().eq('id', id).eq('site_id', target.site_id).select('id').maybeSingle();
-          if (result.error || !result.data) throw dbError('일지 삭제에 실패했습니다. 목록은 유지됩니다.', result.error);
+          const result = await timed(signal => supabase.from('pouring_logs').delete().eq('id', id).eq('site_id', target.site_id).abortSignal(signal).select('id').maybeSingle(), WRITE_TIMEOUT_MESSAGE);
+          if (result.error) throw dbError('일지 삭제에 실패했습니다. 목록은 유지됩니다.', result.error);
+          if (!result.data) throw new Error('이미 삭제되었거나 다른 화면에서 바뀐 일지입니다. 새로고침해 확인해주세요.');
         }
         const nextLogs = logs.filter(log => log.id !== id);
         if (!isSupabase) writeLocalData(localStorage, { sites, logs }, { sites, logs: nextLogs });
@@ -182,7 +203,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       if (!code) throw new Error('현장 코드 A0001~A9999를 모두 사용했습니다.');
       const newSite: Site = { id: `site-${progressId()}`, name: name.trim(), code };
       if (isSupabase && supabase) {
-        const { data: inserted, error } = await supabase.from('sites').insert({ name: newSite.name, code }).select().single();
+        const { data: inserted, error } = await insertOnce(`site:${newSite.name}:${code}`, 'sites', { name: newSite.name, code });
         if (error || !inserted) throw dbError('현장 등록에 실패했습니다. 입력 내용은 유지됩니다. 연결과 권한을 확인해주세요.', error);
         newSite.id = inserted.id;
       } else {
@@ -204,7 +225,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
     try {
       const renamed = sites.map(site => site.id === id ? { ...site, name: nextName } : site);
       if (isSupabase && supabase) {
-        const { data, error } = await supabase.from('sites').update({ name: nextName }).eq('id', id).select('id').maybeSingle();
+        const { data, error } = await timed(signal => supabase.from('sites').update({ name: nextName }).eq('id', id).abortSignal(signal).select('id').maybeSingle(), WRITE_TIMEOUT_MESSAGE);
         if (error || !data) throw dbError('현장명 변경에 실패했습니다. 입력 내용은 유지됩니다. 연결과 권한을 확인해주세요.', error);
       } else {
         writeLocalData(localStorage, { sites, logs }, { sites: renamed, logs });
@@ -225,7 +246,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
     try {
       const updated = sites.map(site => site.id === id ? { ...site, ...change } : site);
       if (isSupabase && supabase) {
-        const { data, error } = await supabase.from('sites').update(change).eq('id', id).select('id').maybeSingle();
+        const { data, error } = await timed(signal => supabase.from('sites').update(change).eq('id', id).abortSignal(signal).select('id').maybeSingle(), WRITE_TIMEOUT_MESSAGE);
         if (error || !data) throw dbError(`현장 ${closedAt ? '종료' : '다시 진행'} 처리에 실패했습니다. 연결과 권한을 확인해주세요.`, error);
       } else {
         writeLocalData(localStorage, { sites, logs }, { sites: updated, logs });
@@ -250,7 +271,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       refreshArchives();
       let remaining = sites.filter(site => site.id !== id), remainingLogs = logs.filter(log => log.site_id !== id);
       if (isSupabase && supabase) {
-        const { error } = await supabase.from('sites').delete().eq('id', id);
+        const { error } = await timed(signal => supabase.from('sites').delete().eq('id', id).abortSignal(signal), WRITE_TIMEOUT_MESSAGE);
         // 타설현황 and photos reference the site with ON DELETE RESTRICT (23503), so say why instead of a bare failure.
         if (error) throw dbError(error.code === '23503' ? '타설현황·사진이 남아 있는 현장은 DB에서 삭제할 수 없습니다. 목록과 기록은 유지됩니다.' : 'DB 현장 삭제에 실패했습니다. 목록과 기록은 유지됩니다.', error);
         // DB changes cannot be rolled back with browser storage; keep the recovery copy.

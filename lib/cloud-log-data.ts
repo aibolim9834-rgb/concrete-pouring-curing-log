@@ -1,13 +1,14 @@
 import { supabase } from './supabase';
 import { PouringLog, Site } from './types';
 import { validateLogs, validateSites } from './log-data';
+import { READ_TIMEOUT_MESSAGE, timed } from './request-timeout';
 
 // Read every page; a failed page must never become a successful partial list.
 async function readRows(table: 'sites' | 'pouring_logs', column: string, ascending: boolean) {
   const rows: Record<string, unknown>[] = [], ids = new Set<string>();
   for (let offset = 0; ; ) {
-    const { data, error } = await supabase.from(table).select('*')
-      .order(column, { ascending }).order('id', { ascending: true }).range(offset, offset + 499);
+    const { data, error } = await timed(signal => supabase.from(table).select('*')
+      .order(column, { ascending }).order('id', { ascending: true }).abortSignal(signal).range(offset, offset + 499), READ_TIMEOUT_MESSAGE);
     if (error || !data) throw new Error('DB 자료를 불러오지 못했습니다. 연결과 권한을 확인해주세요.');
     if (!data.length) return rows;
     for (const row of data) {

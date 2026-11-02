@@ -28,12 +28,12 @@ const same = (a,b) => assert.equal(JSON.stringify(a),JSON.stringify(b));
 let count=0;
 async function check(name,run) { await run(); count++; console.log(`PASS ${name}`); }
 function find(node,type) { if (!node || typeof node !== 'object') return null; if(Array.isArray(node)){for(const child of node){const match=find(child,type);if(match)return match;}return null;} if(node.type===type)return node;return find(node.props?.children,type); }
-function appHarness(result, local = false) {
+function appHarness(result, local = false, overrides = {}) {
   const states = [], refs = []; let cursor=0, refCursor=0, effects=[], csv='';const navigation=[],alerts=[];
   states[0]=[site];states[1]=site.id;states[2]=[log];states[5]=!local;states[6]=false;states[7]='';states[8]=true;
   const react = {useState(initial){const i=cursor++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return [states[i],value=>{states[i]=typeof value==='function'?value(states[i]):value;}];},useEffect(effect){effects.push(effect);},useRef(value){const i=refCursor++;return refs[i] ||= {current:value};}};
   const jsx=(type,props)=>({type,props});
-  const supabase={from(){const q={update(){return q;},insert(){return q;},delete(){return q;},eq(){return q;},select(){return q;},single:async()=>result,maybeSingle:async()=>result,then:(resolve,reject)=>Promise.resolve(result).then(resolve,reject)};return q;}};
+  const supabase={from(){const q={update(){return q;},insert(){return q;},delete(){return q;},eq(){return q;},select(){return q;},abortSignal(){return q;},single:async()=>result,maybeSingle:async()=>result,then:(resolve,reject)=>Promise.resolve(result).then(resolve,reject)};return q;}};
   const deps = {react,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/supabase':{supabase,checkSupabaseHealth:async()=>false},'@/lib/log-data':data,'@/lib/site-archive':load('lib/site-archive.ts'),'@/lib/pouring-progress':model,'./BackupManager':{BackupManager:'BackupManager'}};
   deps['@/lib/site-code']=load('lib/site-code.ts');
   deps['@/lib/cloud-log-data']={loadCloudLogData:async()=>({sites:[site],logs:[log]})};
@@ -44,6 +44,8 @@ function appHarness(result, local = false) {
   deps['@/lib/date-only']=load('lib/date-only.ts');
   deps['@/components/ConfirmDialog']={askConfirm:async()=>true,ConfirmHost:'ConfirmHost'};
   deps['@/lib/db-error']=load('lib/db-error.ts',{},{console:{error(){}}});
+  deps['@/lib/request-timeout']=load('lib/request-timeout.ts',{},{AbortSignal,AbortController,setTimeout,clearTimeout});
+  Object.assign(deps,overrides);
   for(const name of ['Header','SummaryCards','RecordTable','SiteModal','PrintView','PouringProgress','SitePhotos'])deps[`@/components/${name}`]={[name]:name};
   const app=load('components/ConcreteApp.tsx',deps,{confirm:()=>true,alert:message=>alerts.push(message),window:{location:{search:'',assign:url=>navigation.push(url)},addEventListener(){},removeEventListener(){}},URLSearchParams,setTimeout:()=>{},Blob:class{constructor(parts){csv=parts.join('');}},URL:{createObjectURL:()=> 'blob:test'},document:{createElement:()=>({setAttribute(){},click(){}}),body:{appendChild(){},removeChild(){}}}});
   return {states,navigation,alerts,get csv(){return csv;},get effects(){return effects;},render(){cursor=0;refCursor=0;effects=[];return app.ConcreteApp({initialView:arguments[0]||'logs'});}};
@@ -182,6 +184,19 @@ function uiHarness(file, name, props) {
   await check('restore quota failure keeps source data and recovery copy',()=>{const before=backup.collectBackup(storage),other=memory();const expected=backup.collectBackup(other);const set=other.setItem.bind(other);other.setItem=(k,v)=>{if(k==='cp_logs')throw new Error('QuotaExceeded');set(k,v);};assert.throws(()=>backup.restoreBackup(other,before,expected),/QuotaExceeded/);same(backup.collectBackup(other).entries,expected.entries);assert(other.getItem('cp_restore_recovery_v1'));});
   for(const result of [{data:null,error:{message:'failure',code:'XX000'}},{data:null,error:null}])for(const action of ['insert','update','delete'])await check(`DB ${action} ${result.error?'error':'zero rows'} leaves screen unchanged`,async()=>{const h=appHarness(result),tree=h.render();if(action==='delete')await find(tree,'RecordTable').props.onDeleteLog(log.id);else await assert.rejects(()=>action==='update'?find(tree,'RecordTable').props.onQuickUpdateLog(log.id,{...log,floor:'2층'}):find(tree,'RecordTable').props.onQuickAddLog({...log,floor:'2층'}),result.error?/일지 저장에 실패.*\(오류 코드 XX000\)/:/^Error: 일지 저장에 실패[^(]*$/);same(h.states[2],[log]);});
   await check('DB site delete blocked by 타설현황 or photos says why and keeps the list',async()=>{const h=appHarness({data:null,error:{code:'23503',message:'violates foreign key constraint'}}),tree=h.render();await assert.rejects(find(tree,'SiteModal').props.onDeleteSite(site.id),/타설현황·사진이 남아 있는 현장은 DB에서 삭제할 수 없습니다.*\(오류 코드 23503\)/);same(h.states[0],[site]);same(h.states[2],[log]);});
+  await check('a log insert past its deadline frees the screen, and pressing 추가 again reuses the id so only one row is kept',async()=>{
+    const real=load('lib/request-timeout.ts',{},{AbortSignal,AbortController,setTimeout,clearTimeout}),inserted=[];let attempt=0;
+    const supabase={from(table){const q={insert(row){q.row=row;inserted.push(row.id);return q;},select(){return q;},eq(){return q;},abortSignal(signal){q.signal=signal;return q;},
+      single(){attempt++;return attempt===1?new Promise(resolve=>q.signal.addEventListener('abort',()=>resolve({data:null,error:{message:'AbortError'}}))):Promise.resolve({data:null,error:{code:'23505',message:'duplicate key'}});},
+      maybeSingle:async()=>({data:{...log,...q.row,id:inserted[0]},error:null})};return q;}};
+    const h=appHarness(null,false,{'@/lib/supabase':{supabase,checkSupabaseHealth:async()=>true},'@/lib/request-timeout':{...real,timed:(request,message)=>real.timed(request,message,30)}});
+    const draft={...log,id:undefined,floor:'7F'};delete draft.id;
+    await assert.rejects(find(h.render(),'RecordTable').props.onQuickAddLog(draft),new RegExp(real.WRITE_TIMEOUT_MESSAGE.slice(0,10)));
+    same(h.states[2],[log]);
+    await find(h.render(),'RecordTable').props.onQuickAddLog(draft);
+    assert.equal(inserted.length,2);assert.equal(inserted[0],inserted[1]);assert.match(inserted[0],/^[0-9a-f-]{36}$/);
+    assert.equal(h.states[2].length,2);assert.equal(h.states[2].filter(row=>row.id===inserted[0]).length,1);
+  });
   await check('successful DB response commits saved row',async()=>{const h=appHarness({data:{...log,floor:'saved'},error:null}),tree=h.render();await find(tree,'RecordTable').props.onQuickUpdateLog(log.id,{...log,floor:'2층'});assert.equal(h.states[2][0].floor,'saved');});
   await check('local submit failure leaves screen unchanged',async()=>{storage.entries.clear();storage.setItem('cp_sites','{broken');const h=appHarness(null,true),tree=h.render();await assert.rejects(()=>find(tree,'RecordTable').props.onQuickAddLog(log));same(h.states[2],[log]);assert.equal(storage.getItem('cp_sites'),'{broken');});
   await check('print scope uses the same filtered data as the table',()=>{const h=appHarness(null),second={...log,id:'b',date:'2026-09-01'};h.states[2]=[log,second];let tree=h.render();find(tree,'RecordTable').props.onFiltersChange({...data.emptyLogFilters(),from:'2026-09-01'});tree=h.render();find(tree,'Header').props.onOpenPrintView();tree=h.render();same(find(tree,'PrintView').props.logs.map(l=>l.id),['b']);});

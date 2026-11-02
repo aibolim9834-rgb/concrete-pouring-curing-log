@@ -9,7 +9,7 @@ const storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v)};
 function load(file){
  if(cache[file])return cache[file];const module={exports:{}};
  const code=ts.transpileModule(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
- vm.runInNewContext(code,{module,exports:module.exports,require(id){if(id==='./supabase')return {supabase:client};if(id==='./site-photos')return {listPhotos:async()=>localPhotos,photoBlob:async()=>original};if(id.startsWith('.'))return load(path.posix.normalize(path.posix.join(path.posix.dirname(file),id))+'.ts');throw Error(id)},process:{env:{}},localStorage:storage,crypto:require('node:crypto').webcrypto,Blob,structuredClone,console});
+ vm.runInNewContext(code,{module,exports:module.exports,require(id){if(id==='./supabase')return {supabase:client};if(id==='./site-photos')return {listPhotos:async()=>localPhotos,photoBlob:async()=>original};if(id.startsWith('.'))return load(path.posix.normalize(path.posix.join(path.posix.dirname(file),id))+'.ts');throw Error(id)},process:{env:{}},AbortController,setTimeout,clearTimeout,localStorage:storage,crypto:require('node:crypto').webcrypto,Blob,structuredClone,console});
  return cache[file]=module.exports;
 }
 (async()=>{
