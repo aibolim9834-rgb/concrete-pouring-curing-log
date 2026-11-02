@@ -222,7 +222,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
           <colgroup>
             {/* 번호, 일자, 동, 층, 부위, 최저·최고온도, 기상, 업체, 강도, 물량, 살수·보양, 관리.
                 일자·층·부위는 입력칸과 머리글이 들어가는 고정 폭이고, 너비가 없는 동이 남는 폭을 모두 받습니다. */}
-            {['3%', '88px', undefined, '56px', '84px', '5.5%', '5.5%', '4.5%', '6.5%', '7.5%', '6%', '7%', '10%', '7%'].map((width, index) => <col key={index} style={width ? { width } : undefined} />)}
+            {['3%', '88px', undefined, '60px', '94px', '5.5%', '5.5%', '4.5%', '6.5%', '7.5%', '6%', '7%', '10%', '7%'].map((width, index) => <col key={index} style={width ? { width } : undefined} />)}
           </colgroup>
           <thead>
             {/* Row 1 Headers */}
@@ -293,7 +293,6 @@ export const RecordTable: React.FC<RecordTableProps> = ({
               <td className="p-1.5 border-r border-slate-800">
                 <input
                   type="text"
-                  placeholder="예: 101동"
                   aria-label="새 일지 동·구역"
                   value={newRowData.building}
                   onChange={(e) => setNewRowData({ ...newRowData, building: e.target.value })}
@@ -306,7 +305,6 @@ export const RecordTable: React.FC<RecordTableProps> = ({
               <td className="p-1.5 border-r border-slate-800">
                 <input
                   type="text"
-                  placeholder="예: 15F"
                   aria-label="새 일지 층"
                   value={newRowData.floor}
                   onChange={(e) => setNewRowData({ ...newRowData, floor: e.target.value })}
