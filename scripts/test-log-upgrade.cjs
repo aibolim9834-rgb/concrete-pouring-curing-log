@@ -169,6 +169,17 @@ function uiHarness(file, name, props) {
     rejectSave(new Error('offline'));await failed;
     const retained=render(node.type,props,editor);assert(find(retained,'form'));assert(JSON.stringify(retained).includes('offline'));assert.equal(parent.states[18],false);assert.equal(editor.states[1],'101동');
   });
+  await check('photo page opens on 전체 기간 and lists photos from earlier months',()=>{
+    let bucket,cursor=0,refCursor=0;
+    const react={useState(initial){const i=cursor++;if(!(i in bucket.states))bucket.states[i]=typeof initial==='function'?initial():initial;return [bucket.states[i],()=>{}];},useRef(value){return bucket.refs[refCursor++] ||= {current:value};},useEffect(){}};
+    react.default=react;react.Fragment='Fragment';
+    const jsx=(type,props)=>({type,props});
+    const api=load('components/SitePhotos.tsx',{react,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/date-only':load('lib/date-only.ts'),'@/lib/cloud-storage':{cloudStorageEnabled:()=>false},'./ConfirmDialog':{askConfirm:async()=>true},'@/lib/site-photos-cloud':{latestDeletedBatch:()=>[]}});
+    const photo={id:'photo-old',siteId:site.id,date:'2025-03-14',building:'101동',floor:'5F',name:'old.png',createdAt:1};
+    bucket={states:[[photo],true],refs:[]};
+    const page=JSON.stringify(api.SitePhotos({site,onWorkPending(){}}));
+    assert.equal(bucket.states[7],'');assert(page.includes('전체 기간'));assert(page.includes('25.03.14'));
+  });
   await check('corrupt JSON blocks reads without rewriting source',()=>{for(const key of ['cp_sites','cp_logs']){storage.entries.clear();storage.setItem(key,'{broken');assert.throws(()=>data.readLocalData(storage));assert.equal(storage.getItem(key),'{broken');}});
   await check('invalid arrays and fields are rejected',()=>{storage.entries.clear();storage.setItem('cp_sites','{}');assert.throws(()=>data.readLocalData(storage));assert.throws(()=>data.validateLogs([{...log,building:null}]));});
   await check('defaults contain no unconfirmed temperature volume weather or curing claims',()=>{const input=data.newLog(site.id);same([input.min_temp,input.max_temp,input.volume,input.weather,input.curing_watering,input.curing_protection],[null,null,'','','','']);});
