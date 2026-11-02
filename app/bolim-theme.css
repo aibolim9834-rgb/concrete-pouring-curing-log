@@ -285,3 +285,15 @@
   .concrete-app .app-modal form button[type="submit"]:not(.ui-button) { min-block-size: 30px; padding-block: 4px; }
   .concrete-app .app-modal .text-right > button { min-block-size: 30px; padding-block: 4px; }
 }
+
+/* Fields on PC (2026-11-02): photo inputs and selects, the custom color box and the opened 구역 내역 / 작업일 fields
+   match the 30px controls elsewhere; photo list filters put their labels beside the fields like the log filters. */
+@media (min-width: 761px) {
+  .concrete-app .site-photos :is(input, select) { min-height: 30px; min-block-size: 30px; padding: 4px 10px; }
+  .concrete-app .site-photos .photo-fields { margin-top: 12px; }
+  .concrete-app .site-photos .photo-filters { align-items: center; }
+  .concrete-app .site-photos .photo-filters label { display: flex; align-items: center; gap: 6px; }
+  .concrete-app .site-photos .photo-filters label :is(input, select) { width: auto; }
+  .concrete-app .progress-page .progress-color-picker input { inline-size: 28px; block-size: 28px; min-height: 28px; min-block-size: 28px; padding: 2px; }
+  .concrete-app .progress-page .progress-selection-details :is(input, select) { min-height: 30px; min-block-size: 30px; padding-block: 2px; }
+}
