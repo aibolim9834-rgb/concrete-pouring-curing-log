@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { PouringLog, Site } from '@/lib/types';
 import { volumeText } from '@/lib/log-data';
-import { latestDeletedBatch, makePhotoThumbnail, markPhotosDeleted, photoBlob, photoPurgeTime, savePhoto, SitePhoto } from '@/lib/site-photos-cloud';
+import { latestDeletedBatch, makePhotoThumbnail, markPhotosDeleted, photoBlob, photoPurgeLabel, savePhoto, SitePhoto } from '@/lib/site-photos-cloud';
 import { cloudStorageEnabled } from '@/lib/cloud-storage';
 import { askConfirm } from './ConfirmDialog';
 import { PhotoImage } from './SitePhotos';
@@ -119,7 +119,7 @@ export function LogPhotos({ site, log, photos, loadError, readOnly, onChanged, o
       {loadError && <p className="log-photo-alert" role="alert">{loadError}</p>}
       {(message || deleted.length > 0) && <div className="log-photo-tools">
         {message && <p className="ui-note" role="status">{message}</p>}
-        {!readOnly && deleted.length > 0 && <button type="button" className="ui-button" disabled={busy} onClick={() => void remove(deleted, false)}>최근 삭제 취소 ({deleted.length}장{cloudStorageEnabled() && deleted[0].deletedAt ? (d => ` · ${d.getMonth() + 1}.${d.getDate()} 03:00 완전 삭제`)(photoPurgeTime(deleted[0].deletedAt)) : ''})</button>}
+        {!readOnly && deleted.length > 0 && <button type="button" className="ui-button" disabled={busy} onClick={() => void remove(deleted, false)}>최근 삭제 취소 ({deleted.length}장{cloudStorageEnabled() && deleted[0].deletedAt ? ` · ${photoPurgeLabel(deleted[0].deletedAt)} 완전 삭제` : ''})</button>}
       </div>}
       {live.length ? <>
         <div className="log-photo-tools">
