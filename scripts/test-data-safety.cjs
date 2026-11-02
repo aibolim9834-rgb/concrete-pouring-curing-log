@@ -7,6 +7,9 @@ function load(file,deps={},globals={}) {
  vm.runInNewContext(code,{module,exports:module.exports,require(id){if(id in deps)return deps[id];throw Error('Unexpected dependency '+id);},process:{env:{}},...globals});return module.exports;
 }
 const model=load('lib/pouring-progress.ts'),data=load('lib/log-data.ts',{'./pouring-progress':model});
+const logged=[],dbError=load('lib/db-error.ts',{},{console:{error:(...args)=>logged.push(args)}});
+// The Supabase module reads its mode through cloud-storage, so both see the same environment.
+const loadSupabase=(client,env={})=>load('lib/supabase.ts',{'@supabase/supabase-js':client,'./cloud-storage':load('lib/cloud-storage.ts',{},{process:{env}}),'./db-error':dbError},{process:{env}});
 const site={id:'site-a',name:'검증 현장'};
 const records=Array.from({length:1205},(_,i)=>({...data.newLog(site.id),id:'log-'+String(i).padStart(4,'0'),building:'101동',floor:'1층'}));
 let count=0;
@@ -30,10 +33,12 @@ function cloud({cap=500,fail=false,duplicate=false}={}){
  await check('photo listing handles a lower server cap without omitting original metadata',async()=>{const photos=await photosCloud().listPhotos(site.id);assert.equal(photos.length,1205);assert.equal(new Set(photos.map(p=>p.id)).size,1205);assert.equal(photos[1204].name,'original.png');});
  await check('photo listing rejects later-page errors instead of presenting a partial collection',async()=>{await assert.rejects(photosCloud(true).listPhotos(site.id),/사진 정보/);});
  for(const env of [{NEXT_PUBLIC_CON1_LOCAL_ONLY:'true'},{NEXT_PUBLIC_CON1_QA:'true'}]){
-  await check('explicit isolated mode does not query Supabase '+Object.keys(env)[0],async()=>{let calls=0;const api=load('lib/supabase.ts',{'@supabase/supabase-js':{createClient:()=>({from(){calls++;throw Error('network');}})}},{process:{env}});assert.equal(await api.checkSupabaseHealth(),false);assert.equal(calls,0);});
+  await check('explicit isolated mode does not query Supabase '+Object.keys(env)[0],async()=>{let calls=0;const api=loadSupabase({createClient:()=>({from(){calls++;throw Error('network');}})},env);assert.equal(await api.checkSupabaseHealth(),false);assert.equal(calls,0);});
  }
- await check('cloud outage does not fall back to editable local data',async()=>{const query={select(){return query;},limit:async()=>({error:{message:'offline'}})};const api=load('lib/supabase.ts',{'@supabase/supabase-js':{createClient:()=>({from:()=>query})}});await assert.rejects(api.checkSupabaseHealth(),/로컬 자료로 전환하지 않고/);});
- await check('healthy cloud mode stays cloud',async()=>{const query={select(){return query;},limit:async()=>({error:null})};const api=load('lib/supabase.ts',{'@supabase/supabase-js':{createClient:()=>({from:()=>query})}});assert.equal(await api.checkSupabaseHealth(),true);});
+ await check('cloud outage does not fall back to editable local data',async()=>{const query={select(){return query;},limit:async()=>({error:{message:'offline'}})};const api=loadSupabase({createClient:()=>({from:()=>query})});await assert.rejects(api.checkSupabaseHealth(),/로컬 자료로 전환하지 않고/);});
+ await check('cloud outage keeps the server error code and logs the original response',async()=>{const query={select(){return query;},limit:async()=>({error:{message:'JWT expired',code:'PGRST301'}})};logged.length=0;await assert.rejects(loadSupabase({createClient:()=>({from:()=>query})}).checkSupabaseHealth(),/로컬 자료로 전환하지 않고.*\(오류 코드 PGRST301\)/);assert.equal(logged.length,1);});
+ await check('DB errors keep the guidance, add the code only when one exists, and a missing row stays plain',()=>{logged.length=0;assert.equal(dbError.dbError('저장 실패',{code:'23503',message:'fk'}).message,'저장 실패 (오류 코드 23503)');assert.equal(dbError.dbError('저장 실패',new Error('network')).message,'저장 실패');assert.equal(dbError.dbError('저장 실패',null).message,'저장 실패');assert.equal(logged.length,2);});
+ await check('healthy cloud mode stays cloud',async()=>{const query={select(){return query;},limit:async()=>({error:null})};const api=loadSupabase({createClient:()=>({from:()=>query})});assert.equal(await api.checkSupabaseHealth(),true);});
  await check('CSV formula text is exported as text; numbers, quotes and original input survive',()=>{
   const {csvCell}=load('lib/csv.ts');
   for(const value of ['=1+1','+SUM(A1)','-1+2','@SUM(A1)','  =1+1','＝1+1'])assert.equal(csvCell(value), '"\t'+value+'"');
