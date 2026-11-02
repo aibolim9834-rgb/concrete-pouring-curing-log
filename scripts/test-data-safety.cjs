@@ -35,6 +35,12 @@ function cloud({cap=500,fail=false,duplicate=false}={}){
   return load('lib/site-photos-cloud.ts',{'./site-photos':{listPhotos:async()=>[]},'./supabase':{supabase},'./cloud-storage':{cloudStorageEnabled:()=>true},'./request-timeout':requestTimeout});
  }
  await check('photo listing handles a lower server cap without omitting original metadata',async()=>{const photos=await photosCloud().listPhotos(site.id);assert.equal(photos.length,1205);assert.equal(new Set(photos.map(p=>p.id)).size,1205);assert.equal(photos[1204].name,'original.png');});
+ await check('a deleted photo is purged at the first 03:00 KST run once two full days have passed',()=>{
+  const {photoPurgeTime}=photosCloud(),at=iso=>photoPurgeTime(Date.parse(iso)).toISOString();
+  assert.equal(at('2026-11-02T04:19:47Z'),'2026-11-04T18:00:00.000Z');
+  assert.equal(at('2026-11-02T20:00:00Z'),'2026-11-05T18:00:00.000Z');
+  assert.equal(at('2026-11-02T18:00:00Z'),'2026-11-04T18:00:00.000Z');
+ });
  await check('photo listing rejects later-page errors instead of presenting a partial collection',async()=>{await assert.rejects(photosCloud(true).listPhotos(site.id),/사진 정보/);});
  for(const env of [{NEXT_PUBLIC_CON1_LOCAL_ONLY:'true'},{NEXT_PUBLIC_CON1_QA:'true'}]){
   await check('explicit isolated mode does not query Supabase '+Object.keys(env)[0],async()=>{let calls=0;const api=loadSupabase({createClient:()=>({from(){calls++;throw Error('network');}})},env);assert.equal(await api.checkSupabaseHealth(),false);assert.equal(calls,0);});

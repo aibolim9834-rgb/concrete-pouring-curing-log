@@ -5,6 +5,8 @@ import { READ_TIMEOUT_MESSAGE, timed, WRITE_TIMEOUT_MESSAGE } from './request-ti
 import type { SitePhoto } from './site-photos';
 export type { SitePhoto } from './site-photos';
 export { makePhotoThumbnail, latestDeletedBatch } from './site-photos';
+// purge-deleted-photos runs daily at 18:00 UTC (03:00 KST) and removes photos deleted more than two days earlier.
+export function photoPurgeTime(deletedAt:number){const due=deletedAt+2*86400000,d=new Date(due),run=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate(),18);return new Date(run>=due?run:run+86400000);}
 
 const bucket = () => supabase.storage.from('site-photos');
 type PhotoRow = {id:string;site_id:string;metadata:SitePhoto;original_path:string;thumbnail_path:string;original_hash:string};
