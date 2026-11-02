@@ -24,10 +24,13 @@ interface MobileLogSheetProps {
   onUpdate: (id: string, data: PouringLogInput) => Promise<void>;
   onDelete: (id: string) => void;
   onClose: () => void;
+  // Opens the 타설 사진 window for this log on top of the sheet.
+  photoCount?: number;
+  onOpenPhotos?: () => void;
 }
 
 // Phone-sized entry form for one log. The desktop table keeps its inline row editing.
-export function MobileLogSheet({ log, logs, site, onAdd, onUpdate, onDelete, onClose }: MobileLogSheetProps) {
+export function MobileLogSheet({ log, logs, site, onAdd, onUpdate, onDelete, onClose, photoCount = 0, onOpenPhotos }: MobileLogSheetProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const lock = useRef(false);
   // The baseline is what closing without saving would lose nothing against.
@@ -143,6 +146,7 @@ export function MobileLogSheet({ log, logs, site, onAdd, onUpdate, onDelete, onC
             {field('curing_protection', '보양', '예: 비닐 보양')}
           </fieldset>
 
+          {log && onOpenPhotos && <button type="button" className="mobile-log-photos ui-button" onClick={onOpenPhotos}>{photoCount ? `타설 사진 ${photoCount}장 보기` : '타설 사진 추가'}</button>}
           {log && <button type="button" className="mobile-log-delete ui-button ui-danger" onClick={() => onDelete(log.id)}>이 일지 삭제</button>}
         </fieldset>
         {notice && <p className="mobile-log-notice" role="status">{notice}</p>}

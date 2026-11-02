@@ -37,3 +37,31 @@
 .photo-bulk-selection{display:flex;align-items:center;flex-wrap:wrap;gap:10px}.photo-bulk-tools p[role=alert]{width:100%;color:var(--b-danger)}
 .site-photos .photo-select{display:flex;align-items:center;gap:8px;padding:10px 12px;color:var(--b-ink);cursor:pointer}.site-photos .photo-select input{width:18px;height:18px;min-height:0;accent-color:var(--b-action)}
 .photo-card.is-selected{border-color:var(--b-action);box-shadow:0 0 0 1px var(--b-action)}
+
+/* 타설 사진: the photo column chip in 타설일지 (green with the count, + when the row has none) and the window it opens. */
+.log-photo-button{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-inline-size:44px;min-block-size:24px;padding:1px 8px;border:1px solid var(--b-line);border-radius:999px;background:var(--b-surface);color:var(--b-muted);font-size:11px;font-weight:600;cursor:pointer}
+.log-photo-button.has-photos{background:var(--b-selected);border-color:#9cc9a8;color:var(--b-action)}
+.log-photo-button:hover:not(:disabled){border-color:var(--b-action)}
+.log-photo-button:focus-visible{outline:2px solid var(--b-action);outline-offset:2px}
+.log-photo-dialog{width:min(980px,94vw)}
+.log-photo-dialog:modal{overscroll-behavior:contain}
+.log-photo-dialog::backdrop{overflow:hidden;overscroll-behavior:contain}
+.log-photo-heading-actions{display:flex;gap:8px;flex-shrink:0}
+.log-photo-body{display:grid;gap:14px;padding:0 20px 20px}
+.log-photo-add{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:2px dashed #91af99;border-radius:8px;background:#f7faf7}
+.log-photo-add.is-over{background:var(--b-selected);border-color:var(--b-action)}
+.log-photo-add p{margin:0;font-size:12px;color:var(--b-muted)}.log-photo-add strong{color:var(--b-ink)}
+.log-photo-add>div{display:flex;gap:8px;flex-shrink:0}
+.log-photo-file{position:absolute;width:1px;height:1px;opacity:0;clip-path:inset(50%);padding:0}
+.log-photo-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.log-photo-dialog .ui-note{margin:0;font-size:12px}
+.log-photo-alert{margin:0;color:var(--b-danger)}
+.log-photo-dialog .photo-grid{grid-template-columns:repeat(4,minmax(0,1fr));padding:0}
+.concrete-app .log-photo-dialog .photo-thumb{height:150px}
+.log-photo-dialog .photo-info{padding:10px 12px}.log-photo-dialog .photo-info p{margin:0 0 8px}
+.log-photo-dialog .photo-select{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;color:var(--b-ink);cursor:pointer}
+.log-photo-tools .photo-select{padding:0}
+.log-photo-dialog .photo-select input{width:18px;height:18px;min-height:0;margin:0;accent-color:var(--b-action)}
+.log-photo-dialog .photo-delete{color:var(--b-danger)}
+@media(max-width:900px){.log-photo-dialog .photo-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:640px){.log-photo-add{flex-direction:column;align-items:stretch}.log-photo-add>div>*{flex:1}.log-photo-dialog .photo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.log-photo-body{padding:0 14px 14px}}

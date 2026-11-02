@@ -42,6 +42,8 @@ function appHarness(result, local = false, overrides = {}) {
   deps['@/lib/strength']=load('lib/strength.ts');
   deps['@/lib/floor']=load('lib/floor.ts');
   deps['@/lib/date-only']=load('lib/date-only.ts');
+  deps['@/lib/site-photos-cloud']={listPhotos:async()=>[],markPhotosDeleted:async()=>{}};
+  deps['@/lib/cloud-storage']={cloudStorageEnabled:()=>false};
   deps['@/components/ConfirmDialog']={askConfirm:async()=>true,ConfirmHost:'ConfirmHost'};
   deps['@/lib/db-error']=load('lib/db-error.ts',{},{console:{error(){}}});
   deps['@/lib/request-timeout']=load('lib/request-timeout.ts',{},{AbortSignal,AbortController,setTimeout,clearTimeout});
@@ -50,12 +52,12 @@ function appHarness(result, local = false, overrides = {}) {
   const app=load('components/ConcreteApp.tsx',deps,{confirm:()=>true,alert:message=>alerts.push(message),window:{location:{search:'',assign:url=>navigation.push(url)},addEventListener(){},removeEventListener(){}},URLSearchParams,setTimeout:()=>{},Blob:class{constructor(parts){csv=parts.join('');}},URL:{createObjectURL:()=> 'blob:test'},document:{createElement:()=>({setAttribute(){},click(){}}),body:{appendChild(){},removeChild(){}}}});
   return {states,navigation,alerts,get csv(){return csv;},get effects(){return effects;},render(){cursor=0;refCursor=0;effects=[];return app.ConcreteApp({initialView:arguments[0]||'logs'});}};
 }
-function uiHarness(file, name, props) {
+function uiHarness(file, name, props, extra = {}) {
   let cursor=0,refCursor=0,effects=[];const states=[],refs=[];
   const react={useState(initial){const i=cursor++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return [states[i],v=>{states[i]=typeof v==='function'?v(states[i]):v;}];},useEffect(fn){effects.push(fn);},useCallback(fn){return fn;},useRef(value){return refs[refCursor++] ||= {current:value};}};
   const jsx=(type,props)=>({type,props});
   const events=new Map();
-  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./ConfirmDialog':{askConfirm:async()=>true},'./WateringSelect':{WateringSelect:'WateringSelect'},'./MobileLogSheet':{MobileLogSheet:'MobileLogSheet'},'./ShortDateInput':{ShortDateInput:'ShortDateInput'},'@/lib/progress-structure':load('lib/progress-structure.ts'),'@/lib/site-archive':load('lib/site-archive.ts'),'@/lib/site-code':load('lib/site-code.ts'),'@/lib/date-only':load('lib/date-only.ts'),'@/lib/pouring-progress':load('lib/pouring-progress.ts'),'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name})},{Node:TestNode,requestAnimationFrame:fn=>fn(),document:{querySelector:()=>null,addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
+  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./ConfirmDialog':{askConfirm:async()=>true},'./WateringSelect':{WateringSelect:'WateringSelect'},'./MobileLogSheet':{MobileLogSheet:'MobileLogSheet'},'./ShortDateInput':{ShortDateInput:'ShortDateInput'},'./LogPhotos':{LogPhotos:'LogPhotos'},'@/lib/site-photos-cloud':{listPhotos:async()=>[]},'@/lib/progress-structure':load('lib/progress-structure.ts'),'@/lib/site-archive':load('lib/site-archive.ts'),'@/lib/site-code':load('lib/site-code.ts'),'@/lib/date-only':load('lib/date-only.ts'),'@/lib/pouring-progress':load('lib/pouring-progress.ts'),'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name}),...extra},{Node:TestNode,requestAnimationFrame:fn=>fn(),document:{querySelector:()=>null,addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
   return {states,events,get effects(){return effects;},render(){cursor=0;refCursor=0;effects=[];return exports[name](props);}};
 }
 (async()=>{
@@ -179,6 +181,10 @@ function uiHarness(file, name, props) {
     bucket={states:[[photo],true],refs:[]};
     const page=JSON.stringify(api.SitePhotos({site,onWorkPending(){}}));
     assert.equal(bucket.states[7],'');assert(page.includes('전체 기간'));assert(page.includes('25.03.14'));
+    // A 타설 사진 tied to a log row stays off the 알폼핀 체결 사진 page.
+    bucket={states:[[photo,{...photo,id:'photo-log',logId:'log-a',date:'2025-04-20'}],true],refs:[]};cursor=0;refCursor=0;
+    const mixed=JSON.stringify(api.SitePhotos({site,onWorkPending(){}}));
+    assert(mixed.includes('25.03.14'));assert(!mixed.includes('25.04.20'));
   });
   await check('corrupt JSON blocks reads without rewriting source',()=>{for(const key of ['cp_sites','cp_logs']){storage.entries.clear();storage.setItem(key,'{broken');assert.throws(()=>data.readLocalData(storage));assert.equal(storage.getItem(key),'{broken');}});
   await check('invalid arrays and fields are rejected',()=>{storage.entries.clear();storage.setItem('cp_sites','{}');assert.throws(()=>data.readLocalData(storage));assert.throws(()=>data.validateLogs([{...log,building:null}]));});
@@ -252,6 +258,43 @@ function uiHarness(file, name, props) {
     const rows=[12,7,12.5,0,null].map((volume,i)=>({...log,id:'v'+i,volume}));
     const table=uiHarness('components/RecordTable.tsx','RecordTable',{logs:rows,site,filters:data.emptyLogFilters(),sort:data.defaultLogSort,onSortChange(){},onFiltersChange(){},outputScope:'filtered',onOutputScopeChange(){}}).render();
     same(all(find(table,'tbody'),'tr').slice(1).map(row=>all(row,'td')[10].props.children),['12 m³ (2대)','7 m³ (2대)','12.5 m³ (3대)','0 m³','-']);
+  });
+  await check('photo column counts each row\'s 타설 사진 and opens that row\'s photo window',async()=>{
+    const all=(node,type)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,type)):[...(node.type===type?[node]:[]),...all(node.props?.children,type)];
+    const rows=[{...log,id:'p1'},{...log,id:'p2'}];
+    const photo=(id,logId,extra={})=>({id,siteId:site.id,logId,date:log.date,building:'101동',floor:'1F',name:id+'.jpg',size:1,createdAt:1,...extra});
+    const stored=[photo('a','p1'),photo('b','p1'),photo('c','p1',{deletedAt:5}),photo('d',undefined)];
+    const h=uiHarness('components/RecordTable.tsx','RecordTable',{logs:rows,site,filters:data.emptyLogFilters(),sort:data.defaultLogSort,onSortChange(){},onFiltersChange(){},outputScope:'filtered',onOutputScopeChange(){}},{'@/lib/site-photos-cloud':{listPhotos:async id=>{assert.equal(id,site.id);return stored;}}});
+    h.render();h.effects.forEach(fn=>fn());await new Promise(r=>setImmediate(r));
+    let table=h.render();const cell=row=>all(row,'td')[13];
+    const display=all(find(table,'tbody'),'tr').slice(1);
+    // Row p1 has two live photos (the deleted one and the 알폼핀 photo without logId do not count); row p2 offers +.
+    same(display.map(row=>cell(row).props.children.props.children[1]),[2,'+']);
+    assert.equal(cell(display[0]).props.children.props.title,'타설 사진 2장 보기');
+    cell(display[0]).props.children.props.onClick();table=h.render();
+    const win=find(table,'LogPhotos');assert.equal(win.props.log.id,'p1');same(win.props.photos.map(p=>p.id),['a','b','c']);
+  });
+  await check('a closed site shows - for rows without photos and opens existing ones read-only',async()=>{
+    const all=(node,type)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,type)):[...(node.type===type?[node]:[]),...all(node.props?.children,type)];
+    const rows=[{...log,id:'p1'},{...log,id:'p2'}];
+    const h=uiHarness('components/RecordTable.tsx','RecordTable',{logs:rows,site,readOnly:true,filters:data.emptyLogFilters(),sort:data.defaultLogSort,onSortChange(){},onFiltersChange(){},outputScope:'filtered',onOutputScopeChange(){}},{'@/lib/site-photos-cloud':{listPhotos:async()=>[{id:'a',siteId:site.id,logId:'p1',name:'a.jpg',createdAt:1}]}});
+    h.render();h.effects.forEach(fn=>fn());await new Promise(r=>setImmediate(r));
+    const display=all(find(h.render(),'tbody'),'tr').filter(row=>String(row.props.className).includes('record-display-row')),cells=display.map(row=>all(row,'td')[13].props.children);
+    assert.equal(cells[0].type,'button');assert.equal(cells[1].props.children,'-');
+    cells[0].props.onClick();assert.equal(find(h.render(),'LogPhotos').props.readOnly,true);
+  });
+  await check('deleting a log also deletes its 타설 사진 and leaves other photos alone',async()=>{
+    const marked=[],photos=[{id:'a',siteId:site.id,logId:log.id},{id:'b',siteId:site.id,logId:log.id,deletedAt:3},{id:'c',siteId:site.id,logId:'other'},{id:'d',siteId:site.id}];
+    const h=appHarness(null,true,{'@/lib/site-photos-cloud':{listPhotos:async()=>photos,markPhotosDeleted:async(list,deleted)=>{marked.push([list.map(p=>p.id),deleted]);}}});
+    storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site]));storage.setItem('cp_logs',JSON.stringify([log]));
+    await find(h.render(),'RecordTable').props.onDeleteLog(log.id);
+    same(marked,[[['a'],true]]);same(JSON.parse(storage.getItem('cp_logs')),[]);
+  });
+  await check('a log is kept when its photos cannot be checked',async()=>{
+    const marked=[];const h=appHarness(null,true,{'@/lib/site-photos-cloud':{listPhotos:async()=>{throw new Error('offline');},markPhotosDeleted:async()=>{marked.push(1);}}});
+    storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site]));storage.setItem('cp_logs',JSON.stringify([log]));
+    await find(h.render(),'RecordTable').props.onDeleteLog(log.id);
+    same(JSON.parse(storage.getItem('cp_logs')).map(l=>l.id),[log.id]);assert.equal(marked.length,0);assert.match(h.states.find(v=>typeof v==='string'&&v.includes('사진 정보를 확인하지 못해')),/삭제하지 않았습니다/);
   });
   await check('temperature card shows the range without hot or cold alerts',()=>{
     const show=(min,max)=>JSON.stringify(uiHarness('components/SummaryCards.tsx','SummaryCards',{logs:[{...log,min_temp:min,max_temp:max}],site}).render());

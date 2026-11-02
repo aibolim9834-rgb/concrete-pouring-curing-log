@@ -1,7 +1,14 @@
 import { PouringLog, PouringLogInput, Site } from './types';
 import { validDate } from './pouring-progress';
 
-export const localToday = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+// One ready-mix truck carries 6 m³; a part load still counts as a truck, so 7 m³ is 2대.
+const REMICON_TRUCK_M3 = 6;
+export function volumeText(volume: PouringLog['volume']) {
+  if (volume === null || volume === undefined || volume === '') return '';
+  return `${volume} m³${Number(volume) > 0 ? ` (${Math.ceil(Number(volume) / REMICON_TRUCK_M3)}대)` : ''}`;
+}
+
+export const localToday =() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 export function newLog(siteId = '', category = '1'): PouringLogInput {
   return { site_id: siteId, category, date: localToday(), building: '', floor: '', member_type: '슬라브', min_temp: null, max_temp: null, weather: '', remicon_company: '', strength: '', volume: '', curing_watering: '', curing_protection: '', remarks: '' };
 }

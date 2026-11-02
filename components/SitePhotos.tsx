@@ -8,7 +8,7 @@ import { askConfirm } from './ConfirmDialog';
 
 function today() {const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function photoLocation(photo: SitePhoto) {const b=photo.building.trim(),f=photo.floor.trim();return `${/^\d+$/.test(b)?b+'동':b} · ${/^\d+$/.test(f)?f+'층':f}`;}
-function PhotoImage({photo,original=false}:{photo:SitePhoto;original?:boolean}) {
+export function PhotoImage({photo,original=false}:{photo:SitePhoto;original?:boolean}) {
   const [url,setUrl]=useState(''),[failed,setFailed]=useState(false);
   useEffect(()=>{let active=true,objectUrl='';setUrl('');setFailed(false);photoBlob(photo,original).then(blob=>{if(active){objectUrl=URL.createObjectURL(blob);setUrl(objectUrl);}}).catch(()=>{if(active)setFailed(true);});return()=>{active=false;if(objectUrl)URL.revokeObjectURL(objectUrl);};},[photo.id,photo.siteId,original]);
   return failed?<span role="alert">사진을 불러오지 못했습니다.</span>:url?<img src={url} alt={photo.name} loading={original?'eager':'lazy'} decoding="async"/>:<span>불러오는 중…</span>;
@@ -32,14 +32,15 @@ export function SitePhotos({site,blocked=false,onWorkPending}:{site:Site;blocked
   useEffect(()=>{if(!photoBusy)return;const prevent=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',prevent);return()=>window.removeEventListener('beforeunload',prevent);},[photoBusy]);
   useEffect(()=>{if(viewId&&!dialog.current?.open)dialog.current?.showModal();},[viewId]);
   useEffect(()=>{onWorkPending?.(photoBusy);return()=>onWorkPending?.(false);},[photoBusy,onWorkPending]);
-  const live=photos.filter(p=>!p.deletedAt), filtered=live.filter(p=>(!month||p.date.startsWith(month))&&(!filter||p.building===filter));
+  // 타설 사진 (logId) belong to 타설일지 rows and stay off this page.
+  const own=photos.filter(p=>!p.logId), live=own.filter(p=>!p.deletedAt), filtered=live.filter(p=>(!month||p.date.startsWith(month))&&(!filter||p.building===filter));
   const days=Array.from(new Set(filtered.map(p=>p.date))).sort().reverse();
   const dayPhotos=filtered.filter(p=>p.date===day).sort((a,b)=>a.createdAt-b.createdAt||a.id.localeCompare(b.id));
   const selectedPhotos=dayPhotos.filter(p=>selected.includes(p.id));
   const allDisplayedSelected=dayPhotos.length>0&&dayPhotos.slice(0,limit).every(p=>selected.includes(p.id));
   const viewIndex=dayPhotos.findIndex(p=>p.id===viewId),view=dayPhotos[viewIndex];
   const months=Array.from(new Set([month,today().slice(0,7),...live.map(p=>p.date.slice(0,7)),...Array.from({length:12},(_,i)=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;})])).filter(Boolean).sort().reverse();
-  const deleted=latestDeletedBatch(photos);
+  const deleted=latestDeletedBatch(own);
   function uploadInputsValid() {
     if(!normalizeShortDate(date)){alert('올바른 촬영일을 먼저 입력한 뒤 사진을 넣어주세요.');return false;}
     if(!building.trim()||!floor.trim()){alert('동·구역과 층을 먼저 입력한 뒤 사진을 넣어주세요.');return false;}

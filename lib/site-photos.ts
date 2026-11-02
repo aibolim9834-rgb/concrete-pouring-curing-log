@@ -1,5 +1,6 @@
+// A photo with logId is a 타설 사진 attached to that 타설일지 row; one without it is an 알폼핀 체결 사진.
 export interface SitePhoto {
-  id: string; siteId: string; date: string; building: string; floor: string;
+  id: string; siteId: string; logId?: string; date: string; building: string; floor: string;
   name: string; size: number; createdAt: number; deletedAt?: number; deletionBatchId?: string;
 }
 const request = <T>(r: IDBRequest<T>) => new Promise<T>((resolve,reject) => { r.onsuccess=()=>resolve(r.result); r.onerror=()=>reject(r.error); });
