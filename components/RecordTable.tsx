@@ -247,10 +247,10 @@ export const RecordTable: React.FC<RecordTableProps> = ({
           <caption className="sr-only">타설일지. 열 제목을 누르면 오름차순 또는 내림차순으로 정렬합니다. 구분은 현재 조회 순서의 자동 번호입니다.</caption>
           <colgroup>
             {/* 번호, 일자, 동, 층, 부위, 최저·최고온도, 기상, 업체, 강도, 물량, 살수·보양, 사진, 관리.
-                일자·층·부위·기상·강도·물량·살수·관리는 입력칸과 머리글이 들어가는 고정 폭이고(층은 "19F(옥상 파라펫)",
+                일자·층·부위·기상·강도·물량·살수·관리는 입력칸과 머리글이 들어가는 고정 폭이고(층은 "19F(옥상 파라펫)", 강도는 휴대폰 13px 머리글 "타설강도 ↕",
                 물량은 "1386 m³ (231대)", 살수는 입력 줄의 "1일 3회 살수"가 한 줄에 들어가는 폭), 사진은 장수 버튼 폭,
                 너비가 없는 동이 남는 폭을 모두 받습니다. */}
-            {['3%', '88px', undefined, '100px', '94px', '5.5%', '5.5%', '84px', '6.5%', '76px', '120px', '112px', '10%', '64px', '84px'].map((width, index) => <col key={index} style={width ? { width } : undefined} />)}
+            {['3%', '88px', undefined, '100px', '94px', '5.5%', '5.5%', '84px', '6.5%', '82px', '120px', '112px', '10%', '64px', '84px'].map((width, index) => <col key={index} style={width ? { width } : undefined} />)}
           </colgroup>
           <thead>
             {/* Row 1 Headers */}

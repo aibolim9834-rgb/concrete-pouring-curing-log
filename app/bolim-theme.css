@@ -83,7 +83,7 @@
   .concrete-app .record-log-wrap { max-inline-size:100%; }
   .concrete-app .record-row-actions { gap:6px; }
   .concrete-app .record-row-actions button { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; padding:0; border:1px solid var(--b-line); border-radius:5px; background:var(--b-surface); }
-  .concrete-app .record-log-table { table-layout:fixed; inline-size:100%; min-inline-size:1334px; }
+  .concrete-app .record-log-table { table-layout:fixed; inline-size:100%; min-inline-size:1340px; }
   .concrete-app .record-log-table :is(th,td) { min-inline-size:0; padding-inline:4px; }
   .concrete-app .record-log-table thead th { padding-block:3px; }
   .concrete-app .record-log-table .record-display-row > td { padding-block:5px; }
