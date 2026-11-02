@@ -306,3 +306,9 @@
   .concrete-app .progress-page .progress-floor-note { font-size: 12px; line-height: 18px; }
   .concrete-app .app-header-title-row h1 { font-size: 16px; line-height: 24px; }
 }
+
+/* Weights (2026-11-02): floor names lead each row above the 600 dates, delays read as warnings,
+   and the 작업일·계산 기준 / 구역 내역 toggles match the other 600 summaries. */
+.concrete-app .progress-page .progress-table tbody th { font-weight: 700; }
+.concrete-app .progress-comparison-table .comparison-gap .is-late { font-weight: 600; }
+.concrete-app .progress-page .progress-selection-details summary { font-weight: 600; }
