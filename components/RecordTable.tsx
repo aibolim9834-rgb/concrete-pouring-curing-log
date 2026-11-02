@@ -23,6 +23,9 @@ import {
   X
 } from 'lucide-react';
 
+// One ready-mix truck carries 6 m³; a part load still counts as a truck, so 7 m³ is 2대.
+const REMICON_TRUCK_M3 = 6;
+
 interface RecordTableProps {
   logs: PouringLog[];
   site: Site | undefined;
@@ -221,9 +224,10 @@ export const RecordTable: React.FC<RecordTableProps> = ({
           <caption className="sr-only">타설 일지. 열 제목을 누르면 오름차순 또는 내림차순으로 정렬합니다. 구분은 현재 조회 순서의 자동 번호입니다.</caption>
           <colgroup>
             {/* 번호, 일자, 동, 층, 부위, 최저·최고온도, 기상, 업체, 강도, 물량, 살수·보양, 관리.
-                일자·층·부위·기상·관리는 입력칸과 머리글이 들어가는 고정 폭이고(층은 "19F(옥상 파라펫)"이 한 줄에 들어가는 폭),
+                일자·층·부위·기상·강도·물량·살수·관리는 입력칸과 머리글이 들어가는 고정 폭이고(층은 "19F(옥상 파라펫)",
+                물량은 "1386 m³ (231대)", 살수는 입력 줄의 "1일 3회 살수"가 한 줄에 들어가는 폭),
                 너비가 없는 동이 남는 폭을 모두 받습니다. */}
-            {['3%', '88px', undefined, '100px', '94px', '5.5%', '5.5%', '84px', '6.5%', '7.5%', '6%', '7%', '10%', '84px'].map((width, index) => <col key={index} style={width ? { width } : undefined} />)}
+            {['3%', '88px', undefined, '100px', '94px', '5.5%', '5.5%', '84px', '6.5%', '76px', '120px', '112px', '10%', '84px'].map((width, index) => <col key={index} style={width ? { width } : undefined} />)}
           </colgroup>
           <thead>
             {/* Row 1 Headers */}
@@ -673,7 +677,9 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                     {normalizeStrength(log.strength) || '-'}
                   </td>
                   <td className="px-2.5 py-3 border-r border-slate-800/80 text-center font-semibold text-slate-200 whitespace-nowrap">
-                    {log.volume !== null && log.volume !== undefined && log.volume !== '' ? `${log.volume} m³` : '-'}
+                    {log.volume !== null && log.volume !== undefined && log.volume !== ''
+                      ? `${log.volume} m³${Number(log.volume) > 0 ? ` (${Math.ceil(Number(log.volume) / REMICON_TRUCK_M3)}대)` : ''}`
+                      : '-'}
                   </td>
                   <td className="px-2.5 py-3 border-r border-slate-800/80 text-slate-300">
                     {log.curing_watering ? (

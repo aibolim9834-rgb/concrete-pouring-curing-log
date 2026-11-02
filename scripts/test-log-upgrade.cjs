@@ -247,6 +247,12 @@ function uiHarness(file, name, props) {
     const body=find(table,'tbody');same(all(body,'tr').map(row=>all(row,'td')[0].props.children),['자동',1,2]);
     const print=uiHarness('components/PrintView.tsx','PrintView',{logs:rows,sites:[site],currentSite:site,onBack(){}}).render();same(all(find(print,'tbody'),'tr').slice(0,3).map(row=>all(row,'td')[0].props.children),[1,2,'']);
   });
+  await check('volume cell adds ready-mix trucks at 6 m3 each, rounding a part load up',()=>{
+    const all=(node,type)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,type)):[...(node.type===type?[node]:[]),...all(node.props?.children,type)];
+    const rows=[12,7,12.5,0,null].map((volume,i)=>({...log,id:'v'+i,volume}));
+    const table=uiHarness('components/RecordTable.tsx','RecordTable',{logs:rows,site,filters:data.emptyLogFilters(),sort:data.defaultLogSort,onSortChange(){},onFiltersChange(){},outputScope:'filtered',onOutputScopeChange(){}}).render();
+    same(all(find(table,'tbody'),'tr').slice(1).map(row=>all(row,'td')[10].props.children),['12 m³ (2대)','7 m³ (2대)','12.5 m³ (3대)','0 m³','-']);
+  });
   await check('temperature card shows the range without hot or cold alerts',()=>{
     const show=(min,max)=>JSON.stringify(uiHarness('components/SummaryCards.tsx','SummaryCards',{logs:[{...log,min_temp:min,max_temp:max}],site}).render());
     const both=show(-1,36);assert(both.includes('-1°C'));assert(both.includes('36°C'));assert(both.includes('온도 범위'));
