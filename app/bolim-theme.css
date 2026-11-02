@@ -253,6 +253,10 @@
   .concrete-app .record-log-table .record-row-actions button { width: 24px; height: 24px; }
   .concrete-app .record-log-table .log-quick-add-row > td { padding-block: 3px; }
   .concrete-app .record-log-table .log-quick-add-row :is(input, select, button) { min-height: 28px; min-block-size: 28px; padding-block: 2px; }
+  /* Header rows one step smaller: 11px text and lower sort buttons take the two rows from 65px to 49px. */
+  .concrete-app .record-log-table thead th { font-size: 11px; padding-block: 1px; }
+  .concrete-app .record-log-table thead .log-sort-button { min-block-size: 24px; padding: 1px 2px; }
+  .concrete-app .record-log-table thead .log-sort-icon { font-size: 10px; }
 
   /* 타설현황: site name beside the title, lower controls and color row, slimmer building header; the table caption
      repeats the page title, so it stays for screen readers only. */
