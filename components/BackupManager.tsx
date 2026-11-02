@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AppBackup, backupCounts, collectBackup, parseBackup, restoreBackup } from '@/lib/app-backup';
 import { downloadFile } from '@/lib/pouring-progress';
 import { localToday } from '@/lib/log-data';
+import { askConfirm } from './ConfirmDialog';
 
 export function BackupManager({ cloud, blocked, loading, siteId }: { cloud: boolean; blocked: boolean; loading: boolean; siteId?: string }) {
   const menuRef = useRef<HTMLDetailsElement>(null);
@@ -61,8 +62,10 @@ export function BackupManager({ cloud, blocked, loading, siteId }: { cloud: bool
     {pending && <div className="backup-preview">
       <p>복원할 자료: 현장 {backupCounts(pending.backup).sites}개 · 일지 {backupCounts(pending.backup).logs}건 · 현황 {backupCounts(pending.backup).progress}개 · 보관본 {backupCounts(pending.backup).archives}개</p>
       <p className="ui-note">현재 이 브라우저의 전체 자료를 교체합니다. 교체 직전 자료는 별도로 보관하며 복원 후 화면을 새로 불러옵니다.</p>
-      <div className="progress-actions"><button className="ui-button ui-danger" disabled={busy} onClick={() => {
-        if (cloud || loading || lock.current || !confirm('현재 브라우저의 현장·일지·현황·보관본을 위 자료로 전체 교체하시겠습니까?')) return;
+      <div className="progress-actions"><button className="ui-button ui-danger" disabled={busy} onClick={async () => {
+        if (cloud || loading || lock.current) return;
+        if (!await askConfirm({ title: '전체 복원', message: '현재 브라우저의 현장·일지·현황·보관본을 위 자료로 전체 교체하시겠습니까?', confirmLabel: '전체 복원', danger: true })) return;
+        if (lock.current) return;
         lock.current = true; setBusy(true);
         try { restoreBackup(localStorage, pending.backup, pending.before); window.location.assign(window.location.pathname); }
         catch (e) { setError(e instanceof Error ? e.message : '복원에 실패했습니다.'); lock.current = false; setBusy(false); }

@@ -16,6 +16,7 @@ import { progressId, validDate } from '@/lib/pouring-progress';
 import { shortDate } from '@/lib/date-only';
 import { readLocalData, writeLocalData, validateLogInput, filterLogs, emptyLogFilters, LogFilters, sortLogs, defaultLogSort, LogSort } from '@/lib/log-data';
 import { BackupManager } from './BackupManager';
+import { askConfirm, ConfirmHost } from '@/components/ConfirmDialog';
 import { nextSiteCode } from '@/lib/site-code';
 import { loadCloudLogData } from '@/lib/cloud-log-data';
 import { csvCell } from '@/lib/csv';
@@ -154,7 +155,8 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       assertWritable(); assertOpenSite();
       if (siteLock.current) throw new Error('다른 작업을 처리 중입니다.');
       const target = siteLogs.find(log => log.id === id);
-      if (!target || !confirm(`${target.date} ${target.building} ${target.floor} 일지를 삭제하시겠습니까?`)) return;
+      if (!target || !await askConfirm({ title: '일지 삭제', message: `${target.date} ${target.building} ${target.floor} 일지를 삭제하시겠습니까?`, confirmLabel: '삭제', danger: true })) return;
+      if (siteLock.current) throw new Error('다른 작업을 처리 중입니다.');
       siteLock.current = true; setLogBusy(true); setOperationError(''); setNotice('');
       try {
         if (isSupabase) {
@@ -239,7 +241,8 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
     const target = sites.find(site => site.id === id);
     if (!target) throw new Error('삭제할 현장을 다시 선택해주세요.');
     const progress = localStorage.getItem(`cp_pouring_progress_v1:${id}`);
-    if (!confirm(`'${target.name}'${target.code ? ` (${target.code})` : ''} 현장을 삭제하시겠습니까?\n현장 ID: ${target.id}\n기존 일지 ${logs.filter(log => log.site_id === id).length}건 · 타설현황 ${progress ? '있음' : '없음'}\n이 브라우저에 복구용 보관본을 먼저 저장한 뒤 현장 목록과 연결 기록에서 제거합니다.${isSupabase ? '\nDB 현장 복원은 추후 DB 연결 작업에서 진행해야 합니다.' : '\n현장 관리의 보관된 현장에서 복원할 수 있습니다.'}`)) return;
+    if (!await askConfirm({ title: '현장 삭제', confirmLabel: '삭제', danger: true, message: `'${target.name}'${target.code ? ` (${target.code})` : ''} 현장을 삭제하시겠습니까?\n현장 ID: ${target.id}\n기존 일지 ${logs.filter(log => log.site_id === id).length}건 · 타설현황 ${progress ? '있음' : '없음'}\n이 브라우저에 복구용 보관본을 먼저 저장한 뒤 현장 목록과 연결 기록에서 제거합니다.${isSupabase ? '\nDB 현장 복원은 추후 DB 연결 작업에서 진행해야 합니다.' : '\n현장 관리의 보관된 현장에서 복원할 수 있습니다.'}` })) return;
+    if (siteLock.current) throw new Error('현장 처리 중입니다. 잠시 후 다시 시도해주세요.');
     siteLock.current = true;
     try {
       const archive = archiveSite(localStorage, target, logs, isSupabase ? 'cloud' : 'local');
@@ -354,11 +357,11 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       />
 
       <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-        {dataIssue && <div className="progress-error" role="alert">{dataIssue}<button className="ui-button" onClick={() => { if (confirm('작성 중인 내용을 따로 보관하셨나요? 새로고침하면 저장하지 않은 입력은 사라집니다.')) window.location.reload(); }}>새로고침</button></div>}
+        {dataIssue && <div className="progress-error" role="alert">{dataIssue}<button className="ui-button" onClick={async () => { if (await askConfirm({ title: '새로고침', message: '작성 중인 내용을 따로 보관하셨나요? 새로고침하면 저장하지 않은 입력은 사라집니다.', confirmLabel: '새로고침' })) window.location.reload(); }}>새로고침</button></div>}
         {/* DB mode has no whole-app backup, so the menu only appears for browser storage. */}
         {!loading && !isSupabase && <BackupManager cloud={isSupabase} blocked={!ready || !!dataIssue} loading={loading} siteId={selectedSiteId} />}
         {readOnly && currentSite && <div className="site-closed-band" role="status"><span>종료된 현장입니다{currentSite.closed_at ? ` (${shortDate(currentSite.closed_at, '.')} 종료)` : ''} · 읽기 전용</span>
-          <button type="button" className="ui-button ui-primary" disabled={!ready || !!dataIssue} onClick={() => { if (confirm(`'${currentSite.name}'을(를) 다시 진행 현장으로 바꿀까요?`)) handleSetSiteStatus(currentSite.id, null).catch(e => setOperationError(e instanceof Error ? e.message : '다시 진행 처리에 실패했습니다.')); }}>다시 진행</button></div>}
+          <button type="button" className="ui-button ui-primary" disabled={!ready || !!dataIssue} onClick={async () => { if (await askConfirm({ title: '다시 진행', message: `'${currentSite.name}'을(를) 다시 진행 현장으로 바꿀까요?`, confirmLabel: '다시 진행' })) handleSetSiteStatus(currentSite.id, null).catch(e => setOperationError(e instanceof Error ? e.message : '다시 진행 처리에 실패했습니다.')); }}>다시 진행</button></div>}
         {operationError && <p className="progress-error" role="alert">{operationError}</p>}
         <p className="ui-note" role="status">{logBusy ? '저장 중입니다.' : notice}</p>
       </div>
@@ -406,7 +409,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
         canRestore={!isSupabase}
         onRestoreSite={handleRestoreSite}
       />
-
+      <ConfirmHost />
     </div>
   );
 }

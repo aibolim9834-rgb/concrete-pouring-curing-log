@@ -5,6 +5,7 @@ import { PouringLog, PouringLogInput, Site } from '@/lib/types';
 import { newLog } from '@/lib/log-data';
 import { normalizeStrength } from '@/lib/strength';
 import { WateringSelect } from './WateringSelect';
+import { askConfirm } from './ConfirmDialog';
 
 const memberOptions = ['슬라브', '벽체', '기둥/보', '기초(MAT)', '계단/기타'];
 const weatherOptions = ['', '맑음', '흐림', '비', '눈'];
@@ -52,9 +53,10 @@ export function MobileLogSheet({ log, logs, site, onAdd, onUpdate, onDelete, onC
   });
 
   const set = (patch: Partial<PouringLogInput>) => { setDraft(current => ({ ...current, ...patch })); setNotice(''); };
-  function requestClose() {
+  const confirmDiscard = () => askConfirm({ title: '작성 중인 내용 버리기', message: '작성 중인 내용을 버릴까요?', confirmLabel: '버리기', cancelLabel: '계속 작성', danger: true });
+  async function requestClose() {
     if (saving) return;
-    if (dirty && !confirm('작성 중인 내용을 버릴까요?')) return;
+    if (dirty && !await confirmDiscard()) return;
     finish();
   }
 
@@ -92,7 +94,7 @@ export function MobileLogSheet({ log, logs, site, onAdd, onUpdate, onDelete, onC
 
   return (
     <dialog ref={dialogRef} className="mobile-log-sheet" aria-labelledby="mobile-log-title"
-      onCancel={e => { if (saving || (dirty && !confirm('작성 중인 내용을 버릴까요?'))) e.preventDefault(); }}
+      onCancel={e => { if (saving || dirty) { e.preventDefault(); if (!saving) void requestClose(); } }}
       onClose={onClose}>
       <form className="mobile-log-form" onSubmit={e => { e.preventDefault(); void save(false); }} noValidate>
         <header className="mobile-log-head">
@@ -145,9 +147,9 @@ export function MobileLogSheet({ log, logs, site, onAdd, onUpdate, onDelete, onC
         </fieldset>
         {notice && <p className="mobile-log-notice" role="status">{notice}</p>}
         <footer className="mobile-log-foot">
+          <button type="submit" className="mobile-log-primary" disabled={saving}>{saving ? '저장 중…' : '저장'}</button>
           {log ? <button type="button" className="mobile-log-secondary" onClick={requestClose} disabled={saving}>취소</button>
             : <button type="button" className="mobile-log-secondary" onClick={() => { void save(true); }} disabled={saving}>이어서 입력</button>}
-          <button type="submit" className="mobile-log-primary" disabled={saving}>{saving ? '저장 중…' : '저장'}</button>
         </footer>
       </form>
     </dialog>

@@ -42,6 +42,7 @@ function appHarness(result, local = false) {
   deps['@/lib/strength']=load('lib/strength.ts');
   deps['@/lib/floor']=load('lib/floor.ts');
   deps['@/lib/date-only']=load('lib/date-only.ts');
+  deps['@/components/ConfirmDialog']={askConfirm:async()=>true,ConfirmHost:'ConfirmHost'};
   for(const name of ['Header','SummaryCards','RecordTable','SiteModal','PrintView','PouringProgress','SitePhotos'])deps[`@/components/${name}`]={[name]:name};
   const app=load('components/ConcreteApp.tsx',deps,{confirm:()=>true,alert:message=>alerts.push(message),window:{location:{search:'',assign:url=>navigation.push(url)},addEventListener(){},removeEventListener(){}},URLSearchParams,setTimeout:()=>{},Blob:class{constructor(parts){csv=parts.join('');}},URL:{createObjectURL:()=> 'blob:test'},document:{createElement:()=>({setAttribute(){},click(){}}),body:{appendChild(){},removeChild(){}}}});
   return {states,navigation,alerts,get csv(){return csv;},get effects(){return effects;},render(){cursor=0;refCursor=0;effects=[];return app.ConcreteApp({initialView:arguments[0]||'logs'});}};
@@ -51,7 +52,7 @@ function uiHarness(file, name, props) {
   const react={useState(initial){const i=cursor++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return [states[i],v=>{states[i]=typeof v==='function'?v(states[i]):v;}];},useEffect(fn){effects.push(fn);},useCallback(fn){return fn;},useRef(value){return refs[refCursor++] ||= {current:value};}};
   const jsx=(type,props)=>({type,props});
   const events=new Map();
-  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./WateringSelect':{WateringSelect:'WateringSelect'},'./MobileLogSheet':{MobileLogSheet:'MobileLogSheet'},'./ShortDateInput':{ShortDateInput:'ShortDateInput'},'@/lib/progress-structure':load('lib/progress-structure.ts'),'@/lib/site-archive':load('lib/site-archive.ts'),'@/lib/site-code':load('lib/site-code.ts'),'@/lib/date-only':load('lib/date-only.ts'),'@/lib/pouring-progress':load('lib/pouring-progress.ts'),'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name})},{Node:TestNode,requestAnimationFrame:fn=>fn(),document:{querySelector:()=>null,addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
+  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./ConfirmDialog':{askConfirm:async()=>true},'./WateringSelect':{WateringSelect:'WateringSelect'},'./MobileLogSheet':{MobileLogSheet:'MobileLogSheet'},'./ShortDateInput':{ShortDateInput:'ShortDateInput'},'@/lib/progress-structure':load('lib/progress-structure.ts'),'@/lib/site-archive':load('lib/site-archive.ts'),'@/lib/site-code':load('lib/site-code.ts'),'@/lib/date-only':load('lib/date-only.ts'),'@/lib/pouring-progress':load('lib/pouring-progress.ts'),'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name})},{Node:TestNode,requestAnimationFrame:fn=>fn(),document:{querySelector:()=>null,addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
   return {states,events,get effects(){return effects;},render(){cursor=0;refCursor=0;effects=[];return exports[name](props);}};
 }
 (async()=>{
@@ -145,7 +146,7 @@ function uiHarness(file, name, props) {
     react.default=react;react.Fragment='Fragment';
     const jsx=(type,props)=>({type,props});
     const photo={id:'photo-a',siteId:site.id,date:'2026-10-26',building:'101동',floor:'5층',name:'original.png',createdAt:1};
-    const api=load('components/SitePhotos.tsx',{react,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/date-only':load('lib/date-only.ts'),'@/lib/cloud-storage':{cloudStorageEnabled:()=>false},'@/lib/site-photos-cloud':{latestDeletedBatch:()=>[],updatePhotoLocation:()=>new Promise((yes,no)=>{resolveSave=yes;rejectSave=no;})}});
+    const api=load('components/SitePhotos.tsx',{react,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/date-only':load('lib/date-only.ts'),'@/lib/cloud-storage':{cloudStorageEnabled:()=>false},'./ConfirmDialog':{askConfirm:async()=>true},'@/lib/site-photos-cloud':{latestDeletedBatch:()=>[],updatePhotoLocation:()=>new Promise((yes,no)=>{resolveSave=yes;rejectSave=no;})}});
     function render(fn,props,target){bucket=target;cursor=0;refCursor=0;target.effects=[];return fn(props);}
     function editorNode(node){if(!node||typeof node!=='object')return null;if(Array.isArray(node)){for(const n of node){const result=editorNode(n);if(result)return result;}return null;}if(node.type?.name==='PhotoLocationEditor')return node;return editorNode(node.props?.children);}
     const parent={states:[[photo],true,'',false,'26.10.26','','','2026-10','','2026-10-26'],refs:[],effects:[]};
@@ -340,6 +341,19 @@ function uiHarness(file, name, props) {
     tree=h.render();assert(one(tree,n=>label(n)===closedSite.name+' 다시 진행'));assert(one(tree,n=>label(n)===closedSite.name+' 보기 (읽기 전용)'));assert(!one(tree,n=>label(n)===site.name+' 종료 처리'));
     one(tree,n=>label(n)===closedSite.name+' 다시 진행').props.onClick();await new Promise(r=>setImmediate(r));
     same(calls[1],['c',null]);
+  });
+  await check('popups put the action left and 취소 or the second choice right',()=>{
+    const all=(node,pred)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,pred)):[...(pred(node)?[node]:[]),...all(node.props?.children,pred)];
+    const text=node=>typeof node==='string'?node:!node||typeof node!=='object'?'':Array.isArray(node)?node.map(text).join(''):text(node.props?.children);
+    for(const [entry,expected] of [[null,['저장','이어서 입력']],[log,['저장','취소']]]){
+      const sheet=uiHarness('components/MobileLogSheet.tsx','MobileLogSheet',{log:entry,logs:[log],site,onAdd:async()=>{},onUpdate:async()=>{},onDelete(){},onClose(){}});
+      same(all(all(sheet.render(),n=>n.type==='footer')[0],n=>n.type==='button').map(text),expected);
+    }
+    const progressModel=load('lib/pouring-progress.ts'),doc={version:1,buildings:[{id:'b1',name:'101동',stages:progressModel.presetStages(3,1),records:{}},{id:'b2',name:'102동',stages:progressModel.presetStages(3,1),records:{}}]};
+    const h=uiHarness('components/ProgressStructure.tsx','ProgressStructure',{document:doc,buildingId:'b1',stageId:'f2',disabled:false,adding:false,onAdding(){},onClose(){},onSelect(){},commit:async()=>true,canUndo:false,onUndo:async()=>{}});
+    all(h.render(),n=>n.type==='button'&&text(n)==='동 삭제')[0].props.onClick();
+    const modal=all(h.render(),n=>n.type==='Modal')[0];
+    same(all(modal,n=>n.type==='button').map(text),['삭제','취소']);
   });
   console.log(`${count} upgrade checks passed; no network or real browser storage writes.`);
 })().catch(error=>{console.error(error);process.exitCode=1;});

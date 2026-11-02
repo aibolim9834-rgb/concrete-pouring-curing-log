@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { difference, days, gap, shortDate } from '@/lib/date-only';
 import { previousStageId, scheduleMetrics } from '@/lib/progress-schedule';
 import { ShortDateInput } from './ShortDateInput';
+import { askConfirm } from './ConfirmDialog';
 import { ProgressPrint } from './ProgressPrint';
 import { ProgressStructure } from './ProgressStructure';
 import { NavBuilding, ProgressBuildingNav, ProgressFloatingHeader } from './ProgressBuildingNav';
@@ -268,16 +269,16 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
         const dates=parsePourDateList(edit.value);
         if(dates.join()===pourDates(record).join()){inlineKeyRef.current=null;setInlineEdit(null);focusCell(edit.key);return;}
         const updated=setPourDates(record,dates,record?.color || defaultColor);
-        if(record?.entries?.length && record.date!==updated.date && !confirm('마지막 타설일이 바뀌어 구역 내역의 공통 타설일도 함께 바뀝니다. 계속하시겠습니까?'))return;
+        if(record?.entries?.length && record.date!==updated.date && !await askConfirm({title:'타설일 변경',message:'마지막 타설일이 바뀌어 구역 내역의 공통 타설일도 함께 바뀝니다. 계속하시겠습니까?',confirmLabel:'변경'}))return;
         target.records[edit.sid]={...updated,comparisonStage:updated.comparisonStage ?? previousStage(document,edit.bid,edit.sid)};
       } else if(edit.add){
         if(!validDate(edit.value))throw Error('추가할 타설일을 올바르게 입력해주세요.');
         if(pourDates(record).includes(edit.value))throw Error('이미 넣은 타설일입니다.');
         const updated=setPourDates(record,[...pourDates(record),edit.value],record?.color || defaultColor);
-        if(record?.entries?.length && record.date!==updated.date && !confirm('마지막 타설일이 바뀌어 구역 내역의 공통 타설일도 함께 바뀝니다. 계속하시겠습니까?'))return;
+        if(record?.entries?.length && record.date!==updated.date && !await askConfirm({title:'타설일 변경',message:'마지막 타설일이 바뀌어 구역 내역의 공통 타설일도 함께 바뀝니다. 계속하시겠습니까?',confirmLabel:'변경'}))return;
         target.records[edit.sid]={...updated,comparisonStage:updated.comparisonStage ?? previousStage(document,edit.bid,edit.sid)};
       } else target.records[edit.sid]=inlineDateRecord(record,edit.field,edit.value,record?.color || defaultColor,previousStage(document,edit.bid,edit.sid));
-      if(!edit.add && !edit.list && edit.field==='actual' && record?.entries?.length && record.date!==edit.value && !confirm('이 층·단계의 모든 구역에 공통으로 적용되는 타설일을 변경하시겠습니까?'))return;
+      if(!edit.add && !edit.list && edit.field==='actual' && record?.entries?.length && record.date!==edit.value && !await askConfirm({title:'타설일 변경',message:'이 층·단계의 모든 구역에 공통으로 적용되는 타설일을 변경하시겠습니까?',confirmLabel:'변경'}))return;
       if(await commit(next)){inlineKeyRef.current=null;setInlineEdit(null);selectRecord(next,edit.bid,edit.sid);setNotice(buildingLabel(b.name)+' '+(b.stages.find(s=>s.id===edit.sid)?.name || '')+' '+(edit.list?'타설일을 저장했습니다.':edit.add?'타설일 '+shortDate(edit.value,'.')+'을 추가했습니다.':(edit.field==='planned'?'예정일':'타설일')+'을 저장했습니다.'));focusCell(edit.key);}
     } catch(e) {setInlineEdit(current=>current ? {...current,error:e instanceof Error?e.message:'날짜를 확인해주세요.'}:null);}
     finally {inlineSavingRef.current=false;}
@@ -327,7 +328,7 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
       else { b.records[sid] = setProgressColor(b.records[sid], selectedColor); changed++; }
     }
     if (!changed) { setNotice(action === 'clear-color' ? '지울 색상이 없습니다.' : '변경할 기록이 없습니다.'); return; }
-    if (action === 'clear' && !confirm(`선택한 ${changed}개 타설 기록을 지우시겠습니까? 동과 층은 유지됩니다.`)) return;
+    if (action === 'clear' && !await askConfirm({ title: '타설 기록 지우기', message: `선택한 ${changed}개 타설 기록을 지우시겠습니까? 동과 층은 유지됩니다.`, confirmLabel: '지우기', danger: true })) return;
     const saved = await commit(next);
     if (saved && action === 'clear-color') setNotice(`${changed}칸의 색상만 지웠습니다.`);
     return saved;
@@ -344,7 +345,7 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
     } catch (e) { setError(e instanceof Error ? e.message : '구역 내역을 확인해주세요.'); }
   }
   async function deleteEntry(id: string) {
-    if (!selectedRecord || !confirm('이 구역 내역을 삭제하시겠습니까? 공통 타설일과 다른 구역은 유지됩니다.')) return;
+    if (!selectedRecord || !await askConfirm({ title: '구역 내역 삭제', message: '이 구역 내역을 삭제하시겠습니까? 공통 타설일과 다른 구역은 유지됩니다.', confirmLabel: '삭제', danger: true })) return;
     try {
       const next = structuredClone(document);
       next.buildings.find(b => b.id === selectedBuildingId)!.records[selectedStageId] = removeProgressEntry(selectedRecord, id);
@@ -388,7 +389,7 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
     if (!snapshot || lock.current || stale || inlineEdit || !selectedBuilding || !selectedStage) return;
     try {
       const record = selectedBuilding.records[selectedStageId], updated = setPourDates(record, next, color);
-      if (record?.entries?.length && record.date !== updated.date && !confirm('마지막 타설일이 바뀌어 구역 내역의 공통 타설일도 함께 바뀝니다. 계속하시겠습니까?')) return;
+      if (record?.entries?.length && record.date !== updated.date && !await askConfirm({title:'타설일 변경',message:'마지막 타설일이 바뀌어 구역 내역의 공통 타설일도 함께 바뀝니다. 계속하시겠습니까?',confirmLabel:'변경'})) return;
       const doc = structuredClone(document), target = doc.buildings.find(b => b.id === selectedBuildingId)!;
       target.records[selectedStageId] = { ...updated, comparisonStage: updated.comparisonStage ?? previousStage(document, selectedBuildingId, selectedStageId) };
       if (await commit(doc)) { selectRecord(doc, selectedBuildingId, selectedStageId); setPourDraft(''); setNotice(`${buildingLabel(selectedBuilding.name)} ${selectedStage.name} 타설일을 저장했습니다.`); }

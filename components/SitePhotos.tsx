@@ -4,6 +4,7 @@ import { Site } from '@/lib/types';
 import { normalizeShortDate, shortDate } from '@/lib/date-only';
 import { listPhotos, makePhotoThumbnail, markPhotosDeleted, latestDeletedBatch, photoBlob, savePhoto, updatePhotoLocation, updatePhotoLocations, SitePhoto } from '@/lib/site-photos-cloud';
 import { cloudStorageEnabled } from '@/lib/cloud-storage';
+import { askConfirm } from './ConfirmDialog';
 
 function today() {const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function photoLocation(photo: SitePhoto) {const b=photo.building.trim(),f=photo.floor.trim();return `${/^\d+$/.test(b)?b+'동':b} · ${/^\d+$/.test(f)?f+'층':f}`;}
@@ -63,7 +64,8 @@ export function SitePhotos({site,blocked=false,onWorkPending}:{site:Site;blocked
   }
   async function remove(targets:SitePhoto[], deleting:boolean) {
     if(lock.current||locationSaving||blocked||!targets.length)return;
-    if(deleting&&!confirm(`선택한 사진 ${targets.length}장을 삭제하시겠습니까?\n삭제 후 ‘최근 삭제 취소’로 한 번에 복원할 수 있습니다.`))return;
+    if(deleting&&!await askConfirm({title:'사진 삭제',message:`선택한 사진 ${targets.length}장을 삭제하시겠습니까?\n삭제 후 ‘최근 삭제 취소’로 한 번에 복원할 수 있습니다.`,confirmLabel:'삭제',danger:true}))return;
+    if(lock.current)return;
     lock.current=true;setBusy(true);
     try{await markPhotosDeleted(targets,deleting);const rows=await listPhotos(site.id);if(alive.current){setPhotos(rows);setSelected([]);setMessage(deleting?`${targets.length}장을 삭제했습니다. 최근 삭제 취소로 한 번에 복원할 수 있습니다.`:`${targets.length}장을 복원했습니다.`);if(!deleting){setMonth(targets[0].date.slice(0,7));setFilter('');setDay(targets[0].date);}}}
     catch{if(alive.current)setMessage('처리하지 못했습니다. 다른 화면의 변경 여부를 확인하고 다시 시도해주세요.');}

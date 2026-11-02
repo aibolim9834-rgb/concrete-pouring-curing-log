@@ -33,9 +33,14 @@
 .progress-structure .structure-footer { justify-content:space-between; margin-bottom:0; }
 .structure-error { color:#b42534; font-size:14px; }
 .structure-dialog { padding:24px; width:480px; max-width:calc(100vw - 32px); max-height:calc(100dvh - 32px); overflow-y:auto; background:#fff; color:var(--b-ink); border:1px solid #cadbce; border-radius:10px; box-shadow:0 16px 48px rgb(0 0 0 / .2); line-height:1.6; }
-.structure-dialog h3 { font-size:18px; font-weight:600; margin-bottom:14px; }
+.structure-dialog h3 { font-size:16px; font-weight:700; margin-bottom:14px; }
 .structure-dialog p { margin-bottom:18px; }
 .structure-dialog .structure-buttons { justify-content:flex-end; margin-top:18px; }
+/* App confirm dialog: same card as the 동·층 dialogs; the action sits left of 취소 on every device. */
+.confirm-dialog-box { padding:20px 24px; width:420px; max-width:calc(100vw - 32px); background:var(--b-surface, #fff); color:var(--b-ink, #212121); border:1px solid #cadbce; border-radius:10px; box-shadow:0 16px 48px rgb(0 0 0 / .2); }
+.confirm-dialog-box h2 { margin:0 0 8px; font-size:16px; line-height:24px; font-weight:700; }
+.confirm-dialog-box p { margin:0; font-size:var(--ui-body, .75rem); line-height:var(--ui-line, 1.25rem); white-space:pre-line; overflow-wrap:anywhere; }
+.confirm-dialog-buttons { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:8px; margin-top:18px; }
 .structure-dialog .structure-copy-target { display:flex; align-items:center; gap:10px; padding:8px 0; }
 @media(max-width:760px) { .progress-page .progress-work.has-panel:has(> .progress-structure) { grid-template-columns:minmax(0,1fr); } .progress-page .progress-structure { position:static; max-height:none; } .progress-page .progress-selection-tools { position:static; } .progress-structure .structure-stage-list { max-height:350px; } }
 
@@ -540,7 +545,7 @@ body {
 .mobile-log-alert { margin:0; padding:10px 12px; border-radius:8px; background:var(--b-danger-soft, #FDECEE); color:var(--b-danger, #A7262F); }
 .mobile-log-delete { justify-self:start; }
 .mobile-log-notice { flex:none; margin:0; padding:10px 16px; background:#1d2a21; color:#fff; font-size:14px; }
-.mobile-log-foot { flex:none; display:grid; grid-template-columns:1fr 1.4fr; gap:10px; padding:10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top:1px solid var(--b-line, #D8DFD9); background:var(--b-surface, #fff); }
+.mobile-log-foot { flex:none; display:grid; grid-template-columns:1.4fr 1fr; gap:10px; padding:10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top:1px solid var(--b-line, #D8DFD9); background:var(--b-surface, #fff); }
 .mobile-log-foot > button { min-block-size:52px; border-radius:8px; font-size:16px; font-weight:700; }
 .mobile-log-secondary { border:1px solid var(--b-control, #7A8A7D); background:var(--b-surface, #fff); color:var(--b-ink, #212121); }
 .mobile-log-primary { border:0; background:var(--b-action, #007723); color:#fff; }
