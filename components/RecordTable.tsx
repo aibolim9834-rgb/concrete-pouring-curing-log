@@ -165,7 +165,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
       {/* Table Top Toolbar */}
       <div className="log-toolbar p-4 border-b border-slate-800 bg-slate-900/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-baseline gap-2.5">
-          <h2 className="ui-section-title">타설 일지</h2>
+          <h2 className="ui-section-title">타설일지</h2>
           <span className="text-xs text-slate-400 font-medium">
             조회 {filteredLogs.length}건 / 전체 {logs.length}건
           </span>
@@ -219,9 +219,9 @@ export const RecordTable: React.FC<RecordTableProps> = ({
         {filters.from && filters.to && filters.from > filters.to && <p className="progress-error" role="alert">시작일이 종료일보다 늦습니다.</p>}
       </div>
       {/* Main Excel-styled Responsive Table */}
-      <div className="record-log-wrap overflow-x-auto" role="region" aria-label="타설 일지 표" tabIndex={0}>
+      <div className="record-log-wrap overflow-x-auto" role="region" aria-label="타설일지 표" tabIndex={0}>
         <table className="record-log-table w-full text-xs text-left text-slate-300 border-collapse">
-          <caption className="sr-only">타설 일지. 열 제목을 누르면 오름차순 또는 내림차순으로 정렬합니다. 구분은 현재 조회 순서의 자동 번호입니다.</caption>
+          <caption className="sr-only">타설일지. 열 제목을 누르면 오름차순 또는 내림차순으로 정렬합니다. 구분은 현재 조회 순서의 자동 번호입니다.</caption>
           <colgroup>
             {/* 번호, 일자, 동, 층, 부위, 최저·최고온도, 기상, 업체, 강도, 물량, 살수·보양, 관리.
                 일자·층·부위·기상·강도·물량·살수·관리는 입력칸과 머리글이 들어가는 고정 폭이고(층은 "19F(옥상 파라펫)",

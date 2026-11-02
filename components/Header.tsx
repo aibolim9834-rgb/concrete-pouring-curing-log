@@ -53,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="app-header-copy">
               <div className="app-header-title-row">
                 <h1 className="text-lg font-bold text-slate-100 tracking-tight">
-                  <button type="button" className="app-home-button" onClick={onOpenHome} title="타설 일지 첫 화면으로 이동">콘크리트 타설 및 양생 관리 시스템</button>
+                  <button type="button" className="app-home-button" onClick={onOpenHome} title="타설일지 첫 화면으로 이동">콘크리트 타설 및 양생 관리 시스템</button>
                 </h1>
                 <span className={`app-header-status px-2 py-0.5 text-xs rounded-full font-medium flex items-center gap-1 border ${
                   isSupabase 

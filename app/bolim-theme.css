@@ -237,7 +237,7 @@
 /* Denser PC layout (2026-11-02): same 12px text, less padding and lower controls so more rows fit on one screen.
    Phones keep their own, larger touch sizes. */
 @media (min-width: 761px) {
-  /* 타설 일지: summary cards, toolbar, filters with labels beside their fields, and 29px rows. */
+  /* 타설일지: summary cards, toolbar, filters with labels beside their fields, and 29px rows. */
   .concrete-app .summary-cards { gap: 10px; margin-bottom: 10px; }
   .concrete-app .summary-cards > .summary-card-full { padding: 10px 14px; }
   .concrete-app .summary-cards > .summary-card-full .mt-3 { margin-top: 6px; }
