@@ -297,3 +297,12 @@
   .concrete-app .progress-page .progress-color-picker input { inline-size: 28px; block-size: 28px; min-height: 28px; min-block-size: 28px; padding: 2px; }
   .concrete-app .progress-page .progress-selection-details :is(input, select) { min-height: 30px; min-block-size: 30px; padding-block: 2px; }
 }
+
+/* Type scale on PC (2026-11-02): the app title drops to the phone's 16px and the yellow floor note to the 12px body text.
+   The 현장 관리 tab counts keep the tab's own 12px instead of the browser's smaller <small>. */
+.concrete-app .site-status-tabs small { font-size: 1em; font-weight: 400; color: var(--b-muted, #94a3b8); }
+.concrete-app .site-status-tabs button[aria-selected="true"] small { color: inherit; }
+@media (min-width: 761px) {
+  .concrete-app .progress-page .progress-floor-note { font-size: 12px; line-height: 18px; }
+  .concrete-app .app-header-title-row h1 { font-size: 16px; line-height: 24px; }
+}
