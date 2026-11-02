@@ -463,7 +463,8 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
     <section className="progress-selection-tools print:hidden" aria-label="선택 항목 설정"><fieldset disabled={!snapshot || saving || stale || readOnly || !!inlineEdit}>{renderCellEditor('bar')}</fieldset></section>
     <div className="progress-extra-row">
     <section className="progress-selection-extra print:hidden" aria-label="선택 항목 상세"><fieldset disabled={!snapshot || saving || stale || readOnly || !!inlineEdit}>{renderCellEditor('details')}</fieldset></section>
-    <ProgressBuildingNav wrapRef={tableWrapRef} buildings={navBuildings}/>
+    {/* The 동·층 관리 panel switches to the building picked here; the cell selection stays as it is. */}
+    <ProgressBuildingNav wrapRef={tableWrapRef} buildings={navBuildings} onPick={id => { if (id !== buildingId) { setBuildingId(id); setStageId(''); } }}/>
     </div>
     </div>
     <ProgressFloatingHeader wrapRef={tableWrapRef} buildings={navBuildings}/>

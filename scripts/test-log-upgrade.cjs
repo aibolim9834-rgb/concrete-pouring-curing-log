@@ -383,6 +383,13 @@ function uiHarness(file, name, props) {
     const modal=all(h.render(),n=>n.type==='Modal')[0];
     same(all(modal,n=>n.type==='button').map(text),['삭제','취소']);
   });
+  await check('a 동 이동 button tells the page which building was picked so 동·층 관리 can follow',()=>{
+    const all=(n,type)=>!n||typeof n!=='object'?[]:Array.isArray(n)?n.flatMap(x=>all(x,type)):[...(n.type===type?[n]:[]),...all(n.props?.children,type)];
+    const picked=[],h=uiHarness('components/ProgressBuildingNav.tsx','ProgressBuildingNav',{wrapRef:{current:null},buildings:[{id:'b1',label:'101동',summary:''},{id:'b2',label:'102동',summary:''}],onPick:id=>picked.push(id)});
+    h.render();h.states[0]={...h.states[0],overflow:true};
+    all(h.render(),'button').find(b=>b.props.title==='102동').props.onClick();
+    same(picked,['b2']);
+  });
   console.log(`${count} upgrade checks passed; no network or real browser storage writes.`);
 })().catch(error=>{console.error(error);process.exitCode=1;});
 

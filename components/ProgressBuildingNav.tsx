@@ -38,7 +38,8 @@ function linkScroll(a: HTMLElement, b: HTMLElement) {
 
 // One button per building (the one in focus is marked) and a horizontal scrollbar that moves the table,
 // both in the fixed toolbar block so the table can be moved sideways from the top of the screen.
-export function ProgressBuildingNav({ wrapRef, buildings }: { wrapRef: React.RefObject<HTMLDivElement | null>; buildings: NavBuilding[] }) {
+// onPick tells the page which building was picked, so the 동·층 관리 panel can follow it.
+export function ProgressBuildingNav({ wrapRef, buildings, onPick }: { wrapRef: React.RefObject<HTMLDivElement | null>; buildings: NavBuilding[]; onPick?: (id: string) => void }) {
   const [state, setState] = useState({ overflow: false, active: 0, left: 0, width: 0, inner: 0 });
   const chipsRef = useRef<HTMLDivElement>(null), trackRef = useRef<HTMLDivElement>(null), picked = useRef<number | null>(null), settling = useRef(0);
   const measure = useFrame(() => {
@@ -93,7 +94,7 @@ export function ProgressBuildingNav({ wrapRef, buildings }: { wrapRef: React.Ref
     <div className="progress-building-row" role="group" aria-label="동 이동">
       <span className="ui-label">동 이동</span>
       <div ref={chipsRef} className="progress-building-chips">{buildings.map((b, i) =>
-        <button type="button" key={b.id} className="progress-building-chip" aria-current={state.active === i || undefined} title={b.label} aria-label={`${b.label}, 가운데로 이동`} onClick={() => goTo(i)}>{b.label.replace(/\s*[(（].*$/, '') || b.label}</button>)}</div>
+        <button type="button" key={b.id} className="progress-building-chip" aria-current={state.active === i || undefined} title={b.label} aria-label={`${b.label}, 가운데로 이동`} onClick={() => { goTo(i); onPick?.(b.id); }}>{b.label.replace(/\s*[(（].*$/, '') || b.label}</button>)}</div>
     </div>
     <div ref={trackRef} className="progress-building-scroll" aria-hidden="true" style={{ marginInlineStart: state.left, inlineSize: state.width }}><div style={{ inlineSize: state.inner }}/></div>
   </>;
