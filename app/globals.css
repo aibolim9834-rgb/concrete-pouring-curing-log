@@ -475,7 +475,7 @@ body {
 .progress-page .progress-selection-tools .progress-swatches { display: flex; flex-wrap: wrap; gap: 6px; }
 .progress-page .progress-selection-tools .progress-swatches button { inline-size: 28px; block-size: 28px; min-block-size: 28px; }
 .progress-page .progress-selection-tools .progress-recent-swatches { align-items: center; padding-inline-start: 8px; border-inline-start: 1px solid var(--progress-line); }
-.progress-recent-label { font-size: 11px; color: var(--progress-muted); }
+.progress-recent-label { font-size: 12px; color: var(--progress-muted); }
 .progress-clear-record { margin-inline-start: auto; }
 .progress-selection-details { gap: 8px 24px; margin-block-start: 8px; align-items: start; }
 .progress-pour-dates { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
@@ -517,7 +517,7 @@ body {
 .mobile-log-sheet::backdrop { overflow:hidden; overscroll-behavior:contain; background:rgb(0 0 0 / .35); }
 .mobile-log-form { display:flex; flex-direction:column; block-size:100%; }
 .mobile-log-head { flex:none; display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 12px 10px 16px; padding-block-start:calc(10px + env(safe-area-inset-top, 0px)); border-bottom:1px solid var(--b-line, #D8DFD9); }
-.mobile-log-head h2 { margin:0; font-size:17px; line-height:24px; font-weight:700; min-inline-size:0; }
+.mobile-log-head h2 { margin:0; font-size:16px; line-height:24px; font-weight:700; min-inline-size:0; }
 .mobile-log-head small { display:block; font-size:12px; line-height:18px; font-weight:400; color:var(--b-muted, #59635D); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .mobile-log-close { flex:none; inline-size:44px; block-size:44px; border:1px solid var(--b-line, #D8DFD9); border-radius:8px; background:var(--b-surface, #fff); font-size:22px; line-height:1; }
 .mobile-log-body { flex:1; min-block-size:0; overflow-y:auto; overscroll-behavior:contain; display:grid; align-content:start; gap:18px; margin:0; border:0; padding:14px 16px 24px; }

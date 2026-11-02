@@ -89,8 +89,9 @@ export const PrintView: React.FC<PrintViewProps> = ({
         <p className="text-xs mb-3">출력 범위: {description || '현장 전체'} · {logs.length}건</p>
         <table className="log-print-table w-full border-collapse border border-black text-xs text-center text-black mb-8">
           <colgroup>
-            {/* 구분, 일자, 동, 층, 부위, 최저·최고온도, 기상, 레미콘사, 강도, 물량, 살수, 보양, 비고: sized so names like 한일산업(주) stay on one line */}
-            {[3, 7.5, 13, 6, 7, 4.5, 4.5, 5, 8, 7.5, 6.5, 8, 9, 10.5].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}
+            {/* 구분, 일자, 동, 층, 부위, 최저·최고온도, 기상, 레미콘사, 강도, 물량, 살수, 보양, 비고: sized so names like 한일산업(주) stay on one line,
+                and 최저온도 / 최고온도 fit one line on A4 landscape */}
+            {[3, 7.5, 11, 6, 7, 5.5, 5.5, 5, 8, 7.5, 6.5, 8, 9, 10.5].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}
           </colgroup>
           <thead>
             {/* Header Row 1 */}
@@ -129,7 +130,7 @@ export const PrintView: React.FC<PrintViewProps> = ({
             </tr>
 
             {/* Header Row 2 */}
-            <tr className="bg-gray-100 font-bold border-b border-black text-[11px]">
+            <tr className="bg-gray-100 font-bold border-b border-black text-xs">
               <th className="border border-black px-2 py-1.5">동(구역)</th>
               <th className="border border-black px-1 py-1.5">층</th>
               <th className="border border-black px-2 py-1.5">벽/슬라브</th>

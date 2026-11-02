@@ -224,6 +224,7 @@
   .concrete-app :is(table, table .text-xs, table [class*="text-["], table button) { font-size:13px; }
   .concrete-app .progress-page :is(.progress-table, .progress-float-grid > .progress-float-building), .concrete-app .progress-page .progress-comparison-table thead tr:nth-child(2) th { font-size:13px; }
   .concrete-app :is(.log-filters,.progress-controls,.photo-fields,.photo-filters,.mobile-log-group) label, .concrete-app .mobile-log-group > legend,
+  .concrete-app .progress-page :is(.inline-basis,.progress-entry-form) label, .concrete-app .progress-recent-label,
   .concrete-app .summary-card-compact, .concrete-app .progress-page :is(.progress-pour-chip,details > summary,.structure-stage-pick small) { font-size:13px; }
   .concrete-app .progress-page :is(.progress-selection-name,.progress-controls > :is(.progress-check,.ui-note),.structure-stage-pick,.structure-selected,.progress-structure h4,.progress-structure .ui-button), .concrete-app .mobile-log-group .mobile-log-chip { font-size:14px; }
   /* The dock's own 16px was lost to the generic button size. */
@@ -312,3 +313,19 @@
 .concrete-app .progress-page .progress-table tbody th { font-weight: 700; }
 .concrete-app .progress-comparison-table .comparison-gap .is-late { font-weight: 600; }
 .concrete-app .progress-page .progress-selection-details summary { font-weight: 600; }
+
+/* Type harmony (2026-11-02): the log page title matches the other page titles, badges and tabs follow the body size,
+   dialog titles share 16px, and the phone keeps one size per role. */
+.concrete-app .log-toolbar h2.ui-section-title { font-size: 18px; line-height: 26px; }
+.concrete-app .site-status-badge { font-size: var(--ui-body); line-height: var(--ui-line); padding: 2px 6px; }
+.concrete-app .site-status-tabs button { font-size: var(--ui-body); }
+.concrete-app .log-quick-add-row input::placeholder { font-weight: 400; }
+/* The close mark's own 22px was lost to the generic button size. */
+.concrete-app .mobile-log-close { font-size: 22px; }
+@media (max-width: 760px) {
+  /* Backup and restore stay a PC task; the box only appears in local mode anyway. */
+  .concrete-app .backup-manager { display: none; }
+  /* 동 이동 chips wrap instead of running past the card, at the phone's 14px button size. */
+  .concrete-app .progress-page .progress-building-row { flex-wrap: wrap; }
+  .concrete-app .progress-page .progress-building-chip { font-size: 14px; }
+}
