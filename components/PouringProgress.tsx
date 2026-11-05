@@ -16,6 +16,7 @@ import { Site } from '@/lib/types';
 import { buildingLabel, completedStages, downloadFile, emptyProgress, ProgressDocument, progressId, progressRows, validDate } from '@/lib/pouring-progress';
 import { EntryDraft, entryFromDraft, parsePourDateList, pourDates, pourDatesLabel, progressCsv, removeProgressEntry, setPourDates, upsertProgressEntry } from '@/lib/progress-entries';
 import { loadProgress, ProgressSnapshot, saveProgress } from '@/lib/progress-storage';
+import { describeError, logEvent, tracked } from '@/lib/event-log';
 import { cloudStorageEnabled } from '@/lib/cloud-storage';
 
 import { progressEditor, visibleSelection } from '@/lib/progress-editor';
@@ -154,7 +155,7 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
       setSnapshot(value); setStale(false); resetEditor(value.document);
       const first = value.document.buildings[0];
       if (first) { const stage = completedStages(first, today())[0] || first.stages.find(s => s.id === 'f1') || first.stages[0]; if (stage) selectRecord(value.document, first.id, stage.id); }
-    } }).catch(e => { if (active) { setStale(true); setError(e instanceof Error ? e.message : '현황을 불러오지 못했습니다. 원본은 유지됩니다. 새로 불러오기를 눌러주세요.'); } });
+    } }).catch(e => { const d = describeError(e); logEvent({ page: '타설현황', action: '타설현황 불러오기', outcome: 'error', siteId: site.id, message: d.message, code: d.code, detail: d.detail }); if (active) { setStale(true); setError(e instanceof Error ? e.message : '현황을 불러오지 못했습니다. 원본은 유지됩니다. 새로 불러오기를 눌러주세요.'); } });
     const changed = (e: StorageEvent) => { if (e.key === null || e.key === `cp_pouring_progress_v1:${site.id}`) { setStale(true); setError('다른 탭에서 현황을 변경했습니다. 새로 불러온 뒤 다시 입력해주세요.'); } };
     window.addEventListener('storage', changed);
     return () => { active = false; clearInlineAutoSave(); inlineKeyRef.current=null; window.removeEventListener('storage', changed); };
@@ -171,10 +172,10 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
   async function commit(next: ProgressDocument, remember = true) {
     if (!snapshot || lock.current) return false;
     if (readOnly) { setError('종료된 현장은 읽기 전용입니다. 고치려면 먼저 "다시 진행"으로 바꿔주세요.'); return false; }
-    if (stale) { setError('다른 탭에서 변경되었습니다. 새로 불러온 뒤 다시 입력해주세요.'); return false; }
+    if (stale) { logEvent({ page: '타설현황', action: '타설현황 저장', outcome: 'warn', siteId: site.id, message: '다른 탭에서 변경되어 저장을 막음' }); setError('다른 탭에서 변경되었습니다. 새로 불러온 뒤 다시 입력해주세요.'); return false; }
     lock.current = true; setSaving(true); setError(''); setNotice('');
     try {
-      const saved = await saveProgress(site.id, snapshot, next);
+      const saved = await tracked({ page: '타설현황', action: '타설현황 저장', siteId: site.id, target: `revision ${snapshot.revision ?? '-'}` }, () => saveProgress(site.id, snapshot, next));
       if (remember) setHistory(h => [...h.slice(-19), snapshot.document]);
       setSnapshot(saved); setNotice('저장했습니다.'); return true;
     } catch (e) { setError(e instanceof Error ? e.message : '저장에 실패했습니다. 브라우저 저장 공간과 연결 상태를 확인해주세요.'); return false; }
@@ -183,7 +184,7 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
   async function reload() {
     if (lock.current) return;
     try { const value = await loadProgress(site.id, cloudStorageEnabled()); setSnapshot(value); setStale(false); setHistory([]); setSelected([]); setFilter('all'); resetEditor(value.document); setError(''); setNotice('최신 현황을 불러왔습니다.'); }
-    catch(e) { setStale(true); setError(e instanceof Error ? e.message : '불러오기에 실패했습니다. 연결 또는 저장 데이터를 확인해주세요.'); }
+    catch(e) { const d = describeError(e); logEvent({ page: '타설현황', action: '타설현황 새로 불러오기', outcome: 'error', siteId: site.id, message: d.message, code: d.code, detail: d.detail }); setStale(true); setError(e instanceof Error ? e.message : '불러오기에 실패했습니다. 연결 또는 저장 데이터를 확인해주세요.'); }
   }
   function selectRecord(next: ProgressDocument, bid: string, sid: string) {
     setBuildingId(bid); setStageId(sid);

@@ -4,6 +4,7 @@ import { Site } from '@/lib/types';
 import { normalizeShortDate, shortDate } from '@/lib/date-only';
 import { listPhotos, makePhotoThumbnail, markPhotosDeleted, latestDeletedBatch, photoBlob, photoPurgeLabel, photoStorageUsage, savePhoto, storageUsageLabel, updatePhotoLocation, updatePhotoLocations, SitePhoto, StorageUsage } from '@/lib/site-photos-cloud';
 import { cloudStorageEnabled } from '@/lib/cloud-storage';
+import { describeError, logEvent, tracked } from '@/lib/event-log';
 import { askConfirm } from './ConfirmDialog';
 
 function today() {const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
@@ -16,7 +17,7 @@ export function PhotoImage({photo,original=false}:{photo:SitePhoto;original?:boo
 function PhotoLocationEditor({photo,blocked,onSaved,onSaving}:{photo:SitePhoto;blocked:boolean;onSaved:()=>Promise<void>;onSaving:(saving:boolean)=>void}) {
   const [open,setOpen]=useState(false),[building,setBuilding]=useState(photo.building),[floor,setFloor]=useState(photo.floor),[saving,setSaving]=useState(false),[error,setError]=useState('');
   const lock=useRef(false);
-  async function submit(e:React.FormEvent) {e.preventDefault();if(lock.current||blocked)return;lock.current=true;setSaving(true);onSaving(true);setError('');try{await updatePhotoLocation(photo,building,floor);await onSaved();setOpen(false);}catch(e){setError(e instanceof Error?e.message:'수정하지 못했습니다. 입력은 유지됩니다.');}finally{lock.current=false;setSaving(false);onSaving(false);}}
+  async function submit(e:React.FormEvent) {e.preventDefault();if(lock.current||blocked)return;lock.current=true;setSaving(true);onSaving(true);setError('');try{await tracked({page:'사진',action:'사진 동·층 수정',siteId:photo.siteId,target:`${photo.id} · ${photo.date}`},()=>updatePhotoLocation(photo,building,floor));await onSaved();setOpen(false);}catch(e){setError(e instanceof Error?e.message:'수정하지 못했습니다. 입력은 유지됩니다.');}finally{lock.current=false;setSaving(false);onSaving(false);}}
   return open?<form className="photo-location-editor" onSubmit={submit}><label>동·구역<input aria-label="수정할 동·구역" autoFocus required value={building} disabled={saving} onChange={e=>setBuilding(e.target.value)}/></label><label>층<input aria-label="수정할 층" required value={floor} disabled={saving} onChange={e=>setFloor(e.target.value)}/></label>{error&&<p role="alert">{error}</p>}<div><button className="ui-button ui-primary" disabled={saving||blocked} type="submit">{saving?'저장 중':'저장'}</button><button className="ui-button" disabled={saving} type="button" onClick={()=>setOpen(false)}>취소</button></div></form>:<button className="ui-button photo-edit-location" disabled={blocked} onClick={()=>{setBuilding(photo.building);setFloor(photo.floor);setError('');setOpen(true);}}>동·층 수정</button>;
 }
 export function SitePhotos({site,blocked=false,onWorkPending}:{site:Site;blocked?:boolean;onWorkPending?:(pending:boolean)=>void}) {
@@ -29,7 +30,7 @@ export function SitePhotos({site,blocked=false,onWorkPending}:{site:Site;blocked
   const [usage,setUsage]=useState<StorageUsage|null>(null);
   const photoBusy=busy||locationSaving;
   const alive=useRef(true),lock=useRef(false),input=useRef<HTMLInputElement>(null),cameraInput=useRef<HTMLInputElement>(null),dialog=useRef<HTMLDialogElement>(null),outsideDown=useRef(false);
-  useEffect(()=>{alive.current=true;setBusy(true);setMessage(cloudStorageEnabled()?'서버 사진 확인 중입니다. 기존 브라우저 사진이 있으면 원본을 보존하며 이전합니다.':'사진을 불러오는 중입니다.');listPhotos(site.id).then(rows=>{if(alive.current){setPhotos(rows);setReady(true);setMessage('');}}).catch(e=>{if(alive.current)setMessage(e instanceof Error?e.message:'사진 저장소를 열지 못했습니다. 기존 자료는 유지됩니다.');}).finally(()=>{if(alive.current)setBusy(false);});return()=>{alive.current=false;};},[site.id]);
+  useEffect(()=>{alive.current=true;setBusy(true);setMessage(cloudStorageEnabled()?'서버 사진 확인 중입니다. 기존 브라우저 사진이 있으면 원본을 보존하며 이전합니다.':'사진을 불러오는 중입니다.');listPhotos(site.id).then(rows=>{if(alive.current){setPhotos(rows);setReady(true);setMessage('');}}).catch(e=>{const d=describeError(e);logEvent({page:'사진',action:'사진 불러오기',outcome:'error',siteId:site.id,message:d.message,code:d.code,detail:d.detail});if(alive.current)setMessage(e instanceof Error?e.message:'사진 저장소를 열지 못했습니다. 기존 자료는 유지됩니다.');}).finally(()=>{if(alive.current)setBusy(false);});return()=>{alive.current=false;};},[site.id]);
   useEffect(()=>{if(!photoBusy)return;const prevent=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',prevent);return()=>window.removeEventListener('beforeunload',prevent);},[photoBusy]);
   useEffect(()=>{if(viewId&&!dialog.current?.open)dialog.current?.showModal();},[viewId]);
   // 저장 공간 of the shared photo storage: read on open and again whenever a photo is added (deletes only free space at the purge).
@@ -55,13 +56,13 @@ export function SitePhotos({site,blocked=false,onWorkPending}:{site:Site;blocked
     if(cameraInput.current)cameraInput.current.value='';
     if(!files.length)return;
     if(lock.current||locationSaving||!ready||blocked){alert('사진 저장 준비가 완료된 뒤 다시 첨부해주세요.');return;}
-    if(!uploadInputsValid())return;
+    if(!uploadInputsValid()){logEvent({page:'사진',action:'사진 올리기',outcome:'warn',siteId:site.id,message:'촬영일·동·층 입력 확인에 막힘',target:`${files.length}장`});return;}
     const iso=normalizeShortDate(date)!;
     lock.current=true;setBusy(true);let saved=0;const errors:string[]=[];
     try {for(let i=0;i<files.length;i++) {
       if(!alive.current)break;
       setMessage(`${i+1} / ${files.length}장 처리 중`);
-      try {const file=files[i],thumbnail=await makePhotoThumbnail(file);const photo:SitePhoto={id:crypto.randomUUID(),siteId:site.id,date:iso,building:building.trim().toUpperCase(),floor:floor.trim(),name:file.name,size:file.size,createdAt:Date.now()};await savePhoto(photo,file,thumbnail);saved++;if(alive.current)setPhotos(rows=>[...rows,photo]);}
+      try {const file=files[i],id=crypto.randomUUID(),place=`${iso} ${building.trim().toUpperCase()} ${floor.trim()}`;await tracked({page:'사진',action:'사진 올리기',siteId:site.id,target:`${id} · ${place} · ${Math.round(file.size/1024)}KB ${file.type||'형식 모름'} · ${i+1}/${files.length}`},async()=>{const thumbnail=await makePhotoThumbnail(file);const photo:SitePhoto={id,siteId:site.id,date:iso,building:building.trim().toUpperCase(),floor:floor.trim(),name:file.name,size:file.size,createdAt:Date.now()};await savePhoto(photo,file,thumbnail);if(alive.current)setPhotos(rows=>[...rows,photo]);});}
       catch(e){errors.push(`${files[i].name}: ${e instanceof Error?e.message:'저장 실패'}`);}
     }
     if(alive.current){setMonth(m=>m&&iso.slice(0,7));setFilter('');setDay(iso);setLimit(20);setMessage(`${saved}장 저장 완료${errors.length?' · '+errors.join(' / '):''}`);}
@@ -72,14 +73,14 @@ export function SitePhotos({site,blocked=false,onWorkPending}:{site:Site;blocked
     if(deleting&&!await askConfirm({title:'사진 삭제',message:`선택한 사진 ${targets.length}장을 삭제하시겠습니까?\n${cloudStorageEnabled()?'삭제 후 2일 동안은 ‘최근 삭제 취소’로 한 번에 복원할 수 있고, 그 뒤에는 완전히 삭제됩니다.':'삭제 후 ‘최근 삭제 취소’로 한 번에 복원할 수 있습니다.'}`,confirmLabel:'삭제',danger:true}))return;
     if(lock.current)return;
     lock.current=true;setBusy(true);
-    try{await markPhotosDeleted(targets,deleting);const rows=await listPhotos(site.id);if(alive.current){setPhotos(rows);setSelected([]);setMessage(deleting?`${targets.length}장을 삭제했습니다. ${cloudStorageEnabled()?'2일 동안은 ':''}최근 삭제 취소로 한 번에 복원할 수 있습니다.`:`${targets.length}장을 복원했습니다.`);if(!deleting){setMonth(m=>m&&targets[0].date.slice(0,7));setFilter('');setDay(targets[0].date);}}}
+    try{await tracked({page:'사진',action:deleting?'사진 삭제':'사진 삭제 취소',siteId:site.id,target:`${targets.length}장 · ${targets.slice(0,5).map(p=>p.id).join(',')}${targets.length>5?' …':''}`},()=>markPhotosDeleted(targets,deleting));const rows=await listPhotos(site.id);if(alive.current){setPhotos(rows);setSelected([]);setMessage(deleting?`${targets.length}장을 삭제했습니다. ${cloudStorageEnabled()?'2일 동안은 ':''}최근 삭제 취소로 한 번에 복원할 수 있습니다.`:`${targets.length}장을 복원했습니다.`);if(!deleting){setMonth(m=>m&&targets[0].date.slice(0,7));setFilter('');setDay(targets[0].date);}}}
     catch{if(alive.current)setMessage('처리하지 못했습니다. 다른 화면의 변경 여부를 확인하고 다시 시도해주세요.');}
     finally{lock.current=false;if(alive.current)setBusy(false);}
   }
   async function saveSelected(e:React.FormEvent) {
     e.preventDefault();if(lock.current||locationSaving||blocked||!selectedPhotos.length)return;
     lock.current=true;setBusy(true);setBulkError('');
-    try{await updatePhotoLocations(selectedPhotos,bulkBuilding,bulkFloor);const rows=await listPhotos(site.id);if(alive.current){setPhotos(rows);setSelected([]);setFilter('');setMessage(`${selectedPhotos.length}장의 동·층 정보를 수정했습니다.`);}}
+    try{await tracked({page:'사진',action:'사진 동·층 일괄 수정',siteId:site.id,target:`${selectedPhotos.length}장 → ${bulkBuilding.trim()} ${bulkFloor.trim()}`},()=>updatePhotoLocations(selectedPhotos,bulkBuilding,bulkFloor));const rows=await listPhotos(site.id);if(alive.current){setPhotos(rows);setSelected([]);setFilter('');setMessage(`${selectedPhotos.length}장의 동·층 정보를 수정했습니다.`);}}
     catch(e){if(alive.current)setBulkError(e instanceof Error?e.message:'수정하지 못했습니다. 선택과 입력은 유지됩니다.');}
     finally{lock.current=false;if(alive.current)setBusy(false);}
   }

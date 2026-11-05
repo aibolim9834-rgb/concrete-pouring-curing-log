@@ -5,6 +5,7 @@ import { Site, PouringLog, PouringLogInput } from '@/lib/types';
 import type { WeatherArea } from '@/lib/kma-area';
 import { supabase, checkSupabaseHealth } from '@/lib/supabase';
 import { dbError } from '@/lib/db-error';
+import { describeError, logEvent, noteAction, startEventLog, tracked } from '@/lib/event-log';
 import { RequestTimeoutError, timed, WRITE_TIMEOUT_MESSAGE } from '@/lib/request-timeout';
 import { Header } from '@/components/Header';
 import { SummaryCards } from '@/components/SummaryCards';
@@ -31,6 +32,8 @@ import { cloudStorageEnabled } from '@/lib/cloud-storage';
 import { ReportOptions } from '@/lib/daily-report';
 
 export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | 'progress' | 'photos' }) {
+  // 작업 기록 (lib/event-log.ts): which screen an event came from.
+  const appPage = initialView === 'progress' ? '타설현황' : initialView === 'photos' ? '사진' : '일지';
   const [sites, setSiteList] = useState<Site[]>([]);
   // Every change to the list (load, add, rename, delete, restore) goes through here, so it stays in name order.
   const setSites = (update: Site[] | ((prev: Site[]) => Site[])) => setSiteList(prev => sortSites(typeof update === 'function' ? update(prev) : update));
@@ -88,6 +91,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
   function openSiteManager() { if (!canLeavePhotos()) return; refreshArchives(); setIsSiteModalOpen(true); }
 
   useEffect(() => {
+    startEventLog(); // once per load; later calls do nothing
     let active = true;
     async function initData() {
       try {
@@ -106,6 +110,8 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
         setSelectedSiteId(loadedSites.find(site => site.id === preferred)?.id || loadedSites.find(site => !isClosedSite(site))?.id || loadedSites[0]?.id || '');
         setReady(true); setDataIssue('');
       } catch (e) {
+        const d = describeError(e);
+        logEvent({ page: appPage, action: '자료 불러오기', outcome: 'error', message: d.message, code: d.code, detail: d.detail });
         if (active) setDataIssue(`자료를 안전하게 불러오지 못해 입력을 중지했습니다. 원본은 덮어쓰지 않습니다. ${e instanceof Error ? e.message : ''}`);
       } finally { if (active) setLoading(false); }
     }
@@ -149,7 +155,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
   const outputLogs = outputScope === 'all' ? siteLogs : viewedLogs;
   const outputDescription = outputScope === 'all' ? '현장 전체' : `조회 결과 · ${filters.from || '처음'} ~ ${filters.to || '마지막'}`;
 
-  const handleSaveLog = async (data: PouringLogInput, id?: string) => {
+  const saveLog = async (data: PouringLogInput, id?: string): Promise<string> => {
     assertWritable(); assertOpenSite();
     if (siteLock.current) throw new Error('저장 중입니다. 잠시 후 다시 시도해주세요.');
     const activeSiteId = selectedSiteId;
@@ -171,11 +177,19 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       const nextLogs = id ? logs.map(log => log.id === id ? saved : log) : [saved, ...logs];
       if (!isSupabase) writeLocalData(localStorage, { sites, logs }, { sites, logs: nextLogs });
       setLogs(nextLogs); setNotice('일지를 저장했습니다.');
+      return saved.id;
     } catch (e) { setOperationError(e instanceof Error ? e.message : '저장에 실패했습니다.'); throw e; }
     finally { siteLock.current = false; setLogBusy(false); }
   };
+  // Identifiers only (ID, 일자, 동·층, 부위), never the values typed in.
+  const logTarget = (data: Pick<PouringLogInput, 'date' | 'building' | 'floor' | 'member_type'>, id?: string) => `${id ?? '새 일지'} · ${data.date} ${data.building} ${data.floor} ${data.member_type}`.trim();
+  const handleSaveLog = async (data: PouringLogInput, id?: string): Promise<void> => {
+    await tracked({ page: appPage, action: id ? '일지 수정' : '일지 추가', siteId: selectedSiteId, target: logTarget(data, id) },
+      () => saveLog(data, id), savedId => logTarget(data, savedId));
+  };
 
   const handleDeleteLog = async (id: string) => {
+    let deleting: { at: number; target: string; siteId: string } | null = null;
     try {
       assertWritable(); assertOpenSite();
       if (siteLock.current) throw new Error('다른 작업을 처리 중입니다.');
@@ -188,6 +202,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       if (!await askConfirm({ title: '일지 삭제', message: `${target.date} ${target.building} ${target.floor} 일지를 삭제하시겠습니까?${photos.length ? `\n이 일지의 타설 사진 ${photos.length}장도 함께 삭제됩니다${cloudStorageEnabled() ? '(2일 뒤 서버에서 완전히 삭제)' : ''}.` : ''}`, confirmLabel: '삭제', danger: true })) return;
       if (siteLock.current) throw new Error('다른 작업을 처리 중입니다.');
       siteLock.current = true; setLogBusy(true); setOperationError(''); setNotice('');
+      deleting = { at: Date.now(), target: logTarget(target, id), siteId: target.site_id }; noteAction('일지 삭제');
       try {
         if (isSupabase) {
           const result = await timed(signal => supabase.from('pouring_logs').delete().eq('id', id).eq('site_id', target.site_id).abortSignal(signal).select('id').maybeSingle(), WRITE_TIMEOUT_MESSAGE);
@@ -197,16 +212,22 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
         const nextLogs = logs.filter(log => log.id !== id);
         if (!isSupabase) writeLocalData(localStorage, { sites, logs }, { sites, logs: nextLogs });
         setLogs(nextLogs); setNotice('일지를 삭제했습니다.');
+        logEvent({ page: appPage, action: '일지 삭제', outcome: 'ok', siteId: deleting.siteId, target: deleting.target, durationMs: Date.now() - deleting.at });
         if (photos.length) {
           try { await markPhotosDeleted(photos, true); setNotice(`일지와 타설 사진 ${photos.length}장을 삭제했습니다.`); }
-          catch { setOperationError(`일지는 삭제했지만 타설 사진 ${photos.length}장은 삭제하지 못했습니다. 사진은 서버에 남아 있습니다.`); }
+          catch (e) { const d = describeError(e); logEvent({ page: appPage, action: '일지 사진 함께 삭제', outcome: 'error', siteId: target.site_id, target: `${id} · 사진 ${photos.length}장`, message: d.message, code: d.code, detail: d.detail }); setOperationError(`일지는 삭제했지만 타설 사진 ${photos.length}장은 삭제하지 못했습니다. 사진은 서버에 남아 있습니다.`); }
         }
       } finally { siteLock.current = false; setLogBusy(false); }
-    } catch (e) { setOperationError(e instanceof Error ? e.message : '삭제에 실패했습니다.'); }
+    } catch (e) {
+      const d = describeError(e);
+      logEvent({ page: appPage, action: '일지 삭제', outcome: d.unexpected ? 'error' : 'warn', siteId: deleting?.siteId ?? selectedSiteId, target: deleting?.target ?? id, message: d.message, code: d.code, detail: d.detail, durationMs: deleting ? Date.now() - deleting.at : undefined });
+      setOperationError(e instanceof Error ? e.message : '삭제에 실패했습니다.');
+    }
   };
 
   // Site changes finish persistence before committing React state.
-  const handleAddSite = async (name: string, address = '', weather_area: WeatherArea | null = null) => {
+  const handleAddSite = (name: string, address = '', weather_area: WeatherArea | null = null) => tracked({ page: appPage, action: '현장 추가', target: name.trim() }, () => addSite(name, address, weather_area));
+  const addSite = async (name: string, address = '', weather_area: WeatherArea | null = null) => {
     assertWritable();
     if (siteLock.current) throw new Error('현장 처리 중입니다. 잠시 후 다시 시도해주세요.');
     siteLock.current = true;
@@ -226,7 +247,8 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
     } finally { siteLock.current = false; }
   };
 
-  const handleRenameSite = async (id: string, name: string) => {
+  const handleRenameSite = (id: string, name: string) => tracked({ page: appPage, action: '현장명 수정', siteId: id, target: id }, () => renameSite(id, name));
+  const renameSite = async (id: string, name: string) => {
     assertWritable();
     if (siteLock.current) throw new Error('현장 처리 중입니다. 잠시 후 다시 시도해주세요.');
     const target = sites.find(site => site.id === id);
@@ -248,7 +270,8 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
   };
 
   // 현장 주소 and the 기상 위치 found from it (오늘 날씨 card). An empty address clears both.
-  const handleSaveSiteAddress = async (id: string, address: string, weather_area: WeatherArea | null) => {
+  const handleSaveSiteAddress = (id: string, address: string, weather_area: WeatherArea | null) => tracked({ page: appPage, action: '현장 주소 저장', siteId: id, target: weather_area?.code ?? (address.trim() ? '위치 미선택' : '주소 지움') }, () => saveSiteAddress(id, address, weather_area));
+  const saveSiteAddress = async (id: string, address: string, weather_area: WeatherArea | null) => {
     assertWritable();
     if (siteLock.current) throw new Error('현장 처리 중입니다. 잠시 후 다시 시도해주세요.');
     const target = sites.find(site => site.id === id);
@@ -268,7 +291,8 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
   };
 
   // 종료 처리 (closedAt = 'YYYY-MM-DD') or 다시 진행 (closedAt = null); records stay untouched either way.
-  const handleSetSiteStatus = async (id: string, closedAt: string | null) => {
+  const handleSetSiteStatus = (id: string, closedAt: string | null) => tracked({ page: appPage, action: closedAt ? '현장 종료' : '현장 다시 진행', siteId: id, target: closedAt ?? id }, () => setSiteStatus(id, closedAt));
+  const setSiteStatus = async (id: string, closedAt: string | null) => {
     assertWritable();
     if (siteLock.current) throw new Error('현장 처리 중입니다. 잠시 후 다시 시도해주세요.');
     const target = sites.find(site => site.id === id);
@@ -292,7 +316,8 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
 
   // 일일 보고 문구 format and items for one site (null = back to the defaults). Saves arrive one after another from the
   // report window while other state may not have re-rendered yet, so the browser copy is read fresh and the list updated by function.
-  const handleSaveReportOptions = async (id: string, report_options: ReportOptions | null) => {
+  const handleSaveReportOptions = (id: string, report_options: ReportOptions | null) => tracked({ page: appPage, action: '보고 문구 항목 저장', siteId: id, target: report_options ? `형식 ${report_options.format}` : '기본 항목' }, () => saveReportOptions(id, report_options));
+  const saveReportOptions = async (id: string, report_options: ReportOptions | null) => {
     assertWritable();
     const target = sites.find(site => site.id === id);
     if (!target || isClosedSite(target)) throw new Error('진행 중인 현장에서만 보고 문구 항목을 저장합니다.');
@@ -314,6 +339,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
     const progress = localStorage.getItem(`cp_pouring_progress_v1:${id}`);
     if (!await askConfirm({ title: '현장 삭제', confirmLabel: '삭제', danger: true, message: `'${target.name}'${target.code ? ` (${target.code})` : ''} 현장을 삭제하시겠습니까?\n현장 ID: ${target.id}\n기존 일지 ${logs.filter(log => log.site_id === id).length}건 · 타설현황 ${progress ? '있음' : '없음'}\n이 브라우저에 복구용 보관본을 먼저 저장한 뒤 현장 목록과 연결 기록에서 제거합니다.${isSupabase ? '\nDB 현장 복원은 추후 DB 연결 작업에서 진행해야 합니다.' : '\n현장 관리의 보관된 현장에서 복원할 수 있습니다.'}` })) return;
     if (siteLock.current) throw new Error('현장 처리 중입니다. 잠시 후 다시 시도해주세요.');
+    return tracked({ page: appPage, action: '현장 삭제', siteId: id, target: `${target.code ?? ''} ${id}`.trim() }, async () => {
     siteLock.current = true;
     try {
       const archive = archiveSite(localStorage, target, logs, isSupabase ? 'cloud' : 'local');
@@ -333,6 +359,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       setSites(remaining); setLogs(remainingLogs);
       if (selectedSiteId === id) setSelectedSiteId(remaining.find(site => !isClosedSite(site))?.id || remaining[0]?.id || '');
     } finally { siteLock.current = false; }
+    });
   };
 
   const handleRestoreSite = async (key: string) => {

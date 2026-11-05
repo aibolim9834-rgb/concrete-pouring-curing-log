@@ -6,6 +6,7 @@ import { newLog } from '@/lib/log-data';
 import { normalizeStrength } from '@/lib/strength';
 import { WateringSelect } from './WateringSelect';
 import { askConfirm } from './ConfirmDialog';
+import { logEvent } from '@/lib/event-log';
 
 const memberOptions = ['슬라브', '벽체', '기둥/보', '기초(MAT)', '계단/기타'];
 const weatherOptions = ['', '맑음', '흐림', '비', '눈'];
@@ -68,10 +69,11 @@ export function MobileLogSheet({ log, logs, site, onAdd, onUpdate, onDelete, onC
     const min = temperature(minText), max = temperature(maxText);
     const empty = required.filter(([key]) => !String(draft[key] ?? '').trim()).map(([key]) => key);
     setMissing(empty); setError(''); setNotice('');
-    if (empty.length) { dialogRef.current?.querySelector<HTMLElement>(`#mobile-log-${empty[0]}`)?.focus(); return; }
-    if ((min !== null && !Number.isFinite(min)) || (max !== null && !Number.isFinite(max))) { setError('온도는 숫자로 입력해주세요.'); return; }
+    const blocked = (message: string) => logEvent({ page: '일지', action: log ? '일지 수정' : '일지 추가', outcome: 'warn', siteId: site?.id, target: `${log?.id ?? '새 일지'} · 휴대폰 입력`, message });
+    if (empty.length) { blocked(`필수 칸 비어 있음: ${empty.join(', ')}`); dialogRef.current?.querySelector<HTMLElement>(`#mobile-log-${empty[0]}`)?.focus(); return; }
+    if ((min !== null && !Number.isFinite(min)) || (max !== null && !Number.isFinite(max))) { blocked('온도는 숫자로 입력해주세요.'); setError('온도는 숫자로 입력해주세요.'); return; }
     const volumeText = String(draft.volume ?? '').trim(), volume = volumeText === '' ? '' : Number(volumeText);
-    if (volume !== '' && !Number.isFinite(volume)) { setError('타설물량은 숫자로 입력해주세요.'); return; }
+    if (volume !== '' && !Number.isFinite(volume)) { blocked('타설물량은 숫자로 입력해주세요.'); setError('타설물량은 숫자로 입력해주세요.'); return; }
     const input = { ...draft, site_id: site?.id || '', min_temp: min, max_temp: max, volume, strength: normalizeStrength(draft.strength) };
     lock.current = true; setSaving(true);
     try {

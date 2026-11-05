@@ -28,6 +28,10 @@ const same = (a,b) => assert.equal(JSON.stringify(a),JSON.stringify(b));
 let count=0;
 async function check(name,run) { await run(); count++; console.log(`PASS ${name}`); }
 function find(node,type) { if (!node || typeof node !== 'object') return null; if(Array.isArray(node)){for(const child of node){const match=find(child,type);if(match)return match;}return null;} if(node.type===type)return node;return find(node.props?.children,type); }
+// 작업 기록 stub: records what the app reports, runs tracked work as is.
+const events=[];
+const eventLogStub={logEvent:e=>events.push(e),noteAction(){},startEventLog(){},describeError:e=>({message:e instanceof Error?e.message:String(e),unexpected:!(e instanceof Error&&e.name==='Error')}),
+  tracked:async(info,run,okTarget)=>{try{const v=await run();events.push({...info,outcome:'ok',target:okTarget?okTarget(v)??info.target:info.target});return v;}catch(e){events.push({...info,outcome:'error',message:e&&e.message});throw e;}}};
 function appHarness(result, local = false, overrides = {}) {
   const states = [], refs = []; let cursor=0, refCursor=0, effects=[], csv='';const navigation=[],alerts=[];
   states[0]=[site];states[1]=site.id;states[2]=[log];states[5]=!local;states[6]=false;states[7]='';states[8]=true;
@@ -44,6 +48,7 @@ function appHarness(result, local = false, overrides = {}) {
   deps['@/lib/date-only']=load('lib/date-only.ts');
   deps['@/lib/site-photos-cloud']={listPhotos:async()=>[],markPhotosDeleted:async()=>{}};
   deps['@/lib/cloud-storage']={cloudStorageEnabled:()=>false};
+  deps['@/lib/event-log']=eventLogStub;
   deps['@/components/ConfirmDialog']={askConfirm:async()=>true,ConfirmHost:'ConfirmHost'};
   deps['@/lib/db-error']=load('lib/db-error.ts',{},{console:{error(){}}});
   deps['@/lib/request-timeout']=load('lib/request-timeout.ts',{},{AbortSignal,AbortController,setTimeout,clearTimeout});
@@ -57,7 +62,7 @@ function uiHarness(file, name, props, extra = {}) {
   const react={useState(initial){const i=cursor++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return [states[i],v=>{states[i]=typeof v==='function'?v(states[i]):v;}];},useEffect(fn){effects.push(fn);},useCallback(fn){return fn;},useRef(value){return refs[refCursor++] ||= {current:value};}};
   const jsx=(type,props)=>({type,props});
   const events=new Map();
-  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./ConfirmDialog':{askConfirm:async()=>true},'./WateringSelect':{WateringSelect:'WateringSelect'},'./MobileLogSheet':{MobileLogSheet:'MobileLogSheet'},'./ShortDateInput':{ShortDateInput:'ShortDateInput'},'./LogPhotos':{LogPhotos:'LogPhotos'},'./DailyReportDialog':{DailyReportDialog:'DailyReportDialog'},'./SiteAddressFields':{SiteAddressFields:'SiteAddressFields'},'@/lib/smooth-wheel':{smoothWheel(){}},'@/lib/kma-area':load('lib/kma-area.ts'),'@/lib/site-photos-cloud':{listPhotos:async()=>[]},'@/lib/progress-structure':load('lib/progress-structure.ts'),'@/lib/site-archive':load('lib/site-archive.ts'),'@/lib/site-code':load('lib/site-code.ts'),'@/lib/date-only':load('lib/date-only.ts'),'@/lib/pouring-progress':load('lib/pouring-progress.ts'),'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name}),...extra},{Node:TestNode,requestAnimationFrame:fn=>fn(),document:{querySelector:()=>null,addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
+  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./ConfirmDialog':{askConfirm:async()=>true},'./WateringSelect':{WateringSelect:'WateringSelect'},'./MobileLogSheet':{MobileLogSheet:'MobileLogSheet'},'./ShortDateInput':{ShortDateInput:'ShortDateInput'},'./LogPhotos':{LogPhotos:'LogPhotos'},'./DailyReportDialog':{DailyReportDialog:'DailyReportDialog'},'./SiteAddressFields':{SiteAddressFields:'SiteAddressFields'},'@/lib/smooth-wheel':{smoothWheel(){}},'@/lib/event-log':eventLogStub,'@/lib/kma-area':load('lib/kma-area.ts'),'@/lib/site-photos-cloud':{listPhotos:async()=>[]},'@/lib/progress-structure':load('lib/progress-structure.ts'),'@/lib/site-archive':load('lib/site-archive.ts'),'@/lib/site-code':load('lib/site-code.ts'),'@/lib/date-only':load('lib/date-only.ts'),'@/lib/pouring-progress':load('lib/pouring-progress.ts'),'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name}),...extra},{Node:TestNode,requestAnimationFrame:fn=>fn(),document:{querySelector:()=>null,addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
   return {states,events,get effects(){return effects;},render(){cursor=0;refCursor=0;effects=[];return exports[name](props);}};
 }
 (async()=>{
@@ -151,7 +156,7 @@ function uiHarness(file, name, props, extra = {}) {
     react.default=react;react.Fragment='Fragment';
     const jsx=(type,props)=>({type,props});
     const photo={id:'photo-a',siteId:site.id,date:'2026-10-26',building:'101동',floor:'5층',name:'original.png',createdAt:1};
-    const api=load('components/SitePhotos.tsx',{react,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/date-only':load('lib/date-only.ts'),'@/lib/cloud-storage':{cloudStorageEnabled:()=>false},'./ConfirmDialog':{askConfirm:async()=>true},'@/lib/site-photos-cloud':{latestDeletedBatch:()=>[],updatePhotoLocation:()=>new Promise((yes,no)=>{resolveSave=yes;rejectSave=no;})}});
+    const api=load('components/SitePhotos.tsx',{react,'@/lib/event-log':eventLogStub,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/date-only':load('lib/date-only.ts'),'@/lib/cloud-storage':{cloudStorageEnabled:()=>false},'./ConfirmDialog':{askConfirm:async()=>true},'@/lib/site-photos-cloud':{latestDeletedBatch:()=>[],updatePhotoLocation:()=>new Promise((yes,no)=>{resolveSave=yes;rejectSave=no;})}});
     function render(fn,props,target){bucket=target;cursor=0;refCursor=0;target.effects=[];return fn(props);}
     function editorNode(node){if(!node||typeof node!=='object')return null;if(Array.isArray(node)){for(const n of node){const result=editorNode(n);if(result)return result;}return null;}if(node.type?.name==='PhotoLocationEditor')return node;return editorNode(node.props?.children);}
     const parent={states:[[photo],true,'',false,'26.10.26','','','2026-10','','2026-10-26'],refs:[],effects:[]};
@@ -176,7 +181,7 @@ function uiHarness(file, name, props, extra = {}) {
     const react={useState(initial){const i=cursor++;if(!(i in bucket.states))bucket.states[i]=typeof initial==='function'?initial():initial;return [bucket.states[i],()=>{}];},useRef(value){return bucket.refs[refCursor++] ||= {current:value};},useEffect(){}};
     react.default=react;react.Fragment='Fragment';
     const jsx=(type,props)=>({type,props});
-    const api=load('components/SitePhotos.tsx',{react,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/date-only':load('lib/date-only.ts'),'@/lib/cloud-storage':{cloudStorageEnabled:()=>false},'./ConfirmDialog':{askConfirm:async()=>true},'@/lib/site-photos-cloud':{latestDeletedBatch:()=>[]}});
+    const api=load('components/SitePhotos.tsx',{react,'@/lib/event-log':eventLogStub,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/date-only':load('lib/date-only.ts'),'@/lib/cloud-storage':{cloudStorageEnabled:()=>false},'./ConfirmDialog':{askConfirm:async()=>true},'@/lib/site-photos-cloud':{latestDeletedBatch:()=>[]}});
     const photo={id:'photo-old',siteId:site.id,date:'2025-03-14',building:'101동',floor:'5F',name:'old.png',createdAt:1};
     bucket={states:[[photo],true],refs:[]};
     const page=JSON.stringify(api.SitePhotos({site,onWorkPending(){}}));
@@ -215,6 +220,16 @@ function uiHarness(file, name, props, extra = {}) {
     assert.equal(h.states[2].length,2);assert.equal(h.states[2].filter(row=>row.id===inserted[0]).length,1);
   });
   await check('successful DB response commits saved row',async()=>{const h=appHarness({data:{...log,floor:'saved'},error:null}),tree=h.render();await find(tree,'RecordTable').props.onQuickUpdateLog(log.id,{...log,floor:'2층'});assert.equal(h.states[2][0].floor,'saved');});
+  await check('saving a log records the outcome with its ID, 일자, 동·층 and 부위, never the values typed in',async()=>{
+    storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site]));storage.setItem('cp_logs',JSON.stringify([log]));events.length=0;
+    const h=appHarness(null,true);
+    await find(h.render(),'RecordTable').props.onQuickAddLog({...data.newLog(site.id,'2'),date:'2026-11-05',building:'103동',floor:'5F',member_type:'슬라브',volume:4217.5,remicon_company:'성진'});
+    const ok=events.find(e=>e.action==='일지 추가');assert.equal(ok.outcome,'ok');assert.equal(ok.page,'일지');assert.equal(ok.siteId,site.id);
+    assert.match(ok.target,/^log-.+ · 2026-11-05 103동 5F 슬라브$/);assert(!JSON.stringify(ok).includes('성진'));assert(!JSON.stringify(ok).includes('4217.5'));
+    events.length=0;
+    await assert.rejects(find(h.render(),'RecordTable').props.onQuickAddLog({...data.newLog(site.id,'3'),date:'',building:'103동',floor:'5F'}));
+    const failed=events.find(e=>e.action==='일지 추가');assert.equal(failed.outcome,'error');assert(failed.message);assert.match(failed.target,/^새 일지 · /);
+  });
   await check('local submit failure leaves screen unchanged',async()=>{storage.entries.clear();storage.setItem('cp_sites','{broken');const h=appHarness(null,true),tree=h.render();await assert.rejects(()=>find(tree,'RecordTable').props.onQuickAddLog(log));same(h.states[2],[log]);assert.equal(storage.getItem('cp_sites'),'{broken');});
   await check('print scope uses the same filtered data as the table',()=>{const h=appHarness(null),second={...log,id:'b',date:'2026-09-01'};h.states[2]=[log,second];let tree=h.render();find(tree,'RecordTable').props.onFiltersChange({...data.emptyLogFilters(),from:'2026-09-01'});tree=h.render();find(tree,'Header').props.onOpenPrintView();tree=h.render();same(find(tree,'PrintView').props.logs.map(l=>l.id),['b']);});
   await check('whole-site print scope remains available after filtering',()=>{const h=appHarness(null);h.states[2]=[log,{...log,id:'b',date:'2026-09-01'}];let tree=h.render();find(tree,'RecordTable').props.onFiltersChange({...data.emptyLogFilters(),from:'2026-09-01'});tree=h.render();find(tree,'RecordTable').props.onOutputScopeChange('all');tree=h.render();find(tree,'Header').props.onOpenPrintView();assert.equal(find(h.render(),'PrintView').props.logs.length,2);});
