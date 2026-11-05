@@ -632,8 +632,9 @@ body {
 .concrete-app .summary-compact-alert { font-weight: 700; }
 .concrete-app .summary-compact-alert.is-warning { color: var(--b-danger, #f87171); }
 .concrete-app .summary-compact-alert.is-advisory { color: var(--b-warning, #fbbf24); }
-/* Wide screens: the weather card gets the room for that line from 타설 기록 (three short figures); 타설 부위 현황 keeps its width. */
-@media (min-width: 1024px) { .concrete-app .summary-cards { grid-template-columns: minmax(0, .75fr) minmax(0, 1.5fr) minmax(0, 1fr); } }
+/* Wide screens: the weather card is a little wider for that line. At 1,560px a line of one 특보 (256px) fits with room to spare,
+   and three 특보 (718px) take two lines here as they did at 1.5fr, so a wider card would only leave empty space. */
+@media (min-width: 1024px) { .concrete-app .summary-cards { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr); } }
 
 /* 동·층 관리, compact on PC: one line per floor (타설일 on the right), smaller buttons and spacing so more floors fit.
    Phones keep the larger touch sizes. */
