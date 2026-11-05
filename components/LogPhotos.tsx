@@ -34,7 +34,8 @@ export function LogPhotos({ site, log, photos, loadError, readOnly, onChanged, o
   const deleted = latestDeletedBatch(photos);
   const picked = live.filter(p => selected.includes(p.id));
   const viewIndex = live.findIndex(p => p.id === viewId), view = live[viewIndex];
-  const place = [log.date, log.building, log.floor, log.member_type, volumeText(log.volume)].filter(Boolean).join(' · ');
+  // Each · is tied to the item before it (no-break space), so a phone never starts a line with the separator.
+  const place = [log.date, log.building, log.floor, log.member_type].filter(Boolean).join(' · '), volume = volumeText(log.volume);
 
   async function run(task: () => Promise<void>) {
     if (lock.current) return;
@@ -92,7 +93,7 @@ export function LogPhotos({ site, log, photos, loadError, readOnly, onChanged, o
     onPointerCancel={() => { outsideDown.current = false; }}
     onClick={e => { if (outsideDown.current && e.target === e.currentTarget && outside(e)) close(); outsideDown.current = false; }}>
     <div className="photo-viewer-heading">
-      <div><h2 id="log-photo-title">{view ? view.name : `타설 사진 · ${live.length}장`}</h2><p>{place}</p></div>
+      <div><h2 id="log-photo-title">{view ? view.name : `타설 사진 · ${live.length}장`}</h2><p>{place}{volume && <>{' · '}<span className="log-photo-volume">{volume}</span></>}</p></div>
       <div className="log-photo-heading-actions">
         {view && <button type="button" className="ui-button" onClick={() => { setViewId(''); setZoom(false); }}>목록으로</button>}
         <button type="button" className="ui-button" autoFocus disabled={busy} onClick={close}>닫기</button>

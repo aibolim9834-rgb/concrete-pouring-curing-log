@@ -707,8 +707,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                     {log.max_temp !== null ? `${log.max_temp}°C` : '-'}
                   </td>
                   <td className="px-2 py-3 border-r border-slate-800/80 text-center font-medium text-slate-300 whitespace-nowrap">
-                    {getWeatherIcon(log.weather)}
-                    {log.weather}
+                    {log.weather ? <>{getWeatherIcon(log.weather)}{log.weather}</> : '-'}
                   </td>
                   <td className="px-2.5 py-3 border-r border-slate-800/80 font-medium text-slate-300 truncate max-w-[120px]">
                     {log.remicon_company || '-'}

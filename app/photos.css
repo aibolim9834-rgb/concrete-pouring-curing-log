@@ -47,6 +47,10 @@
 .log-photo-dialog:modal{overscroll-behavior:contain}
 .log-photo-dialog::backdrop{overflow:hidden;overscroll-behavior:contain}
 .log-photo-heading-actions{display:flex;gap:8px;flex-shrink:0}
+/* On a phone the place line breaks only between items: words such as 슬라브 stay whole (keep-all),
+   and "36.5 m³ (7대)" moves to the next line as one piece instead of breaking after the number. */
+.log-photo-dialog .photo-viewer-heading p{word-break:keep-all}
+.log-photo-volume{white-space:nowrap}
 .log-photo-body{display:grid;gap:14px;padding:0 20px 20px}
 .log-photo-add{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:2px dashed #91af99;border-radius:8px;background:#f7faf7}
 .log-photo-add.is-over{background:var(--b-selected);border-color:var(--b-action)}

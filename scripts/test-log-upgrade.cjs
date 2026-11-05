@@ -259,6 +259,25 @@ function uiHarness(file, name, props, extra = {}) {
     const table=uiHarness('components/RecordTable.tsx','RecordTable',{logs:rows,site,filters:data.emptyLogFilters(),sort:data.defaultLogSort,onSortChange(){},onFiltersChange(){},outputScope:'filtered',onOutputScopeChange(){}}).render();
     same(all(find(table,'tbody'),'tr').slice(1).map(row=>all(row,'td')[10].props.children),['12 m³ (2대)','7 m³ (2대)','12.5 m³ (3대)','0 m³','-']);
   });
+  await check('an empty weather cell shows - like the other empty cells, and a set one keeps its icon',()=>{
+    const all=(node,type)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,type)):[...(node.type===type?[node]:[]),...all(node.props?.children,type)];
+    const rows=[{...log,id:'w1',weather:''},{...log,id:'w2',weather:'흐림'}];
+    const table=uiHarness('components/RecordTable.tsx','RecordTable',{logs:rows,site,filters:data.emptyLogFilters(),sort:data.defaultLogSort,onSortChange(){},onFiltersChange(){},outputScope:'filtered',onOutputScopeChange(){}}).render();
+    const cells=all(find(table,'tbody'),'tr').slice(1).map(row=>all(row,'td')[7].props.children);
+    assert.equal(cells[0],'-');
+    same(cells[1].props.children.map(c=>typeof c==='string'?c:c.type),['Cloud','흐림']);
+  });
+  await check('the photo window keeps the volume and truck count together so a phone breaks the line before it',()=>{
+    const heading=volume=>find(uiHarness('components/LogPhotos.tsx','LogPhotos',{site,log:{...log,building:'103동',floor:'7F',volume},photos:[],loadError:'',readOnly:false,onChanged:async()=>{},onClose(){}},{'./SitePhotos':{PhotoImage:'PhotoImage'},'@/lib/site-photos-cloud':{latestDeletedBatch:()=>[]},'@/lib/cloud-storage':{cloudStorageEnabled:()=>false}}).render(),'p').props.children;
+    const line=heading(36.5);
+    // A no-break space ties each · to the item before it, so no line starts with the separator.
+    assert.equal(line[0],`${log.date} · 103동 · 7F · ${log.member_type}`);
+    assert.equal(line[1].props.children[0],' · ');
+    const amount=find(line[1],'span');
+    assert.equal(amount.props.className,'log-photo-volume');assert.equal(amount.props.children,'36.5 m³ (7대)');
+    // No volume: nothing follows the place, not even a separator.
+    assert.equal(heading('')[1],'');
+  });
   await check('photo column counts each row\'s 타설 사진 and opens that row\'s photo window',async()=>{
     const all=(node,type)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,type)):[...(node.type===type?[node]:[]),...all(node.props?.children,type)];
     const rows=[{...log,id:'p1'},{...log,id:'p2'}];
