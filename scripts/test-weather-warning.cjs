@@ -57,12 +57,20 @@ const T7 = '(1) 풍랑 예비특보\r\no 11월 05일 오전(06시~12시) : 서�
     same(warning.warningsFor(T6, site('제주특별자치도', '제주시'), zones), [{ kind: '강풍', level: '주의보', zones: ['제주도'] }]);
     same(warning.warningsFor(T6, site('서울특별시', '동작구'), zones), []);
     same(warning.warningsFor(T6, site('전남광주통합특별시', '신안군'), zones), []); // 흑산도.홍도 is apart from 신안(흑산면제외)
-    const t6 = 'o 건조주의보 : 서울\r\no 한파경보 : 서울(서울동남권), 경기도(용인남부, 파주서북부)\r\no 폭염주의보 : 광주';
-    same(warning.warningsFor(t6, site('서울특별시', '동작구'), zones), [{ kind: '한파', level: '경보', zones: ['서울동남권'] }, { kind: '건조', level: '주의보', zones: ['서울'] }]);
+    const t6 = 'o 대설주의보 : 서울\r\no 한파경보 : 서울(서울동남권), 경기도(용인남부, 파주서북부)\r\no 폭염주의보 : 광주';
+    same(warning.warningsFor(t6, site('서울특별시', '동작구'), zones), [{ kind: '한파', level: '경보', zones: ['서울동남권'] }, { kind: '대설', level: '주의보', zones: ['서울'] }]);
     same(warning.warningsFor(t6, site('경기도', '용인시수지구'), zones), [{ kind: '한파', level: '경보', zones: ['용인남부'] }]);
     same(warning.warningsFor(t6, site('경기도', '광주시'), zones), []); // the bare 광주 is 광주광역시
     same(warning.warningsFor(t6, site('전남광주통합특별시', '북구'), zones), [{ kind: '폭염', level: '주의보', zones: ['광주'] }]);
     same(warning.warningsFor('o 없음', site('서울특별시', '동작구'), zones), []);
+  });
+
+  await check('건조·황사·폭풍해일·풍랑 are left off, in force or ahead', () => {
+    const t6 = 'o 건조주의보 : 서울\r\no 황사경보 : 서울\r\no 폭풍해일주의보 : 인천(인천영종)\r\no 호우주의보 : 서울(서울서남권)';
+    same(warning.warningsFor(t6, site('서울특별시', '동작구'), zones), [{ kind: '호우', level: '주의보', zones: ['서울서남권'] }]);
+    same(warning.warningsFor(t6, site('인천광역시', '연수구'), zones), []);
+    const t7 = '(1) 건조 예비특보\r\no 11월 06일 오전(06시~12시) : 서울\r\n(2) 한파 예비특보\r\no 11월 07일 아침(06시~09시) : 서울';
+    same(warning.previewsFor(t7, site('서울특별시', '동작구'), zones), [{ kind: '한파', when: '11/7 아침(06시~09시)', zones: ['서울'] }]);
   });
 
   await check('t7 gives the 예비특보 by time, nested names included', () => {

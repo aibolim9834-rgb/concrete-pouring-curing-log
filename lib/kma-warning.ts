@@ -101,11 +101,15 @@ const label = (codes: string[], zones: WarningZone[]) => {
   return Array.from(new Set(codes.map(c => byCode.get(c)!).filter(Boolean)));
 };
 
+// Kinds left off the site screen (2026-11-05 사용자 결정): they do not change the day's 타설 or 양생.
+// 풍랑 is only issued for sea zones anyway.
+export const HIDDEN_KINDS: ReadonlySet<string> = new Set(['건조', '황사', '폭풍해일', '풍랑']);
+
 export function warningsFor(t6: string, site: Set<string>, zones: WarningZone[]): SiteWarning[] {
   const out: SiteWarning[] = [];
   for (const line of lines(t6)) {
     const m = line.match(/^o\s*(.+?)(중대경보|경보|주의보)\s+:\s+(.+)$/);
-    if (!m) continue;
+    if (!m || HIDDEN_KINDS.has(m[1].trim())) continue;
     const hit = namedZones(m[3], zones).filter(code => site.has(code));
     if (hit.length) out.push({ kind: m[1].trim(), level: m[2] as WarningLevel, zones: label(hit, zones) });
   }
@@ -123,7 +127,7 @@ export function previewsFor(t7: string, site: Set<string>, zones: WarningZone[])
     const head = line.match(/^\(\d+\)\s*(.+?)\s*예비특보/);
     if (head) { kind = head[1]; continue; }
     const m = line.match(/^o\s*(.+?)\s+:\s+(.+)$/);
-    if (!m || !kind) continue;
+    if (!m || !kind || HIDDEN_KINDS.has(kind)) continue;
     const hit = namedZones(m[2], zones).filter(code => site.has(code));
     if (hit.length) out.push({ kind, when: shortWhen(m[1]), zones: label(hit, zones) });
   }
