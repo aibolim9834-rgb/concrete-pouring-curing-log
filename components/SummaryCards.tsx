@@ -101,7 +101,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
         <div className="mt-3">
           {!area ? <>
             <div className="flex items-center justify-between text-xs"><span className="text-slate-400">현재 기온</span><span className="font-bold text-slate-100">-</span></div>
-            <p className="ui-note mt-2">{site?.address ? '현장 관리의 주소 버튼에서 기상 위치를 고르면 표시됩니다.' : '현장 관리에서 현장 주소를 넣으면 표시됩니다.'}</p>
+            <p className="ui-note mt-2">{site?.address ? '현장 관리에서 ⋯ › 주소 수정으로 기상 위치를 고르면 표시됩니다.' : '현장 관리에서 현장 주소를 넣으면 표시됩니다.'}</p>
           </> : !weather ? <p className="ui-note">{today.error || '오늘 날씨를 불러오는 중입니다.'}</p> : <>
             <div className="flex items-baseline justify-between text-xs"><span className="text-slate-400">{`현재 기온${weather.observedAt ? ` (${weather.observedAt} 관측)` : ''}`}</span><span className="today-weather-now font-extrabold text-slate-100">{degrees(weather.temp)}</span></div>
             <div className="mt-1 flex items-center justify-between text-xs"><span className="text-slate-400">오늘 최저 / 최고 (예보)</span><span className="today-weather-range font-bold"><span className="text-blue-400">{degrees(weather.min)}</span><span className="text-slate-400"> / </span><span className="text-red-400">{degrees(weather.max)}</span></span></div>

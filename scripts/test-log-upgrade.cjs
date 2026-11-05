@@ -324,7 +324,7 @@ function uiHarness(file, name, props, extra = {}) {
     const text=(state,weatherArea)=>{const h=uiHarness('components/SummaryCards.tsx','SummaryCards',{logs:[log],site:{...site,weather_area:weatherArea}});if(state)h.states[0]=state;return JSON.stringify(h.render());};
     const banpo={code:'1165056000',label:'서울특별시 서초구 반포동',nx:60,ny:125};
     const none=text(null,null);assert(none.includes('현장 관리에서 현장 주소를 넣으면 표시됩니다.'));assert(none.includes('주소 미등록'));
-    const unpicked=JSON.stringify(uiHarness('components/SummaryCards.tsx','SummaryCards',{logs:[log],site:{...site,address:'OO산업단지',weather_area:null}}).render());assert(unpicked.includes('주소 버튼에서 기상 위치를 고르면 표시됩니다.'));assert(unpicked.includes('위치 선택 필요'));
+    const unpicked=JSON.stringify(uiHarness('components/SummaryCards.tsx','SummaryCards',{logs:[log],site:{...site,address:'OO산업단지',weather_area:null}}).render());assert(unpicked.includes('⋯ › 주소 수정으로 기상 위치를 고르면 표시됩니다.'));assert(unpicked.includes('위치 선택 필요'));
     assert(text(null,banpo).includes('오늘 날씨를 불러오는 중입니다.'));
     const at=new Date(2026,10,5,14,30).getTime(),weather={date:'2026-11-05',temp:12.3,observedAt:'14:00',min:3,max:13};
     const shown=text({grid:'60,125',weather,at,error:''},banpo);
@@ -420,18 +420,30 @@ function uiHarness(file, name, props, extra = {}) {
   });
   await check('site list 수정 edits the name in its own row and Esc cancels',async()=>{
     const all=(node,pred)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,pred)):[...(pred(node)?[node]:[]),...all(node.props?.children,pred)];
-    const one=(tree,pred)=>all(tree,pred)[0];const renamed=[];
+    const one=(tree,pred)=>all(tree,pred)[0];const renamed=[];const item=(tree,label)=>{const a=all(tree,n=>Array.isArray(n.props?.actions)).flatMap(n=>n.props.actions).find(x=>x[0]===label);return a&&{props:{onClick:a[2]}};};
     const props={isOpen:true,onClose(){},sites:[site],selectedSiteId:site.id,onSelectSite(){},onAddSite:async()=>{},onRenameSite:async(id,name)=>{renamed.push([id,name]);},onDeleteSite:async()=>{},archives:[],archiveError:'',canRestore:true,onRestoreSite:async()=>{}};
     const h=uiHarness('components/SiteModal.tsx','SiteModal',props);
-    one(h.render(),n=>n.props?.['aria-label']===site.name+' 현장명 수정').props.onClick();
+    item(h.render(),site.name+' 현장명 수정').props.onClick();
     let form=one(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-rename-row'));assert(form);
     one(form,n=>n.type==='input').props.onChange({target:{value:'바뀐 현장'}});
     form=one(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-rename-row'));
     form.props.onSubmit({preventDefault(){}});await new Promise(r=>setImmediate(r));
     assert.deepEqual(renamed,[[site.id,'바뀐 현장']]);assert(!one(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-rename-row')));
-    one(h.render(),n=>n.props?.['aria-label']===site.name+' 현장명 수정').props.onClick();
+    item(h.render(),site.name+' 현장명 수정').props.onClick();
     let stopped=false;one(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-rename-row')).props.onKeyDown({key:'Escape',preventDefault(){},stopPropagation(){stopped=true;},nativeEvent:{isComposing:false}});
     assert(stopped);assert(!one(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-rename-row')));assert.equal(renamed.length,1);
+  });
+  await check('a site row keeps 선택 on the row and puts 현장명 수정, 주소 and 종료 처리 behind ⋯',()=>{
+    const all=(node,pred)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,pred)):[...(pred(node)?[node]:[]),...all(node.props?.children,pred)];
+    const other={id:'site-b',name:'다른 현장',address:'대구 수성구'},picked=[];let closed=0;
+    const props={isOpen:true,onClose(){closed++;},sites:[site,other],selectedSiteId:site.id,onSelectSite(id){picked.push(id);},onAddSite:async()=>{},onRenameSite:async()=>{},onSaveSiteAddress:async()=>{},onDeleteSite:async()=>{},onSetSiteStatus:async()=>{},archives:[],archiveError:'',canRestore:true,onRestoreSite:async()=>{}};
+    const h=uiHarness('components/SiteModal.tsx','SiteModal',props),tree=h.render();
+    const menus=all(tree,n=>Array.isArray(n.props?.actions));assert.equal(menus.length,2);
+    same(menus.map(n=>n.props.actions.map(a=>a[1])),[['현장명 수정','주소 입력','종료 처리'],['현장명 수정','주소 수정','종료 처리']]);
+    same(menus[1].props.actions.map(a=>a[0]),['다른 현장 현장명 수정','다른 현장 주소 수정','다른 현장 종료 처리']);
+    assert(JSON.stringify(tree).includes('현재 현장'));assert(!all(tree,n=>n.props?.['aria-label']===site.name+' 선택').length);
+    all(tree,n=>n.props?.['aria-label']==='다른 현장 선택')[0].props.onClick();same(picked,['site-b']);assert.equal(closed,1);
+    menus[1].props.actions[1][2]();assert(all(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-address-row')).length===1);
   });
   await check('log floors save as B2F and 21F while other floor text is kept',async()=>{
     const {normalizeFloor}=load('lib/floor.ts');
@@ -464,18 +476,19 @@ function uiHarness(file, name, props, extra = {}) {
   });
   await check('현장 관리 tabs split 진행 and 종료, and 종료 처리 sends the chosen date',async()=>{
     const all=(node,pred)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,pred)):[...(pred(node)?[node]:[]),...all(node.props?.children,pred)];
+    const item=(tree,label)=>{const a=all(tree,n=>Array.isArray(n.props?.actions)).flatMap(n=>n.props.actions).find(x=>x[0]===label);return a&&{props:{onClick:a[2]}};};
     const one=(tree,pred)=>all(tree,pred)[0],closedSite={id:'c',name:'종료 현장',status:'closed',closed_at:'2026-10-15'},calls=[];
     const props={isOpen:true,onClose(){},sites:[site,closedSite],selectedSiteId:site.id,onSelectSite(){},onAddSite:async()=>{},onRenameSite:async()=>{},onDeleteSite:async()=>{},onSetSiteStatus:async(id,date)=>{calls.push([id,date]);},archives:[],archiveError:'',canRestore:true,onRestoreSite:async()=>{}};
     const h=uiHarness('components/SiteModal.tsx','SiteModal',props);
     const label=n=>n.props?.['aria-label']||'';
-    let tree=h.render();assert(one(tree,n=>label(n)===site.name+' 종료 처리'));assert(!one(tree,n=>label(n)===closedSite.name+' 다시 진행'));
-    one(tree,n=>label(n)===site.name+' 종료 처리').props.onClick();
+    let tree=h.render();assert(item(tree,site.name+' 종료 처리'));assert(!one(tree,n=>label(n)===closedSite.name+' 다시 진행'));
+    item(tree,site.name+' 종료 처리').props.onClick();
     const form=one(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-close-row'));assert(form);
     one(form,n=>n.type==='ShortDateInput').props.onChange('2026-10-20');
     one(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-close-row')).props.onSubmit({preventDefault(){}});await new Promise(r=>setImmediate(r));
     same(calls,[[site.id,'2026-10-20']]);
     one(h.render(),n=>n.props?.role==='tab'&&[].concat(n.props.children).includes('종료')).props.onClick();
-    tree=h.render();assert(one(tree,n=>label(n)===closedSite.name+' 다시 진행'));assert(one(tree,n=>label(n)===closedSite.name+' 보기 (읽기 전용)'));assert(!one(tree,n=>label(n)===site.name+' 종료 처리'));
+    tree=h.render();assert(one(tree,n=>label(n)===closedSite.name+' 다시 진행'));assert(one(tree,n=>label(n)===closedSite.name+' 보기 (읽기 전용)'));assert(!item(tree,site.name+' 종료 처리'));
     one(tree,n=>label(n)===closedSite.name+' 다시 진행').props.onClick();await new Promise(r=>setImmediate(r));
     same(calls[1],['c',null]);
   });

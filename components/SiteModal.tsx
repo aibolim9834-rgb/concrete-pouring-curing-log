@@ -9,7 +9,7 @@ import { shortDate } from '@/lib/date-only';
 import { ShortDateInput } from './ShortDateInput';
 import { downloadFile } from '@/lib/pouring-progress';
 import { nextSiteCode } from '@/lib/site-code';
-import { X, Plus, Building2, Trash2, CheckCircle } from 'lucide-react';
+import { X, Plus, Building2, Trash2, CheckCircle, MoreHorizontal } from 'lucide-react';
 import { KmaRegion, resolveArea, shortAreaLabel, WeatherArea } from '@/lib/kma-area';
 import { SiteAddressFields } from './SiteAddressFields';
 
@@ -227,17 +227,18 @@ export const SiteModal: React.FC<SiteModalProps> = ({
                 return (
                   <div
                     key={site.id}
-                    className={`site-row flex flex-wrap items-center justify-between gap-y-1 p-2.5 rounded-lg border text-xs transition ${closed ? 'is-closed' : ''} ${
+                    className={`site-row flex flex-wrap items-center justify-between gap-x-2 gap-y-1 p-2.5 rounded-lg border text-xs transition ${closed ? 'is-closed' : ''} ${
                       isSelected
                         ? 'bg-amber-950/40 border-amber-800/80 text-amber-300 font-semibold'
                         : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800'
                     }`}
                   >
-                    <div className="flex items-center gap-2 truncate">
+                    {/* flex-1 + min-w-0: a long 현장명 shortens with … instead of pushing 선택 and ⋯ onto their own line. */}
+                    <div className="flex flex-1 min-w-0 items-center gap-2">
                       {isSelected && <CheckCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />}
-                      <span className="truncate">{site.name}</span>
+                      <span className="truncate" title={site.name}>{site.name}</span>
                       {site.code && (
-                        <span className="text-[10px] text-slate-500 bg-slate-900 border border-slate-700 px-1.5 py-0.5 rounded">
+                        <span className="flex-shrink-0 text-[10px] text-slate-500 bg-slate-900 border border-slate-700 px-1.5 py-0.5 rounded">
                           {site.code}
                         </span>
                       )}
@@ -256,33 +257,20 @@ export const SiteModal: React.FC<SiteModalProps> = ({
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </> : <>
-                        <button
-                          data-site-rename={site.id}
-                          onClick={() => { setError(''); setClosing(null); setAddressing(null); setRenaming({ id: site.id, name: site.name }); }}
-                          aria-label={`${site.name} 현장명 수정`}
-                          className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-[11px]"
-                        >
-                          수정
-                        </button>
-                        <button onClick={() => { setError(''); setRenaming(null); setClosing(null); setAddressing({ id: site.id, address: site.address ?? '', picked: site.weather_area ?? null }); }} aria-label={`${site.name} 주소 ${site.address ? '수정' : '입력'}`} className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-[11px]">주소</button>
-                        {!isSelected && (
-                          <button
-                            onClick={() => {
-                              onSelectSite(site.id);
-                              onClose();
-                            }}
-                            className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-[11px]"
-                          >
-                            선택
-                          </button>
-                        )}
-                        <button onClick={() => { setError(''); setRenaming(null); setAddressing(null); setClosing({ id: site.id, date: localToday() }); }} aria-label={`${site.name} 종료 처리`} className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-[11px]">종료 처리</button>
+                        {/* 선택 is used most, so it stays on the row; the rarer three sit behind ⋯ to leave room for long site names. */}
+                        {isSelected ? <span className="site-row-current">현재 현장</span>
+                          : <button onClick={() => { onSelectSite(site.id); onClose(); }} aria-label={`${site.name} 선택`} className="site-row-select">선택</button>}
+                        <SiteActions site={site} actions={[
+                          [`${site.name} 현장명 수정`, '현장명 수정', () => { setError(''); setClosing(null); setAddressing(null); setRenaming({ id: site.id, name: site.name }); }],
+                          [`${site.name} 주소 ${site.address ? '수정' : '입력'}`, site.address ? '주소 수정' : '주소 입력', () => { setError(''); setRenaming(null); setClosing(null); setAddressing({ id: site.id, address: site.address ?? '', picked: site.weather_area ?? null }); }],
+                          [`${site.name} 종료 처리`, '종료 처리', () => { setError(''); setRenaming(null); setAddressing(null); setClosing({ id: site.id, date: localToday() }); }],
+                        ]} />
                       </>}
                     </div>
                     <p className="site-row-address">
                       {site.address && <span className="truncate">{site.address}</span>}
                       <span className={`site-area-chip ${site.weather_area ? 'is-ok' : site.address ? 'is-need' : ''}`}>
-                        {site.weather_area ? `기상 기준: ${shortAreaLabel(site.weather_area)}` : site.address ? '위치 선택 필요 · 주소 버튼에서 고르기' : '주소 없음 · 오늘 날씨 표시 안 됨'}
+                        {site.weather_area ? `기상 기준: ${shortAreaLabel(site.weather_area)}` : site.address ? '위치 선택 필요 · ⋯의 주소 수정에서 고르기' : '주소 없음 · 오늘 날씨 표시 안 됨'}
                       </span>
                     </p>
                   </div>
@@ -325,3 +313,49 @@ export const SiteModal: React.FC<SiteModalProps> = ({
     </Modal>
   );
 };
+
+// ⋯ next to a site: its rarer actions as a small group of buttons in a popover (not an ARIA menu, so Tab moves through them).
+// The popover sits in the top layer above the dialog; it is placed under the button by script because CSS anchor positioning
+// is not yet in Chrome. Browsers without popover show the buttons on the row instead.
+function SiteActions({ site, actions }: { site: Site; actions: [label: string, text: string, run: () => void][] }) {
+  const trigger = useRef<HTMLButtonElement>(null), panel = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false), [inline, setInline] = useState(false);
+  const panelId = `site-actions-${site.id}`;
+  useEffect(() => {
+    const menu = panel.current;
+    if (!menu || !('popover' in HTMLElement.prototype)) { setInline(true); return; }
+    const close = () => menu.hidePopover();
+    const onToggle = (event: Event) => {
+      const isOpen = (event as ToggleEvent).newState === 'open';
+      setOpen(isOpen);
+      if (isOpen) {
+        // Below the button, right edges aligned; above it when the window bottom is too close.
+        const box = trigger.current!.getBoundingClientRect(), width = menu.offsetWidth, height = menu.offsetHeight;
+        const top = box.bottom + 4 + height > window.innerHeight - 8 ? Math.max(8, box.top - 4 - height) : box.bottom + 4;
+        menu.style.top = `${top}px`;
+        menu.style.left = `${Math.max(8, Math.min(box.right - width, window.innerWidth - width - 8))}px`;
+        // The list scrolls under a fixed panel, so scrolling or resizing closes it instead of leaving it behind.
+        window.addEventListener('scroll', close, { capture: true, once: true });
+        window.addEventListener('resize', close, { once: true });
+      } else {
+        window.removeEventListener('scroll', close, { capture: true });
+        window.removeEventListener('resize', close);
+        // Esc or a click outside hides the focused item; put focus back on ⋯ rather than losing it.
+        if (document.activeElement === document.body || menu.contains(document.activeElement)) trigger.current?.focus();
+      }
+    };
+    menu.addEventListener('toggle', onToggle);
+    return () => { menu.removeEventListener('toggle', onToggle); window.removeEventListener('scroll', close, { capture: true }); window.removeEventListener('resize', close); };
+  }, []);
+  const buttons = actions.map(([label, text, run]) =>
+    <button key={text} type="button" aria-label={label} onClick={() => { if (panel.current?.matches(':popover-open')) panel.current.hidePopover(); run(); }}>{text}</button>);
+  if (inline) return <span className="site-actions-inline">{buttons}</span>;
+  return <>
+    <button ref={trigger} type="button" data-site-rename={site.id} className="site-actions-trigger" aria-label={`${site.name} 관리`} aria-expanded={open} aria-controls={panelId}
+      onClick={() => { const menu = panel.current; if (menu) { if (menu.matches(':popover-open')) menu.hidePopover(); else menu.showPopover(); } }}>
+      <MoreHorizontal className="w-4 h-4" aria-hidden="true" />
+    </button>
+    {/* Right after its button so Tab moves from ⋯ into the open panel. */}
+    <div ref={panel} id={panelId} popover="auto" className="site-actions-menu">{buttons}</div>
+  </>;
+}
