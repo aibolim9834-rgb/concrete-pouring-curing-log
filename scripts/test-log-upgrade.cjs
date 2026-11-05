@@ -57,7 +57,7 @@ function uiHarness(file, name, props, extra = {}) {
   const react={useState(initial){const i=cursor++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return [states[i],v=>{states[i]=typeof v==='function'?v(states[i]):v;}];},useEffect(fn){effects.push(fn);},useCallback(fn){return fn;},useRef(value){return refs[refCursor++] ||= {current:value};}};
   const jsx=(type,props)=>({type,props});
   const events=new Map();
-  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./ConfirmDialog':{askConfirm:async()=>true},'./WateringSelect':{WateringSelect:'WateringSelect'},'./MobileLogSheet':{MobileLogSheet:'MobileLogSheet'},'./ShortDateInput':{ShortDateInput:'ShortDateInput'},'./LogPhotos':{LogPhotos:'LogPhotos'},'./DailyReportDialog':{DailyReportDialog:'DailyReportDialog'},'@/lib/site-photos-cloud':{listPhotos:async()=>[]},'@/lib/progress-structure':load('lib/progress-structure.ts'),'@/lib/site-archive':load('lib/site-archive.ts'),'@/lib/site-code':load('lib/site-code.ts'),'@/lib/date-only':load('lib/date-only.ts'),'@/lib/pouring-progress':load('lib/pouring-progress.ts'),'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name}),...extra},{Node:TestNode,requestAnimationFrame:fn=>fn(),document:{querySelector:()=>null,addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
+  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./ConfirmDialog':{askConfirm:async()=>true},'./WateringSelect':{WateringSelect:'WateringSelect'},'./MobileLogSheet':{MobileLogSheet:'MobileLogSheet'},'./ShortDateInput':{ShortDateInput:'ShortDateInput'},'./LogPhotos':{LogPhotos:'LogPhotos'},'./DailyReportDialog':{DailyReportDialog:'DailyReportDialog'},'./SiteAddressFields':{SiteAddressFields:'SiteAddressFields'},'@/lib/kma-area':load('lib/kma-area.ts'),'@/lib/site-photos-cloud':{listPhotos:async()=>[]},'@/lib/progress-structure':load('lib/progress-structure.ts'),'@/lib/site-archive':load('lib/site-archive.ts'),'@/lib/site-code':load('lib/site-code.ts'),'@/lib/date-only':load('lib/date-only.ts'),'@/lib/pouring-progress':load('lib/pouring-progress.ts'),'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name}),...extra},{Node:TestNode,requestAnimationFrame:fn=>fn(),document:{querySelector:()=>null,addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
   return {states,events,get effects(){return effects;},render(){cursor=0;refCursor=0;effects=[];return exports[name](props);}};
 }
 (async()=>{
@@ -315,10 +315,51 @@ function uiHarness(file, name, props, extra = {}) {
     await find(h.render(),'RecordTable').props.onDeleteLog(log.id);
     same(JSON.parse(storage.getItem('cp_logs')).map(l=>l.id),[log.id]);assert.equal(marked.length,0);assert.match(h.states.find(v=>typeof v==='string'&&v.includes('사진 정보를 확인하지 못해')),/삭제하지 않았습니다/);
   });
-  await check('temperature card shows the range without hot or cold alerts',()=>{
+  await check('the record card shows the logged temperature range without hot or cold alerts',()=>{
     const show=(min,max)=>JSON.stringify(uiHarness('components/SummaryCards.tsx','SummaryCards',{logs:[{...log,min_temp:min,max_temp:max}],site}).render());
-    const both=show(-1,36);assert(both.includes('-1°C'));assert(both.includes('36°C'));assert(both.includes('온도 범위'));
+    const both=show(-1,36);assert(both.includes('-1°C'));assert(both.includes('36°C'));assert(both.includes('기록 온도'));assert(both.includes('기록 -1~36°'));
     for(const text of [show(21,30),show(21,30.1),show(0,20),both])assert(!text.includes('확인 필요'));
+  });
+  await check('the weather card asks for an address, shows today and keeps the last values when a refresh fails',()=>{
+    const text=(state,weatherArea)=>{const h=uiHarness('components/SummaryCards.tsx','SummaryCards',{logs:[log],site:{...site,weather_area:weatherArea}});if(state)h.states[0]=state;return JSON.stringify(h.render());};
+    const banpo={code:'1165056000',label:'서울특별시 서초구 반포동',nx:60,ny:125};
+    const none=text(null,null);assert(none.includes('현장 관리에서 현장 주소를 넣으면 표시됩니다.'));assert(none.includes('주소 미등록'));
+    const unpicked=JSON.stringify(uiHarness('components/SummaryCards.tsx','SummaryCards',{logs:[log],site:{...site,address:'OO산업단지',weather_area:null}}).render());assert(unpicked.includes('주소 버튼에서 기상 위치를 고르면 표시됩니다.'));assert(unpicked.includes('위치 선택 필요'));
+    assert(text(null,banpo).includes('오늘 날씨를 불러오는 중입니다.'));
+    const at=new Date(2026,10,5,14,30).getTime(),weather={date:'2026-11-05',temp:12.3,observedAt:'14:00',min:3,max:13};
+    const shown=text({grid:'60,125',weather,at,error:''},banpo);
+    for(const part of ['오늘 날씨 · 서초구 반포동','12.3°','3°','13°','(14:00 관측)','오늘 최저 / 최고 (예보)','14:30 갱신 · 30분마다 새로 불러옵니다.','현재 12.3°','3~13°','오늘 예보'])assert(shown.includes(part),part);
+    const stale=text({grid:'60,125',weather,at,error:'기상청 하루 호출 한도를 넘었습니다.'},banpo);assert(stale.includes('14:30 값 · 새로 불러오지 못해 이전 값을 보여 줍니다. 기상청 하루 호출 한도를 넘었습니다.'));assert(stale.includes('12.3°'));
+    assert(text({grid:'60,125',weather:null,at:0,error:'기상청 연결 키가 아직 설정되지 않았습니다.'},banpo).includes('기상청 연결 키가 아직 설정되지 않았습니다.'));
+    // Values of another site's grid are not shown while the new site loads.
+    assert(text({grid:'89,90',weather,at,error:''},banpo).includes('오늘 날씨를 불러오는 중입니다.'));
+  });
+  await check('site address and 기상 위치 save with the site in browser storage and DB, and an empty address clears both',async()=>{
+    const banpo={code:'1165056000',label:'서울특별시 서초구 반포동',nx:60,ny:125};
+    storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site]));storage.setItem('cp_logs',JSON.stringify([log]));
+    const h=appHarness(null,true);
+    await find(h.render(),'SiteModal').props.onSaveSiteAddress(site.id,'  서울 서초구 반포동 1-1 ',banpo);
+    same(JSON.parse(storage.getItem('cp_sites')),[{...site,address:'서울 서초구 반포동 1-1',weather_area:banpo}]);same(h.states[0],[{...site,address:'서울 서초구 반포동 1-1',weather_area:banpo}]);
+    await find(h.render(),'SiteModal').props.onSaveSiteAddress(site.id,'  ',banpo);
+    same(JSON.parse(storage.getItem('cp_sites')),[{...site,address:'',weather_area:null}]);
+    await find(h.render(),'SiteModal').props.onAddSite('주소 있는 현장','대구 수성구 범어동',null);
+    const added=JSON.parse(storage.getItem('cp_sites')).find(s=>s.name==='주소 있는 현장');assert.equal(added.address,'대구 수성구 범어동');assert.equal(added.weather_area,null);
+    same(JSON.parse(storage.getItem('cp_logs')),[log]);
+    const failed=appHarness({data:null,error:{message:'column does not exist'}});
+    await assert.rejects(find(failed.render(),'SiteModal').props.onSaveSiteAddress(site.id,'서울 서초구',banpo),/현장 주소 저장에 실패/);same(failed.states[0],[site]);
+    const saved=appHarness({data:{id:site.id},error:null});await find(saved.render(),'SiteModal').props.onSaveSiteAddress(site.id,'서울 서초구 반포동',banpo);same(saved.states[0],[{...site,address:'서울 서초구 반포동',weather_area:banpo}]);
+  });
+  await check('a new site that sorts before the others does not block the next browser-storage save',async()=>{
+    storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site]));storage.setItem('cp_logs',JSON.stringify([log]));
+    const h=appHarness(null,true);
+    await find(h.render(),'SiteModal').props.onAddSite('가나다 현장');
+    assert.equal(h.states[0][0].name,'가나다 현장');assert.equal(JSON.parse(storage.getItem('cp_sites'))[0].name,'검증 현장');
+    await find(h.render(),'SiteModal').props.onSaveSiteAddress(site.id,'대구 수성구',null);
+    await find(h.render(),'SiteModal').props.onRenameSite(site.id,'검증 현장 2');
+    same(JSON.parse(storage.getItem('cp_sites')).find(s=>s.id===site.id),{...site,name:'검증 현장 2',address:'대구 수성구',weather_area:null});
+    // A real change made elsewhere is still caught.
+    storage.setItem('cp_sites',JSON.stringify([...JSON.parse(storage.getItem('cp_sites')),{id:'other',name:'다른 화면 현장'}]));
+    await assert.rejects(find(h.render(),'SiteModal').props.onSaveSiteAddress(site.id,'서울',null),/다른 화면에서 현장 또는 일지를 변경/);
   });
   await check('custom member names cannot collide with Object prototype in summary counts',()=>{
     const tree=uiHarness('components/SummaryCards.tsx','SummaryCards',{logs:[{...log,id:'a',member_type:'constructor'},{...log,id:'b',member_type:'constructor'}],site}).render();

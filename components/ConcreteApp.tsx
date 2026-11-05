@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Site, PouringLog, PouringLogInput } from '@/lib/types';
+import type { WeatherArea } from '@/lib/kma-area';
 import { supabase, checkSupabaseHealth } from '@/lib/supabase';
 import { dbError } from '@/lib/db-error';
 import { RequestTimeoutError, timed, WRITE_TIMEOUT_MESSAGE } from '@/lib/request-timeout';
@@ -205,7 +206,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
   };
 
   // Site changes finish persistence before committing React state.
-  const handleAddSite = async (name: string) => {
+  const handleAddSite = async (name: string, address = '', weather_area: WeatherArea | null = null) => {
     assertWritable();
     if (siteLock.current) throw new Error('현장 처리 중입니다. 잠시 후 다시 시도해주세요.');
     siteLock.current = true;
@@ -213,9 +214,9 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       assertNewSiteName(sites, name);
       const code = nextSiteCode([...sites, ...listSiteArchives(localStorage).map(archive => archive.site)]);
       if (!code) throw new Error('현장 코드 A0001~A9999를 모두 사용했습니다.');
-      const newSite: Site = { id: `site-${progressId()}`, name: name.trim(), code };
+      const newSite: Site = { id: `site-${progressId()}`, name: name.trim(), code, ...(address ? { address, weather_area } : {}) };
       if (isSupabase && supabase) {
-        const { data: inserted, error } = await insertOnce(`site:${newSite.name}:${code}`, 'sites', { name: newSite.name, code });
+        const { data: inserted, error } = await insertOnce(`site:${newSite.name}:${code}`, 'sites', { name: newSite.name, code, ...(address ? { address, weather_area } : {}) });
         if (error || !inserted) throw dbError('현장 등록에 실패했습니다. 입력 내용은 유지됩니다. 연결과 권한을 확인해주세요.', error);
         newSite.id = inserted.id;
       } else {
@@ -243,6 +244,26 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
         writeLocalData(localStorage, { sites, logs }, { sites: renamed, logs });
       }
       setSites(renamed);
+    } finally { siteLock.current = false; }
+  };
+
+  // 현장 주소 and the 기상 위치 found from it (오늘 날씨 card). An empty address clears both.
+  const handleSaveSiteAddress = async (id: string, address: string, weather_area: WeatherArea | null) => {
+    assertWritable();
+    if (siteLock.current) throw new Error('현장 처리 중입니다. 잠시 후 다시 시도해주세요.');
+    const target = sites.find(site => site.id === id);
+    if (!target) throw new Error('주소를 넣을 현장을 다시 선택해주세요.');
+    const change = { address: address.trim(), weather_area: address.trim() ? weather_area : null };
+    siteLock.current = true;
+    try {
+      const updated = sites.map(site => site.id === id ? { ...site, ...change } : site);
+      if (isSupabase && supabase) {
+        const { data, error } = await timed(signal => supabase.from('sites').update(change).eq('id', id).abortSignal(signal).select('id').maybeSingle(), WRITE_TIMEOUT_MESSAGE);
+        if (error || !data) throw dbError('현장 주소 저장에 실패했습니다. 입력 내용은 유지됩니다. 연결과 권한을 확인해주세요.', error);
+      } else {
+        writeLocalData(localStorage, { sites, logs }, { sites: updated, logs });
+      }
+      setSites(updated);
     } finally { siteLock.current = false; }
   };
 
@@ -420,7 +441,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       <main className={`flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pb-6 ${dataIssue || operationError || logBusy || notice || (!loading && !isSupabase) ? 'pt-3' : 'pt-0'}`}>
         
         {/* Summary Counter & Alert Cards */}
-        {initialView === 'logs' && <SummaryCards logs={viewedLogs} />}
+        {initialView === 'logs' && <SummaryCards logs={viewedLogs} site={currentSite} />}
 
         {/* Concrete Pouring & Curing Log Table */}
         {initialView === 'photos' ? loading ? <p role="status">현장을 불러오는 중입니다.</p> : currentSite ? <SitePhotos key={currentSite.id} site={currentSite} blocked={!ready || !!dataIssue || readOnly} onWorkPending={value=>{photoWorkPending.current=value;}} /> : <div className="progress-empty">현장을 먼저 선택하거나 추가해주세요.</div> : initialView === 'progress' ? loading ? <p className="ui-note" role="status">현장을 불러오는 중입니다.</p> : currentSite ? <PouringProgress key={currentSite.id} site={currentSite} readOnly={readOnly} onWorkPending={value=>{progressWorkPending.current=value;}} /> : <div className="progress-empty"><h2 className="ui-page-title">현장을 먼저 추가해주세요</h2><button className="ui-button ui-primary" onClick={openSiteManager}>현장 추가</button></div> : loading ? <p role="status">일지를 불러오는 중입니다.</p> : <RecordTable
@@ -454,6 +475,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
         onSelectSite={id => { if (!siteLock.current && canLeavePhotos()) { setSelectedSiteId(id); setFilters(emptyLogFilters()); setNotice(''); } }}
         onAddSite={handleAddSite}
         onRenameSite={handleRenameSite}
+        onSaveSiteAddress={handleSaveSiteAddress}
         onDeleteSite={handleDeleteSite}
         onSetSiteStatus={handleSetSiteStatus}
         archives={archives}

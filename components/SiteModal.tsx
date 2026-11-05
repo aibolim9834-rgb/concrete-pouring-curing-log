@@ -1,7 +1,7 @@
 'use client';
 
 import { Modal } from './Modal';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Site } from '@/lib/types';
 import { assertNewSiteName, isClosedSite, SiteArchive } from '@/lib/site-archive';
 import { localToday } from '@/lib/log-data';
@@ -10,6 +10,8 @@ import { ShortDateInput } from './ShortDateInput';
 import { downloadFile } from '@/lib/pouring-progress';
 import { nextSiteCode } from '@/lib/site-code';
 import { X, Plus, Building2, Trash2, CheckCircle } from 'lucide-react';
+import { KmaRegion, resolveArea, shortAreaLabel, WeatherArea } from '@/lib/kma-area';
+import { SiteAddressFields } from './SiteAddressFields';
 
 interface SiteModalProps {
   isOpen: boolean;
@@ -17,8 +19,9 @@ interface SiteModalProps {
   sites: Site[];
   selectedSiteId: string;
   onSelectSite: (id: string) => void;
-  onAddSite: (name: string) => Promise<void>;
+  onAddSite: (name: string, address: string, area: WeatherArea | null) => Promise<void>;
   onRenameSite: (id: string, name: string) => Promise<void>;
+  onSaveSiteAddress: (id: string, address: string, area: WeatherArea | null) => Promise<void>;
   onDeleteSite: (id: string) => Promise<void>;
   onSetSiteStatus: (id: string, closedAt: string | null) => Promise<void>;
   archives: SiteArchive[];
@@ -35,6 +38,7 @@ export const SiteModal: React.FC<SiteModalProps> = ({
   onSelectSite,
   onAddSite,
   onRenameSite,
+  onSaveSiteAddress,
   onDeleteSite,
   onSetSiteStatus,
   archives, archiveError, canRestore, onRestoreSite,
@@ -49,8 +53,28 @@ export const SiteModal: React.FC<SiteModalProps> = ({
   const [closing, setClosing] = useState<{ id: string; date: string } | null>(null);
   const inTab = (site: Site) => tab === 'all' || isClosedSite(site) === (tab === 'closed');
   const lock = useRef(false);
+  const [newAddress, setNewAddress] = useState(''), [newPicked, setNewPicked] = useState<WeatherArea | null>(null);
+  const [addressing, setAddressing] = useState<{ id: string; address: string; picked: WeatherArea | null } | null>(null);
+  // The official region table (about 250 KB) loads only when this window opens.
+  const [regions, setRegions] = useState<KmaRegion[] | null>(null), [regionError, setRegionError] = useState('');
+  useEffect(() => {
+    if (!isOpen || regions) return;
+    let alive = true;
+    import('@/lib/kma-regions.json')
+      .then(m => { if (alive) { setRegions(m.default.rows as KmaRegion[]); setRegionError(''); } })
+      .catch(() => { if (alive) setRegionError('기상 위치 목록을 불러오지 못했습니다. 주소만 저장되고, 위치는 나중에 다시 찾을 수 있습니다.'); });
+    return () => { alive = false; };
+  }, [isOpen, regions]);
 
   if (!isOpen) return null;
+
+  // The place saved with an address. Waiting for the table instead of saving without a place the address would have found.
+  const areaFor = (address: string, picked: WeatherArea | null) => {
+    if (!address.trim()) return null;
+    if (regionError) return picked;
+    if (!regions) throw new Error('기상 위치 목록을 불러오는 중입니다. 잠시 후 다시 눌러 주세요.');
+    return resolveArea(address, picked, regions);
+  };
 
   const run = async (action: () => Promise<void>) => {
     if (lock.current) return;
@@ -77,8 +101,8 @@ export const SiteModal: React.FC<SiteModalProps> = ({
     if (!newSiteName.trim()) return;
     void run(async () => {
       assertNewSiteName(sites, newSiteName);
-      await onAddSite(newSiteName.trim());
-      setNewSiteName('');
+      await onAddSite(newSiteName.trim(), newAddress.trim(), areaFor(newAddress, newPicked));
+      setNewSiteName(''); setNewAddress(''); setNewPicked(null);
     });
   };
 
@@ -136,6 +160,8 @@ export const SiteModal: React.FC<SiteModalProps> = ({
               </div>
             </div>
             <p id="site-code-note" className="ui-note">{newSiteCode ? '현장 코드는 A0001부터 순서대로 자동 부여됩니다.' : '현장 코드 A0001~A9999를 모두 사용했습니다.'}</p>
+            <SiteAddressFields id="new-site-address" address={newAddress} picked={newPicked} regions={regions} regionError={regionError}
+              onAddressChange={value => { setNewAddress(value); setNewPicked(null); }} onPick={setNewPicked} />
             <button
               type="submit"
               disabled={!newSiteCode}
@@ -150,7 +176,7 @@ export const SiteModal: React.FC<SiteModalProps> = ({
             <div className="site-status-tabs" role="tablist" aria-label="현장 상태">
               {([['active', '진행'], ['closed', '종료'], ['all', '전체']] as const).map(([key, label]) => {
                 const count = key === 'all' ? sites.length : sites.filter(site => isClosedSite(site) === (key === 'closed')).length;
-                return <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => { setTab(key); setClosing(null); setError(''); }}>{label} <small>{count}</small></button>;
+                return <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => { setTab(key); setClosing(null); setAddressing(null); setError(''); }}>{label} <small>{count}</small></button>;
               })}
             </div>
             <div className="space-y-1.5 mt-2" role="tabpanel">
@@ -164,6 +190,19 @@ export const SiteModal: React.FC<SiteModalProps> = ({
                     <button type="submit" className="ui-button ui-danger">종료 처리</button>
                     <button type="button" className="ui-button" onClick={() => setClosing(null)}>취소</button>
                     <p className="ui-note">일지·타설현황·사진은 그대로 남고, 위쪽 현장 선택에서만 빠집니다. 종료 탭에서 다시 볼 수 있습니다.</p>
+                  </form>
+                );
+                if (addressing?.id === site.id) return (
+                  // Esc cancels only the address change, not the whole dialog.
+                  <form key={site.id} className="site-address-row" onSubmit={e => { e.preventDefault(); void run(async () => { await onSaveSiteAddress(site.id, addressing.address.trim(), areaFor(addressing.address, addressing.picked)); setAddressing(null); }); }}
+                    onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setAddressing(null); } }}>
+                    <b className="truncate">{site.name}</b>
+                    <SiteAddressFields id={`site-address-${site.id}`} autoFocus address={addressing.address} picked={addressing.picked} regions={regions} regionError={regionError}
+                      onAddressChange={address => setAddressing({ id: site.id, address, picked: null })} onPick={picked => setAddressing({ ...addressing, picked })} />
+                    <div className="progress-actions">
+                      <button type="submit" className="ui-button ui-primary">저장</button>
+                      <button type="button" className="ui-button" onClick={() => setAddressing(null)}>취소</button>
+                    </div>
                   </form>
                 );
                 if (renaming?.id === site.id) return (
@@ -188,7 +227,7 @@ export const SiteModal: React.FC<SiteModalProps> = ({
                 return (
                   <div
                     key={site.id}
-                    className={`site-row flex items-center justify-between p-2.5 rounded-lg border text-xs transition ${closed ? 'is-closed' : ''} ${
+                    className={`site-row flex flex-wrap items-center justify-between gap-y-1 p-2.5 rounded-lg border text-xs transition ${closed ? 'is-closed' : ''} ${
                       isSelected
                         ? 'bg-amber-950/40 border-amber-800/80 text-amber-300 font-semibold'
                         : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800'
@@ -219,12 +258,13 @@ export const SiteModal: React.FC<SiteModalProps> = ({
                       </> : <>
                         <button
                           data-site-rename={site.id}
-                          onClick={() => { setError(''); setClosing(null); setRenaming({ id: site.id, name: site.name }); }}
+                          onClick={() => { setError(''); setClosing(null); setAddressing(null); setRenaming({ id: site.id, name: site.name }); }}
                           aria-label={`${site.name} 현장명 수정`}
                           className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-[11px]"
                         >
                           수정
                         </button>
+                        <button onClick={() => { setError(''); setRenaming(null); setClosing(null); setAddressing({ id: site.id, address: site.address ?? '', picked: site.weather_area ?? null }); }} aria-label={`${site.name} 주소 ${site.address ? '수정' : '입력'}`} className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-[11px]">주소</button>
                         {!isSelected && (
                           <button
                             onClick={() => {
@@ -236,9 +276,15 @@ export const SiteModal: React.FC<SiteModalProps> = ({
                             선택
                           </button>
                         )}
-                        <button onClick={() => { setError(''); setRenaming(null); setClosing({ id: site.id, date: localToday() }); }} aria-label={`${site.name} 종료 처리`} className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-[11px]">종료 처리</button>
+                        <button onClick={() => { setError(''); setRenaming(null); setAddressing(null); setClosing({ id: site.id, date: localToday() }); }} aria-label={`${site.name} 종료 처리`} className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-[11px]">종료 처리</button>
                       </>}
                     </div>
+                    <p className="site-row-address">
+                      {site.address && <span className="truncate">{site.address}</span>}
+                      <span className={`site-area-chip ${site.weather_area ? 'is-ok' : site.address ? 'is-need' : ''}`}>
+                        {site.weather_area ? `기상 기준: ${shortAreaLabel(site.weather_area)}` : site.address ? '위치 선택 필요 · 주소 버튼에서 고르기' : '주소 없음 · 오늘 날씨 표시 안 됨'}
+                      </span>
+                    </p>
                   </div>
                 );
               })}

@@ -583,6 +583,25 @@ body {
 .concrete-app .site-closed-band .ui-button { margin-inline-start: auto; }
 @media print { .concrete-app .site-closed-band { display: none; } }
 
+/* 현장 주소 and the 기상 기준 위치 found from it (현장 관리), and the 오늘 날씨 card. */
+.concrete-app .site-address-fields { display: grid; gap: 6px; }
+.concrete-app .site-address-fields label { font-size: 12px; font-weight: 700; color: var(--b-ink, #e2e8f0); }
+.concrete-app .site-address-fields label small { margin-inline-start: 4px; font-weight: 400; color: var(--b-muted, #94a3b8); }
+.concrete-app .site-address-fields input, .concrete-app .site-area select { inline-size: 100%; min-inline-size: 0; border: 1px solid var(--b-control, #475569); border-radius: 8px; padding: 7px 10px; background: var(--b-surface, #1e293b); color: var(--b-ink, #e2e8f0); font: inherit; font-size: 12px; }
+.concrete-app .site-area { display: grid; gap: 6px; margin: 0; border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.5; color: var(--b-ink, #e2e8f0); }
+.concrete-app .site-area.is-ok { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; background: var(--b-selected, #14532d); }
+.concrete-app .site-area.is-need { background: var(--b-warning-soft, #422006); }
+.concrete-app .site-area.is-fail { background: var(--b-danger-soft, #450a0a); }
+.concrete-app .site-area-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.concrete-app .site-area-pick select { flex: 1 1 8rem; inline-size: auto; }
+.concrete-app .site-address-row { display: grid; gap: 8px; padding: 10px; border: 1px dashed var(--b-action, #f59e0b); border-radius: 8px; font-size: 12px; }
+.concrete-app .site-row-address { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; flex-basis: 100%; min-inline-size: 0; margin: 0; font-size: 11px; font-weight: 400; color: var(--b-muted, #94a3b8); }
+.concrete-app .site-area-chip { flex: none; border-radius: 999px; padding: 0 8px; line-height: 18px; background: var(--b-head, #334155); color: var(--b-muted, #94a3b8); font-weight: 700; }
+.concrete-app .site-area-chip.is-ok { background: var(--b-selected, #14532d); box-shadow: inset 0 0 0 1px var(--b-action, #22c55e); color: var(--b-action, #22c55e); }
+.concrete-app .site-area-chip.is-need { background: var(--b-warning-soft, #422006); color: var(--b-warning, #f59e0b); }
+.concrete-app .today-weather-now { font-size: 20px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.concrete-app .today-weather-card .today-weather-stale { color: var(--b-warning, #f59e0b); }
+
 /* 동·층 관리, compact on PC: one line per floor (타설일 on the right), smaller buttons and spacing so more floors fit.
    Phones keep the larger touch sizes. */
 @media (min-width: 761px) {

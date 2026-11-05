@@ -19,6 +19,9 @@ export function validateSites(value: unknown): asserts value is Site[] {
     if (!s || typeof s.id !== 'string' || !s.id || ids.has(s.id) || typeof s.name !== 'string' || !s.name.trim() || ['code', 'address', 'created_at'].some(k => s[k] != null && typeof s[k] !== 'string')) throw new Error('현장 정보가 올바르지 않습니다.');
     if (s.status != null && s.status !== 'active' && s.status !== 'closed' || (s.status === 'closed') !== (typeof s.closed_at === 'string' && validDate(s.closed_at)) || (s.status !== 'closed' && s.closed_at != null)) throw new Error('현장 진행·종료 상태가 올바르지 않습니다.');
     validateReportOptions(s.report_options);
+    const area = s.weather_area;
+    if (area != null && (typeof area !== 'object' || typeof area.code !== 'string' || typeof area.label !== 'string' || !area.label.trim()
+      || ![area.nx, area.ny].every(v => Number.isInteger(v) && v > 0))) throw new Error('현장의 기상 위치 정보가 올바르지 않습니다.');
     ids.add(s.id);
   }
 }
@@ -48,9 +51,11 @@ export function readLocalData(storage: Storage) {
   return { sites, logs };
 }
 // Synchronous compare/write/verify, with rollback. No render-time auto-save.
+// The screen keeps sites in name order while storage keeps them in the order they were written, so sites are compared by id order.
+const byId = (sites: Site[]) => [...sites].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 export function writeLocalData(storage: Storage, before: { sites: Site[]; logs: PouringLog[] }, after: { sites: Site[]; logs: PouringLog[] }) {
   const current = readLocalData(storage);
-  if (JSON.stringify(current) !== JSON.stringify(before)) throw new Error('다른 화면에서 현장 또는 일지를 변경했습니다. 새로고침 후 다시 시도해주세요.');
+  if (JSON.stringify(byId(current.sites)) !== JSON.stringify(byId(before.sites)) || JSON.stringify(current.logs) !== JSON.stringify(before.logs)) throw new Error('다른 화면에서 현장 또는 일지를 변경했습니다. 새로고침 후 다시 시도해주세요.');
   validateSites(after.sites); validateLogs(after.logs);
   writeStorage(storage, [['cp_sites', JSON.stringify(after.sites)], ['cp_logs', JSON.stringify(after.logs)]]);
 }

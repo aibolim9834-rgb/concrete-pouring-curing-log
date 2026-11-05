@@ -1,10 +1,12 @@
 import type { ReportOptions } from './daily-report';
+import type { WeatherArea } from './kma-area';
 
 export interface Site {
   id: string;
   name: string;
   code?: string;
   address?: string;
+  weather_area?: WeatherArea | null; // 현장 주소로 찾은 기상청 단기예보 위치 (오늘 날씨 카드)
   created_at?: string;
   // 진행 (active, the default) or 종료 (closed). A closed site keeps all its records and is shown read-only.
   status?: 'active' | 'closed';
