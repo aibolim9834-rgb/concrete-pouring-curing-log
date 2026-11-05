@@ -2,16 +2,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { PouringLog, Site } from '@/lib/types';
 import { volumeText } from '@/lib/log-data';
-import { latestDeletedBatch, makePhotoThumbnail, markPhotosDeleted, photoBlob, photoPurgeLabel, savePhoto, SitePhoto } from '@/lib/site-photos-cloud';
+import { latestDeletedBatch, makePhotoThumbnail, markPhotosDeleted, photoPurgeLabel, savePhoto, SitePhoto } from '@/lib/site-photos-cloud';
 import { cloudStorageEnabled } from '@/lib/cloud-storage';
 import { askConfirm } from './ConfirmDialog';
-import { PhotoImage } from './SitePhotos';
-
-function saveBlob(blob: Blob, name: string) {
-  const url = URL.createObjectURL(blob), a = document.createElement('a');
-  a.href = url; a.download = name; a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
+import { downloadPhotoFiles, PhotoImage } from './SitePhotos';
 
 // 타설 사진 for one 타설일지 row. photos are this row's photos, deleted ones included so the last deletion can be undone.
 export function LogPhotos({ site, log, photos, loadError, readOnly, onChanged, onClose }: {
@@ -60,16 +54,10 @@ export function LogPhotos({ site, log, photos, loadError, readOnly, onChanged, o
       if (alive.current) setMessage(`${saved}장 저장 완료${errors.length ? ' · ' + errors.join(' / ') : ''}`);
     });
   }
-  // Each photo is its own download; a short gap keeps browsers from dropping the later ones.
   function download(targets: SitePhoto[]) {
     if (!targets.length) return;
     void run(async () => {
-      const failed: string[] = [];
-      for (let i = 0; i < targets.length; i++) {
-        setMessage(`${i + 1} / ${targets.length}장 내려받는 중`);
-        try { saveBlob(await photoBlob(targets[i], true), targets[i].name); } catch { failed.push(targets[i].name); }
-        if (i < targets.length - 1) await new Promise(resolve => setTimeout(resolve, 400));
-      }
+      const failed = await downloadPhotoFiles(targets, i => setMessage(`${i + 1} / ${targets.length}장 내려받는 중`));
       if (alive.current) setMessage(failed.length ? `${targets.length - failed.length}장 받음 · 받지 못한 사진: ${failed.join(', ')}` : `${targets.length}장을 내려받았습니다.`);
     });
   }
@@ -105,7 +93,7 @@ export function LogPhotos({ site, log, photos, loadError, readOnly, onChanged, o
         <button type="button" className="ui-button" disabled={viewIndex === 0} onClick={() => setViewId(live[viewIndex - 1].id)}>이전</button>
         <button type="button" className="ui-button" disabled={viewIndex === live.length - 1} onClick={() => setViewId(live[viewIndex + 1].id)}>다음</button>
         <button type="button" className="ui-button" onClick={() => setZoom(v => !v)}>{zoom ? '맞춤 보기' : '확대'}</button>
-        <button type="button" className="ui-button" disabled={busy} onClick={() => download([view])}>원본 받기</button>
+        <button type="button" className="ui-button" disabled={busy} onClick={() => download([view])}>내려받기</button>
       </div></div>
     </> : <div className="log-photo-body">
       {!readOnly && <div className={`log-photo-add ${over ? 'is-over' : ''}`} onDragOver={e => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={e => { e.preventDefault(); setOver(false); attach(Array.from(e.dataTransfer.files)); }}>
@@ -124,16 +112,16 @@ export function LogPhotos({ site, log, photos, loadError, readOnly, onChanged, o
       </div>}
       {live.length ? <>
         <div className="log-photo-tools">
-          <label className="photo-select"><input type="checkbox" checked={picked.length === live.length} disabled={busy} onChange={e => setSelected(e.target.checked ? live.map(p => p.id) : [])} />전체 선택</label>
+          <label className="photo-select"><input type="checkbox" checked={picked.length === live.length} disabled={busy} onChange={e => setSelected(e.target.checked ? live.map(p => p.id) : [])} />모두 선택</label>
           <span className="ui-note">{picked.length}장 선택</span>
-          <button type="button" className="ui-button ui-primary" disabled={busy || !picked.length} onClick={() => download(picked)}>선택한 사진 받기 ({picked.length}장)</button>
+          <button type="button" className="ui-button ui-primary" disabled={busy || !picked.length} onClick={() => download(picked)}>내려받기</button>
           <span className="ui-note">사진마다 파일 하나씩 내려받습니다. 처음 한 번은 브라우저가 여러 파일 다운로드를 허용할지 물을 수 있습니다.</span>
         </div>
         <div className="photo-grid">{live.map(p => <article className={`photo-card ${selected.includes(p.id) ? 'is-selected' : ''}`} key={p.id}>
           <label className="photo-select"><input type="checkbox" aria-label={`${p.name} 선택`} checked={selected.includes(p.id)} disabled={busy} onChange={e => setSelected(ids => e.target.checked ? [...ids, p.id] : ids.filter(id => id !== p.id))} />선택</label>
           <button type="button" className="photo-thumb" aria-label={`${p.name} 크게 보기`} onClick={() => { setZoom(false); setViewId(p.id); }}><PhotoImage photo={p} /></button>
           <div className="photo-info"><p>{p.name}</p><div>
-            <button type="button" className="ui-button" disabled={busy} onClick={() => download([p])}>원본 받기</button>
+            <button type="button" className="ui-button" disabled={busy} onClick={() => download([p])}>내려받기</button>
             {!readOnly && <button type="button" className="ui-button photo-delete" disabled={busy} onClick={() => void remove([p], true)}>삭제</button>}
           </div></div>
         </article>)}</div>

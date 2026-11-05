@@ -35,6 +35,7 @@
 .photo-location-editor{display:grid;gap:8px;margin:10px 0}.photo-location-editor>div{display:flex;gap:8px}.photo-info .photo-edit-location{margin-bottom:10px}.photo-location-editor p[role=alert]{color:var(--b-danger)}
 .photo-bulk-tools{display:flex;flex-wrap:wrap;align-items:end;gap:12px;padding:14px;margin-top:12px;background:var(--b-selected);border:1px solid var(--b-line);border-radius:6px}
 .photo-bulk-selection{display:flex;align-items:center;flex-wrap:wrap;gap:10px}.photo-bulk-tools p[role=alert]{width:100%;color:var(--b-danger)}
+.photo-bulk-tools .photo-bulk-hint{width:100%;font-size:12px;color:var(--b-muted)}
 .site-photos .photo-select{display:flex;align-items:center;gap:8px;padding:10px 12px;color:var(--b-ink);cursor:pointer}.site-photos .photo-select input{width:18px;height:18px;min-height:0;accent-color:var(--b-action)}
 .photo-card.is-selected{border-color:var(--b-action);box-shadow:0 0 0 1px var(--b-action)}
 

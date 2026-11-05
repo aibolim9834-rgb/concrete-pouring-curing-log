@@ -156,7 +156,7 @@ function uiHarness(file, name, props, extra = {}) {
     react.default=react;react.Fragment='Fragment';
     const jsx=(type,props)=>({type,props});
     const photo={id:'photo-a',siteId:site.id,date:'2026-10-26',building:'101동',floor:'5층',name:'original.png',createdAt:1};
-    const api=load('components/SitePhotos.tsx',{react,'@/lib/event-log':eventLogStub,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/date-only':load('lib/date-only.ts'),'@/lib/cloud-storage':{cloudStorageEnabled:()=>false},'./ConfirmDialog':{askConfirm:async()=>true},'@/lib/site-photos-cloud':{latestDeletedBatch:()=>[],updatePhotoLocation:()=>new Promise((yes,no)=>{resolveSave=yes;rejectSave=no;})}});
+    const api=load('components/SitePhotos.tsx',{react,'@/lib/event-log':eventLogStub,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/date-only':load('lib/date-only.ts'),'@/lib/floor':load('lib/floor.ts'),'@/lib/cloud-storage':{cloudStorageEnabled:()=>false},'./ConfirmDialog':{askConfirm:async()=>true},'@/lib/site-photos-cloud':{latestDeletedBatch:()=>[],updatePhotoLocation:()=>new Promise((yes,no)=>{resolveSave=yes;rejectSave=no;})}});
     function render(fn,props,target){bucket=target;cursor=0;refCursor=0;target.effects=[];return fn(props);}
     function editorNode(node){if(!node||typeof node!=='object')return null;if(Array.isArray(node)){for(const n of node){const result=editorNode(n);if(result)return result;}return null;}if(node.type?.name==='PhotoLocationEditor')return node;return editorNode(node.props?.children);}
     const parent={states:[[photo],true,'',false,'26.10.26','','','2026-10','','2026-10-26'],refs:[],effects:[]};
@@ -181,7 +181,7 @@ function uiHarness(file, name, props, extra = {}) {
     const react={useState(initial){const i=cursor++;if(!(i in bucket.states))bucket.states[i]=typeof initial==='function'?initial():initial;return [bucket.states[i],()=>{}];},useRef(value){return bucket.refs[refCursor++] ||= {current:value};},useEffect(){}};
     react.default=react;react.Fragment='Fragment';
     const jsx=(type,props)=>({type,props});
-    const api=load('components/SitePhotos.tsx',{react,'@/lib/event-log':eventLogStub,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/date-only':load('lib/date-only.ts'),'@/lib/cloud-storage':{cloudStorageEnabled:()=>false},'./ConfirmDialog':{askConfirm:async()=>true},'@/lib/site-photos-cloud':{latestDeletedBatch:()=>[]}});
+    const api=load('components/SitePhotos.tsx',{react,'@/lib/event-log':eventLogStub,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/date-only':load('lib/date-only.ts'),'@/lib/floor':load('lib/floor.ts'),'@/lib/cloud-storage':{cloudStorageEnabled:()=>false},'./ConfirmDialog':{askConfirm:async()=>true},'@/lib/site-photos-cloud':{latestDeletedBatch:()=>[]}});
     const photo={id:'photo-old',siteId:site.id,date:'2025-03-14',building:'101동',floor:'5F',name:'old.png',createdAt:1};
     bucket={states:[[photo],true],refs:[]};
     const page=JSON.stringify(api.SitePhotos({site,onWorkPending(){}}));
@@ -474,7 +474,8 @@ function uiHarness(file, name, props, extra = {}) {
     menus[1].props.actions[1][2]();assert(all(h.render(),n=>n.type==='form'&&String(n.props.className).includes('site-address-row')).length===1);
   });
   await check('log floors save as B2F and 21F while other floor text is kept',async()=>{
-    const {normalizeFloor}=load('lib/floor.ts');
+    const {normalizeFloor,normalizePhotoFloor}=load('lib/floor.ts');
+    for(const [input,expected] of [['35','35F'],[' 35 ','35F'],['6층','6F'],['3F','3F'],['3f','3F'],['b2','B2F'],['B2F','B2F'],['지하 1층','B1F'],['PH2','PH2'],['옥상','옥상'],['1~3층','1~3F'],['','']])assert.equal(normalizePhotoFloor(input),expected);
     for(const [input,expected] of [['지하 2층','B2F'],['지하2층','B2F'],['지하1F','B1F'],['B2층','B2F'],['21층','21F'],['21 층','21F'],['19층(옥상 파라펫)','19F(옥상 파라펫)'],['1~3층','1~3F'],['B1층~1F층','B1F~1F'],['3층, 5층','3F, 5F'],['PH2','PH2'],['옥상','옥상'],['B1F','B1F'],['15','15'],['','']])assert.equal(normalizeFloor(input),expected);
     const h=appHarness(null,true);storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site]));storage.setItem('cp_logs',JSON.stringify([log]));
     await find(h.render(),'RecordTable').props.onQuickAddLog({...data.newLog(site.id,'2'),date:'2026-08-02',building:'101동',floor:'지하 2층',member_type:'슬라브'});

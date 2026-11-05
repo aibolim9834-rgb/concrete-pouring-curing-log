@@ -1,4 +1,5 @@
 import * as local from './site-photos';
+import { normalizePhotoFloor } from './floor';
 import { supabase } from './supabase';
 import { blobHash, canonical, cloudStorageEnabled } from './cloud-storage';
 import { READ_TIMEOUT_MESSAGE, timed, WRITE_TIMEOUT_MESSAGE } from './request-timeout';
@@ -113,7 +114,7 @@ export async function markPhotosDeleted(photos:SitePhoto[],deleted:boolean){
 }
 export async function updatePhotoLocations(photos:SitePhoto[],building:string,floor:string){
  if(!cloudStorageEnabled())return local.updatePhotoLocations(photos,building,floor);
- building=building.trim().toUpperCase();floor=floor.trim();if(!building||!floor)throw Error('동·구역과 층을 모두 입력해주세요.');
+ building=building.trim().toUpperCase();floor=normalizePhotoFloor(floor);if(!building||!floor)throw Error('동·구역과 층을 모두 입력해주세요.');
  return changePhotos(photos,p=>{if(p.deletedAt)throw Error('삭제된 사진입니다.');return {...p,building,floor};});
 }
 export const updatePhotoLocation=(photo:SitePhoto,building:string,floor:string)=>updatePhotoLocations([photo],building,floor);

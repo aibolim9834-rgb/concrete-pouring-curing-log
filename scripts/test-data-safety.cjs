@@ -32,7 +32,7 @@ function cloud({cap=500,fail=false,duplicate=false}={}){
  function photosCloud(fail=false,usage={data:[{bytes:'108159008',files:'52'}],error:null},cloudOn=true){
   const source=records.map(r=>({id:r.id,metadata:{id:r.id,siteId:site.id,name:'original.png'}}));
   const supabase={rpc(name){assert.equal(name,'photo_storage_usage');const q={async abortSignal(){return usage;}};return q;},from(){const q={abortSignal(){return q;},select(){return q;},eq(){return q;},order(){return q;},async range(start){if(fail&&start>0)return {data:null,error:{message:'offline'}};return {data:source.slice(start,start+73),error:null};}};return q;}};
-  return load('lib/site-photos-cloud.ts',{'./site-photos':{listPhotos:async()=>[]},'./supabase':{supabase},'./cloud-storage':{cloudStorageEnabled:()=>cloudOn},'./request-timeout':requestTimeout});
+  return load('lib/site-photos-cloud.ts',{'./site-photos':{listPhotos:async()=>[]},'./supabase':{supabase},'./cloud-storage':{cloudStorageEnabled:()=>cloudOn},'./request-timeout':requestTimeout,'./floor':load('lib/floor.ts',{})});
  }
  await check('the photo storage total reads the shared bucket and is labelled against the 1GB plan limit',async()=>{
   const usage=await photosCloud().photoStorageUsage();assert.equal(usage.bytes,108159008);assert.equal(usage.files,52);
