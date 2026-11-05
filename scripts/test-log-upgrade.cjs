@@ -57,7 +57,7 @@ function uiHarness(file, name, props, extra = {}) {
   const react={useState(initial){const i=cursor++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return [states[i],v=>{states[i]=typeof v==='function'?v(states[i]):v;}];},useEffect(fn){effects.push(fn);},useCallback(fn){return fn;},useRef(value){return refs[refCursor++] ||= {current:value};}};
   const jsx=(type,props)=>({type,props});
   const events=new Map();
-  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./ConfirmDialog':{askConfirm:async()=>true},'./WateringSelect':{WateringSelect:'WateringSelect'},'./MobileLogSheet':{MobileLogSheet:'MobileLogSheet'},'./ShortDateInput':{ShortDateInput:'ShortDateInput'},'./LogPhotos':{LogPhotos:'LogPhotos'},'./DailyReportDialog':{DailyReportDialog:'DailyReportDialog'},'./SiteAddressFields':{SiteAddressFields:'SiteAddressFields'},'@/lib/kma-area':load('lib/kma-area.ts'),'@/lib/site-photos-cloud':{listPhotos:async()=>[]},'@/lib/progress-structure':load('lib/progress-structure.ts'),'@/lib/site-archive':load('lib/site-archive.ts'),'@/lib/site-code':load('lib/site-code.ts'),'@/lib/date-only':load('lib/date-only.ts'),'@/lib/pouring-progress':load('lib/pouring-progress.ts'),'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name}),...extra},{Node:TestNode,requestAnimationFrame:fn=>fn(),document:{querySelector:()=>null,addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
+  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./ConfirmDialog':{askConfirm:async()=>true},'./WateringSelect':{WateringSelect:'WateringSelect'},'./MobileLogSheet':{MobileLogSheet:'MobileLogSheet'},'./ShortDateInput':{ShortDateInput:'ShortDateInput'},'./LogPhotos':{LogPhotos:'LogPhotos'},'./DailyReportDialog':{DailyReportDialog:'DailyReportDialog'},'./SiteAddressFields':{SiteAddressFields:'SiteAddressFields'},'@/lib/smooth-wheel':{smoothWheel(){}},'@/lib/kma-area':load('lib/kma-area.ts'),'@/lib/site-photos-cloud':{listPhotos:async()=>[]},'@/lib/progress-structure':load('lib/progress-structure.ts'),'@/lib/site-archive':load('lib/site-archive.ts'),'@/lib/site-code':load('lib/site-code.ts'),'@/lib/date-only':load('lib/date-only.ts'),'@/lib/pouring-progress':load('lib/pouring-progress.ts'),'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name}),...extra},{Node:TestNode,requestAnimationFrame:fn=>fn(),document:{querySelector:()=>null,addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
   return {states,events,get effects(){return effects;},render(){cursor=0;refCursor=0;effects=[];return exports[name](props);}};
 }
 (async()=>{
@@ -511,6 +511,33 @@ function uiHarness(file, name, props, extra = {}) {
     h.render();h.states[0]={...h.states[0],overflow:true};
     all(h.render(),'button').find(b=>b.props.title==='102동').props.onClick();
     same(picked,['b2']);
+  });
+  await check('a mouse wheel notch glides when reduced motion is set, and touchpads, edges and normal settings are left alone',()=>{
+    const run=(reduce)=>{
+      let frames=[],now=0;
+      const box={scrollTop:0,scrollHeight:1000,clientHeight:400,listener:null,addEventListener(type,fn,opts){assert.equal(type,'wheel');assert.equal(opts.passive,false);this.listener=fn;},removeEventListener(){this.listener=null;}};
+      const {smoothWheel}=load('lib/smooth-wheel.ts',{},{window:{matchMedia:()=>({matches:reduce})},WheelEvent:{DOM_DELTA_PIXEL:0,DOM_DELTA_LINE:1,DOM_DELTA_PAGE:2},Element:class{},performance:{now:()=>now},requestAnimationFrame:fn=>{frames.push(fn);return frames.length;},cancelAnimationFrame(){},getComputedStyle:()=>({overflowY:'visible'})});
+      const cleanup=smoothWheel(box);
+      const wheel=(deltaY,extra={})=>{const e={deltaY,deltaX:0,deltaMode:0,ctrlKey:false,shiftKey:false,defaultPrevented:false,target:null,prevented:false,preventDefault(){this.prevented=true;},...extra};box.listener(e);return e.prevented;};
+      const flush=()=>{while(frames.length){const fn=frames.shift();now+=16;fn(now);}};
+      return {box,wheel,flush,cleanup,get frames(){return frames;}};
+    };
+    const off=run(false);
+    assert.equal(off.wheel(100),false);
+    const on=run(true);
+    assert.equal(on.wheel(10),false,'touchpad step stays native');
+    assert.equal(on.wheel(100,{ctrlKey:true}),false,'ctrl+wheel zoom stays native');
+    assert.equal(on.wheel(-100),false,'already at the top');
+    assert.equal(on.wheel(100),true);
+    assert.equal(on.box.scrollTop,0,'does not jump in the event itself');
+    on.frames.shift()(1);
+    assert.ok(on.box.scrollTop>=0&&on.box.scrollTop<100,'first frame is not past the target');
+    on.wheel(100);on.flush();
+    assert.equal(on.box.scrollTop,200,'two quick notches add up');
+    on.wheel(1000);on.flush();
+    assert.equal(on.box.scrollTop,600,'stops at the bottom');
+    assert.equal(on.wheel(100),false,'already at the bottom');
+    on.cleanup();assert.equal(on.box.listener,null);
   });
   console.log(`${count} upgrade checks passed; no network or real browser storage writes.`);
 })().catch(error=>{console.error(error);process.exitCode=1;});

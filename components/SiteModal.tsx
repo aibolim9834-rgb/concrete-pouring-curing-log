@@ -12,6 +12,7 @@ import { nextSiteCode } from '@/lib/site-code';
 import { X, Plus, Building2, Trash2, CheckCircle, MoreHorizontal } from 'lucide-react';
 import { KmaRegion, resolveArea, shortAreaLabel, WeatherArea } from '@/lib/kma-area';
 import { SiteAddressFields } from './SiteAddressFields';
+import { smoothWheel } from '@/lib/smooth-wheel';
 
 interface SiteModalProps {
   isOpen: boolean;
@@ -128,7 +129,7 @@ export const SiteModal: React.FC<SiteModalProps> = ({
 
         {/* Content */}
         {/* One scroll area for the whole body: a second, nested list scroller made the wheel jump between the two. */}
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto overscroll-contain">
+        <div ref={smoothWheel} className="p-6 space-y-6 max-h-[75vh] overflow-y-auto overscroll-contain">
           {(error || archiveError) && <p className="progress-error" role="alert">{error || archiveError}</p>}
           <fieldset disabled={busy} className="space-y-6">
           
