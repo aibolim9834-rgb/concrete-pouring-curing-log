@@ -70,3 +70,9 @@
 @media(max-width:900px){.log-photo-dialog .photo-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 /* Two cards per row on phones leave about 125px, too narrow for 원본 받기 and 삭제 side by side, so they stack. */
 @media(max-width:640px){.log-photo-add{flex-direction:column;align-items:stretch}.log-photo-add>div>*{flex:1}.log-photo-dialog .photo-info>div{flex-direction:column;gap:6px}.log-photo-dialog .photo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.log-photo-body{padding:0 14px 14px}}
+/* 저장 공간 of the shared photo storage, at the end of the 등록한 사진 line: small text and a 56px bar, no extra row. */
+.photo-storage{display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:18px;color:var(--b-muted,#94a3b8);font-variant-numeric:tabular-nums;white-space:nowrap}
+.photo-storage-bar{inline-size:56px;block-size:6px;border-radius:999px;background:var(--b-line,#334155);overflow:hidden}
+.photo-storage-bar i{display:block;block-size:100%;background:var(--b-action,#22c55e)}
+.photo-storage.is-warn{color:var(--b-warning,#f59e0b)}.photo-storage.is-warn .photo-storage-bar i{background:var(--b-warning,#f59e0b)}
+.photo-storage.is-full{color:var(--b-danger,#ef4444)}.photo-storage.is-full .photo-storage-bar i{background:var(--b-danger,#ef4444)}

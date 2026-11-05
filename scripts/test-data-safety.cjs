@@ -29,11 +29,21 @@ function cloud({cap=500,fail=false,duplicate=false}={}){
  await check('failed later page rejects entire load instead of returning partial records',async()=>{await assert.rejects(cloud({fail:true}).api.loadCloudLogData(),/DB/);});
  await check('shifting pages with duplicate IDs reject instead of silently dropping records',async()=>{await assert.rejects(cloud({duplicate:true}).api.loadCloudLogData(),/변경/);});
  await check('nullable legacy descriptions normalize without editing original responses',async()=>{const original=records[0].remicon_company;records[0].remicon_company=null;try{assert.equal((await cloud().api.loadCloudLogData()).logs[0].remicon_company,'');assert.equal(records[0].remicon_company,null);}finally{records[0].remicon_company=original;}});
- function photosCloud(fail=false){
+ function photosCloud(fail=false,usage={data:[{bytes:'108159008',files:'52'}],error:null},cloudOn=true){
   const source=records.map(r=>({id:r.id,metadata:{id:r.id,siteId:site.id,name:'original.png'}}));
-  const supabase={from(){const q={abortSignal(){return q;},select(){return q;},eq(){return q;},order(){return q;},async range(start){if(fail&&start>0)return {data:null,error:{message:'offline'}};return {data:source.slice(start,start+73),error:null};}};return q;}};
-  return load('lib/site-photos-cloud.ts',{'./site-photos':{listPhotos:async()=>[]},'./supabase':{supabase},'./cloud-storage':{cloudStorageEnabled:()=>true},'./request-timeout':requestTimeout});
+  const supabase={rpc(name){assert.equal(name,'photo_storage_usage');const q={async abortSignal(){return usage;}};return q;},from(){const q={abortSignal(){return q;},select(){return q;},eq(){return q;},order(){return q;},async range(start){if(fail&&start>0)return {data:null,error:{message:'offline'}};return {data:source.slice(start,start+73),error:null};}};return q;}};
+  return load('lib/site-photos-cloud.ts',{'./site-photos':{listPhotos:async()=>[]},'./supabase':{supabase},'./cloud-storage':{cloudStorageEnabled:()=>cloudOn},'./request-timeout':requestTimeout});
  }
+ await check('the photo storage total reads the shared bucket and is labelled against the 1GB plan limit',async()=>{
+  const usage=await photosCloud().photoStorageUsage();assert.equal(usage.bytes,108159008);assert.equal(usage.files,52);
+  const {storageUsageLabel}=photosCloud();
+  const now=storageUsageLabel(108159008);assert.equal(now.text,'저장 공간 103MB / 1GB');assert.equal(now.percent,10);assert.equal(now.level,'ok');
+  assert.equal(storageUsageLabel(5*1048576).text,'저장 공간 5.0MB / 1GB');
+  assert.equal(storageUsageLabel(0.8*1024**3).level,'warn');assert.equal(storageUsageLabel(0.96*1024**3).level,'full');
+  const over=storageUsageLabel(1.2*1024**3);assert.equal(over.text,'저장 공간 1.20GB / 1GB');assert.equal(over.percent,100);
+  assert.equal(await photosCloud(false,undefined,false).photoStorageUsage(),null); // photos kept in this browser: no figure
+  await assert.rejects(photosCloud(false,{data:null,error:{message:'permission denied'}}).photoStorageUsage(),/저장 공간을 불러오지 못했습니다/);
+ });
  await check('photo listing handles a lower server cap without omitting original metadata',async()=>{const photos=await photosCloud().listPhotos(site.id);assert.equal(photos.length,1205);assert.equal(new Set(photos.map(p=>p.id)).size,1205);assert.equal(photos[1204].name,'original.png');});
  await check('a deleted photo is purged at the first hourly run once two full days have passed',()=>{
   const {photoPurgeTime}=photosCloud(),at=iso=>photoPurgeTime(Date.parse(iso)).toISOString();

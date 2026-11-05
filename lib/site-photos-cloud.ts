@@ -10,6 +10,25 @@ export { makePhotoThumbnail, latestDeletedBatch } from './site-photos';
 export function photoPurgeTime(deletedAt:number){const hour=3600000;return new Date(Math.ceil((deletedAt+2*86400000)/hour)*hour);}
 export function photoPurgeLabel(deletedAt:number){const d=photoPurgeTime(deletedAt);return `${d.getMonth()+1}.${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:00`;}
 
+// 저장 공간: every site's photos share the one site-photos bucket, and the Supabase Free plan allows 1GB of storage
+// (measured as the month's average). Change both values if the plan changes.
+export const PHOTO_STORAGE_LIMIT=1024**3, PHOTO_STORAGE_LIMIT_LABEL='1GB';
+export type StorageUsage={bytes:number;files:number};
+// Bucket total from the photo_storage_usage() DB function; null when photos stay in this browser.
+export async function photoStorageUsage():Promise<StorageUsage|null>{
+ if(!cloudStorageEnabled())return null;
+ const {data,error}=await timed(signal=>supabase.rpc('photo_storage_usage').abortSignal(signal),READ_TIMEOUT_MESSAGE);
+ if(error)throw Error('저장 공간을 불러오지 못했습니다. '+error.message);
+ const row=(Array.isArray(data)?data[0]:data) as {bytes?:number|string;files?:number|string}|null;
+ return {bytes:Number(row?.bytes??0),files:Number(row?.files??0)};
+}
+// "저장 공간 103MB / 1GB", the share used, and when to warn (80%) or alarm (95%).
+export function storageUsageLabel(bytes:number,limit=PHOTO_STORAGE_LIMIT,limitLabel=PHOTO_STORAGE_LIMIT_LABEL){
+ const mb=bytes/1048576,used=mb>=1000?`${(mb/1024).toFixed(2)}GB`:`${mb<10?mb.toFixed(1):Math.round(mb)}MB`;
+ const percent=Math.min(100,Math.round(bytes/limit*100));
+ return {text:`저장 공간 ${used} / ${limitLabel}`,percent,level:percent>=95?'full':percent>=80?'warn':'ok'} as const;
+}
+
 const bucket = () => supabase.storage.from('site-photos');
 type PhotoRow = {id:string;site_id:string;metadata:SitePhoto;original_path:string;thumbnail_path:string;original_hash:string};
 const rows = new Map<string,PhotoRow>();
