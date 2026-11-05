@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { PouringLog, Site } from '@/lib/types';
 import { shortAreaLabel } from '@/lib/kma-area';
 import type { TodayWeather } from '@/lib/kma-weather';
+import type { SiteWarnings } from '@/lib/kma-warning';
 import {
   ClipboardList,
   Thermometer,
@@ -48,10 +49,56 @@ function useTodayWeather(nx?: number, ny?: number) {
   return state.grid === grid ? state : { grid, weather: null, at: 0, error: '' };
 }
 
+// 기상특보 for the site's 기상 위치, every 10 minutes (the server shares one 기상청 call per 10 minutes among all sites).
+// A failed refresh keeps the last 특보 on screen.
+const WARNING_REFRESH_MS = 10 * 60 * 1000;
+function useWeatherWarnings(code?: string) {
+  const [state, setState] = useState<{ code: string; data: SiteWarnings | null; error: string }>({ code: '', data: null, error: '' });
+  useEffect(() => {
+    if (!code) return;
+    let alive = true, last = 0;
+    const load = async () => {
+      last = Date.now();
+      try {
+        const response = await fetch(`/api/weather-warning?code=${code}`);
+        const body = await response.json().catch(() => ({ error: '기상특보를 불러오지 못했습니다.' }));
+        if (!response.ok) throw new Error(body.error || '기상특보를 불러오지 못했습니다.');
+        if (alive) setState({ code, data: body as SiteWarnings, error: '' });
+      } catch (e) {
+        const error = e instanceof Error && e.message !== 'Failed to fetch' ? e.message : '기상특보를 불러오지 못했습니다.';
+        if (alive) setState(prev => prev.code === code ? { ...prev, error } : { code, data: null, error });
+      }
+    };
+    void load();
+    const timer = setInterval(() => void load(), WARNING_REFRESH_MS);
+    const onVisible = () => { if (document.visibilityState === 'visible' && Date.now() - last >= WARNING_REFRESH_MS) void load(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { alive = false; clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
+  }, [code]);
+  return state.code === code ? state : { code: code ?? '', data: null, error: '' };
+}
+
+// One line under 오늘 최저·최고: 경보·주의보 in force, then 예비특보, each with the 특보구역 it names.
+function warningLine(data: SiteWarnings | null, error: string) {
+  if (!data) return <p className="ui-note">{error || '기상특보 확인 중'}</p>;
+  if (!data.warnings.length && !data.previews.length) return <p className="ui-note">{`기상특보 없음${data.issuedAt ? ` · 기상청 ${data.issuedAt} 발표 기준` : ''}`}</p>;
+  return <ul className="weather-alerts" aria-label="기상특보">
+    {data.warnings.map(w => <li key={`w-${w.kind}-${w.level}`} className={w.level === '주의보' ? 'is-advisory' : 'is-warning'}>
+      <span className="weather-alert-badge">{w.level}</span><b>{`${w.kind}${w.level}`}</b><span>{w.zones.join(', ')}</span>
+    </li>)}
+    {data.previews.map(p => <li key={`p-${p.kind}-${p.when}`} className="is-preview">
+      <span className="weather-alert-badge">예비</span><b>{`${p.kind} 예비특보`}</b><span>{`${p.when} · ${p.zones.join(', ')}`}</span>
+    </li>)}
+    {data.issuedAt && <li className="weather-alerts-source">{`기상청 ${data.issuedAt} 발표${error ? ' · 새로 불러오지 못해 이전 특보입니다' : ''}`}</li>}
+  </ul>;
+}
+
 export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
   const area = site?.weather_area ?? null;
   const today = useTodayWeather(area?.nx, area?.ny);
   const weather = today.weather;
+  const alerts = useWeatherWarnings(area?.code);
+  const firstAlert = alerts.data?.warnings[0];
   const totalCount = logs.length;
   const totalVolume = logs.reduce((sum, log) => sum + Number(log.volume || 0), 0);
   
@@ -105,8 +152,9 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
           </> : !weather ? <p className="ui-note">{today.error || '오늘 날씨를 불러오는 중입니다.'}</p> : <>
             <div className="flex items-baseline justify-between text-xs"><span className="text-slate-400">{`현재 기온${weather.observedAt ? ` (${weather.observedAt} 관측)` : ''}`}</span><span className="today-weather-now font-extrabold text-slate-100">{degrees(weather.temp)}</span></div>
             <div className="mt-1 flex items-center justify-between text-xs"><span className="text-slate-400">오늘 최저 / 최고 (예보)</span><span className="summary-card-value font-bold"><span className="text-blue-400">{degrees(weather.min)}</span><span className="text-slate-400"> / </span><span className="text-red-400">{degrees(weather.max)}</span></span></div>
-            <p className={`ui-note mt-2 ${today.error ? 'today-weather-stale' : ''}`}>{today.error ? `${clock(today.at)} 값 · 새로 불러오지 못해 이전 값을 보여 줍니다. ${today.error}` : `${clock(today.at)} 갱신 · 30분마다 새로 불러옵니다.`}</p>
+            {today.error && <p className="ui-note today-weather-stale mt-2">{`${clock(today.at)} 값 · 새로 불러오지 못해 이전 값을 보여 줍니다. ${today.error}`}</p>}
           </>}
+          {area && <div className="mt-2">{warningLine(alerts.data, alerts.error)}</div>}
         </div>
       </div>
 
@@ -141,7 +189,9 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
       <div className="summary-card-compact bg-slate-900 border border-slate-800 rounded-xl">
         <span className="text-slate-400">{weather ? `현재 ${degrees(weather.temp)}` : '오늘 날씨'}</span>
         <strong className="text-slate-100">{weather ? `${weather.min ?? '-'}~${weather.max ?? '-'}°` : '-'}</strong>
-        <span className="text-slate-400">{!area ? site?.address ? '위치 선택 필요' : '주소 미등록' : weather ? today.error ? `${clock(today.at)} 값` : '오늘 예보' : today.error ? '불러오지 못함' : '불러오는 중'}</span>
+        {firstAlert
+          ? <span className={`summary-compact-alert ${firstAlert.level === '주의보' ? 'is-advisory' : 'is-warning'}`}>{`${firstAlert.kind}${firstAlert.level}${alerts.data!.warnings.length > 1 ? ` 외 ${alerts.data!.warnings.length - 1}` : ''}`}</span>
+          : <span className="text-slate-400">{!area ? site?.address ? '위치 선택 필요' : '주소 미등록' : weather ? today.error ? `${clock(today.at)} 값` : '오늘 예보' : today.error ? '불러오지 못함' : '불러오는 중'}</span>}
       </div>
       <div className="summary-card-compact bg-slate-900 border border-slate-800 rounded-xl">
         <span className="text-slate-400">부위</span>

@@ -41,8 +41,9 @@ function kmaError(code: string, message: string) {
   return new Error(`기상청 응답 오류${message ? ` (${message})` : ''}.`);
 }
 // The service answers JSON when asked, but key and quota errors can still come back as XML.
-export function readKmaBody(text: string): KmaItem[] {
-  let body: { response?: { header?: { resultCode?: string; resultMsg?: string }; body?: { items?: { item?: KmaItem[] } } } };
+// Shared by the 단기예보 and 기상특보 services, which use the same envelope; T is the item shape of the operation.
+export function readKmaBody<T = KmaItem>(text: string): T[] {
+  let body: { response?: { header?: { resultCode?: string; resultMsg?: string }; body?: { items?: { item?: T[] } } } };
   try { body = JSON.parse(text); }
   catch {
     const tag = (name: string) => new RegExp(`<${name}>([^<]*)<`).exec(text)?.[1] ?? '';

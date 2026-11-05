@@ -328,11 +328,24 @@ function uiHarness(file, name, props, extra = {}) {
     assert(text(null,banpo).includes('오늘 날씨를 불러오는 중입니다.'));
     const at=new Date(2026,10,5,14,30).getTime(),weather={date:'2026-11-05',temp:12.3,observedAt:'14:00',min:3,max:13};
     const shown=text({grid:'60,125',weather,at,error:''},banpo);
-    for(const part of ['오늘 날씨 · 서초구 반포동','12.3°','3°','13°','(14:00 관측)','오늘 최저 / 최고 (예보)','14:30 갱신 · 30분마다 새로 불러옵니다.','현재 12.3°','3~13°','오늘 예보'])assert(shown.includes(part),part);
+    for(const part of ['오늘 날씨 · 서초구 반포동','12.3°','3°','13°','(14:00 관측)','오늘 최저 / 최고 (예보)','현재 12.3°','3~13°','오늘 예보','기상특보 확인 중'])assert(shown.includes(part),part);
+    assert(!shown.includes('30분마다'));
     const stale=text({grid:'60,125',weather,at,error:'기상청 하루 호출 한도를 넘었습니다.'},banpo);assert(stale.includes('14:30 값 · 새로 불러오지 못해 이전 값을 보여 줍니다. 기상청 하루 호출 한도를 넘었습니다.'));assert(stale.includes('12.3°'));
     assert(text({grid:'60,125',weather:null,at:0,error:'기상청 연결 키가 아직 설정되지 않았습니다.'},banpo).includes('기상청 연결 키가 아직 설정되지 않았습니다.'));
     // Values of another site's grid are not shown while the new site loads.
     assert(text({grid:'89,90',weather,at,error:''},banpo).includes('오늘 날씨를 불러오는 중입니다.'));
+  });
+  await check('the weather card puts the site\'s 기상특보 on one line where the refresh note was, and the phone card names the first 특보',()=>{
+    const banpo={code:'1165056000',label:'서울특별시 서초구 반포동',nx:60,ny:125};
+    const text=(alerts)=>{const h=uiHarness('components/SummaryCards.tsx','SummaryCards',{logs:[log],site:{...site,weather_area:banpo}});h.states[0]={grid:'60,125',weather:{date:'2026-11-05',temp:-3,observedAt:'14:00',min:-9,max:1},at:0,error:''};h.states[1]=alerts;return JSON.stringify(h.render());};
+    const data={issuedAt:'07:00',warnings:[{kind:'한파',level:'경보',zones:['서울동남권']},{kind:'건조',level:'주의보',zones:['서울']}],previews:[{kind:'강풍',when:'11/6 새벽(00시~06시)',zones:['서울']}]};
+    const shown=text({code:'1165056000',data,error:''});
+    for(const part of ['한파경보','서울동남권','건조주의보','강풍 예비특보','11/6 새벽(00시~06시) · 서울','기상청 07:00 발표','한파경보 외 1','is-warning','is-advisory','is-preview'])assert(shown.includes(part),part);
+    assert(text({code:'1165056000',data:{issuedAt:'07:00',warnings:[],previews:[]},error:''}).includes('기상특보 없음 · 기상청 07:00 발표 기준'));
+    assert(text({code:'1165056000',data,error:'기상청 서버가 응답하지 않습니다 (502).'}).includes('새로 불러오지 못해 이전 특보입니다'));
+    assert(text({code:'1165056000',data:null,error:'기상청 연결 키가 아직 설정되지 않았습니다.'}).includes('기상청 연결 키가 아직 설정되지 않았습니다.'));
+    // 특보 of another site's 위치 are not shown while the new site loads.
+    assert(!text({code:'4113500000',data,error:''}).includes('한파경보'));
   });
   await check('site address and 기상 위치 save with the site in browser storage and DB, and an empty address clears both',async()=>{
     const banpo={code:'1165056000',label:'서울특별시 서초구 반포동',nx:60,ny:125};
