@@ -615,7 +615,8 @@ body {
 .concrete-app .site-actions-inline { display: inline-flex; gap: 4px; }
 .concrete-app .site-actions-inline button { border: 1px solid var(--b-line, #475569); border-radius: 6px; background: var(--b-surface, #1e293b); color: inherit; padding: 4px 8px; font: inherit; font-size: 11px; }
 .concrete-app .today-weather-now { font-size: 20px; line-height: 1.2; font-variant-numeric: tabular-nums; }
-.concrete-app .today-weather-range { font-size: 16px; line-height: 1.25; font-variant-numeric: tabular-nums; }
+/* Second-line values in the summary cards (volume, logged and forecast temperatures) share one size so the cards line up. */
+.concrete-app .summary-card-value { font-size: 16px; line-height: 1.25; font-variant-numeric: tabular-nums; }
 .concrete-app .today-weather-card .today-weather-stale { color: var(--b-warning, #f59e0b); }
 
 /* 동·층 관리, compact on PC: one line per floor (타설일 on the right), smaller buttons and spacing so more floors fit.
