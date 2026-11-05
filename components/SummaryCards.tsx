@@ -104,7 +104,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
             <p className="ui-note mt-2">{site?.address ? '현장 관리의 주소 버튼에서 기상 위치를 고르면 표시됩니다.' : '현장 관리에서 현장 주소를 넣으면 표시됩니다.'}</p>
           </> : !weather ? <p className="ui-note">{today.error || '오늘 날씨를 불러오는 중입니다.'}</p> : <>
             <div className="flex items-baseline justify-between text-xs"><span className="text-slate-400">{`현재 기온${weather.observedAt ? ` (${weather.observedAt} 관측)` : ''}`}</span><span className="today-weather-now font-extrabold text-slate-100">{degrees(weather.temp)}</span></div>
-            <div className="mt-1 flex items-center justify-between text-xs"><span className="text-slate-400">오늘 최저 / 최고 (예보)</span><span className="font-bold"><span className="text-blue-400">{degrees(weather.min)}</span><span className="text-slate-400"> / </span><span className="text-red-400">{degrees(weather.max)}</span></span></div>
+            <div className="mt-1 flex items-center justify-between text-xs"><span className="text-slate-400">오늘 최저 / 최고 (예보)</span><span className="today-weather-range font-bold"><span className="text-blue-400">{degrees(weather.min)}</span><span className="text-slate-400"> / </span><span className="text-red-400">{degrees(weather.max)}</span></span></div>
             <p className={`ui-note mt-2 ${today.error ? 'today-weather-stale' : ''}`}>{today.error ? `${clock(today.at)} 값 · 새로 불러오지 못해 이전 값을 보여 줍니다. ${today.error}` : `${clock(today.at)} 갱신 · 30분마다 새로 불러옵니다.`}</p>
           </>}
         </div>
