@@ -81,7 +81,8 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
   const cellNodes = useRef(new Map<string,HTMLButtonElement>());
   const colorToolsRef = useRef<HTMLDivElement>(null);
   const stickyRef = useRef<HTMLDivElement>(null), tableWrapRef = useRef<HTMLDivElement>(null);
-  useEffect(()=>{if(inlineEdit)inlineDateRef.current?.focus();},[inlineEdit?.key]);
+  // The caret goes to the end, so a typed first digit is followed by the next one and F2 edits from the end as in a spreadsheet.
+  useEffect(()=>{const field=inlineDateRef.current;if(!inlineEdit || !field)return;field.focus();field.setSelectionRange(field.value.length,field.value.length);},[inlineEdit?.key]);
   const [color, setColor] = useState(defaultColor);
   const [history, setHistory] = useState<ProgressDocument[]>([]);
   const [buildingId, setBuildingId] = useState('');
@@ -154,7 +155,7 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
     loadProgress(site.id, cloudStorageEnabled()).then(value => { if (active) {
       setSnapshot(value); setStale(false); resetEditor(value.document);
       const first = value.document.buildings[0];
-      if (first) { const stage = completedStages(first, today())[0] || first.stages.find(s => s.id === 'f1') || first.stages[0]; if (stage) selectRecord(value.document, first.id, stage.id); }
+      if (first) { const stage = completedStages(first, today())[0] || first.stages.find(s => s.id === 'f1') || first.stages[0]; if (stage) { selectRecord(value.document, first.id, stage.id); revealCell(`${first.id}:${stage.id}:actual`); } }
     } }).catch(e => { const d = describeError(e); logEvent({ page: '타설현황', action: '타설현황 불러오기', outcome: 'error', siteId: site.id, message: d.message, code: d.code, detail: d.detail }); if (active) { setStale(true); setError(e instanceof Error ? e.message : '현황을 불러오지 못했습니다. 원본은 유지됩니다. 새로 불러오기를 눌러주세요.'); } });
     const changed = (e: StorageEvent) => { if (e.key === null || e.key === `cp_pouring_progress_v1:${site.id}`) { setStale(true); setError('다른 탭에서 현황을 변경했습니다. 새로 불러온 뒤 다시 입력해주세요.'); } };
     window.addEventListener('storage', changed);
@@ -204,7 +205,8 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
     setDate(record?.date || ''); setPlannedDate(record?.plannedDate || ''); setComparisonStage(record?.comparisonStage ?? previousStage(document,editBuilding,editStage)); setColor(record?.color || defaultColor); setEntryDraft(blankEntry());
     setError('');
   }
-  function beginInline(bid:string,sid:string,field:'actual'|'planned',add=false) {
+  // `typed` is the digit that started the edit from a selected cell; it replaces the old date like a spreadsheet does.
+  function beginInline(bid:string,sid:string,field:'actual'|'planned',add=false,typed?:string) {
     if (saving || stale || readOnly || lock.current) return;
     const b=document.buildings.find(b=>b.id===bid),r=b?.records[sid];
     if (!b?.stages.some(s=>s.id===sid)) return;
@@ -212,7 +214,7 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
     clearInlineAutoSave();inlineKeyRef.current=bid+':'+sid+':'+field;
     // Multi-date cells edit all dates as one comma-separated line.
     const list=field==='actual' && !!r?.dates && !add;
-    setInlineEdit({key:bid+':'+sid+':'+field,bid,sid,field,value:list?pourDates(r).map(d=>shortDate(d)).join(', '):add?'':(field==='planned'?r?.plannedDate:r?.date)||'',error:'',add,list});
+    setInlineEdit({key:bid+':'+sid+':'+field,bid,sid,field,value:list?pourDates(r).map(d=>shortDate(d)).join(', '):typed ?? (add?'':(field==='planned'?r?.plannedDate:r?.date)||''),error:'',add,list});
     setNotice(list?'날짜를 쉼표로 구분해 고치거나 지우고 Enter로 저장합니다. · Esc로 입력 취소':add?'추가할 타설일을 입력하면 자동 저장됩니다. · Esc로 입력 취소':'날짜 입력을 마치면 자동 저장됩니다. · Esc로 입력 취소');
   }
   function setInlineValue(value:string) {
@@ -222,6 +224,19 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
     if(inlineEdit.field==='planned')setPlannedDate(value);else setDate(value);
   }
   function focusCell(key:string) { requestAnimationFrame(()=>cellNodes.current.get(key)?.focus({preventScroll:true})); }
+  // On opening, the latest poured floor is selected but sits below the first screen in a tall table (roof rows come first).
+  // It is brought to the middle of the screen when it is out of view, and takes the cursor so typing a date starts there.
+  // The cell exists only after the loaded table renders, so the request waits here for the effect below.
+  const revealRef = useRef<string|null>(null);
+  function revealCell(key:string) { revealRef.current=key; }
+  useEffect(()=>{
+    const node=revealRef.current && cellNodes.current.get(revealRef.current);
+    if(!node)return;
+    revealRef.current=null;
+    const box=node.getBoundingClientRect();
+    if(box.top<0 || box.bottom>window.innerHeight || box.left<0 || box.right>window.innerWidth)node.scrollIntoView({block:'center',inline:'center'});
+    node.focus({preventScroll:true});
+  });
   // Arrow keys move between date cells like a spreadsheet; at the table edge the key is left alone so the page still scrolls.
   function moveCell(e:React.KeyboardEvent<HTMLButtonElement>,bid:string,sid:string,field:'planned'|'actual') {
     const step=({ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]} as Record<string,[number,number]>)[e.key];
@@ -491,9 +506,15 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
                   const value = (field === 'planned' ? record?.plannedDate : record?.date) || '', label = field === 'actual' && record?.dates ? pourDatesLabel(record) : value ? shortDate(value,'.') : '';
                   return <td key={field} data-date-field={field}>{inlineEdit?.key === key ? renderInlineDate() : <button
                     ref={node => { if (node) cellNodes.current.set(key,node); else cellNodes.current.delete(key); }}
-                    disabled={saving || stale} title={(field === 'actual' ? '타설일(층 바닥 기준)' : fieldName)+' · 더블클릭 또는 Enter로 직접 수정'}
+                    disabled={saving || stale} title={(field === 'actual' ? '타설일(층 바닥 기준)' : fieldName)+' · 더블클릭, Enter 또는 숫자 입력으로 직접 수정'}
                     onDoubleClick={() => beginInline(b.id,row.id,field)}
-                    onKeyDown={e => { if ((e.key === 'Enter' || e.key === 'F2') && !e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) { e.preventDefault(); beginInline(b.id,row.id,field); } else moveCell(e,b.id,row.id,field); }}
+                    onKeyDown={e => {
+                      const composing = e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229;
+                      if ((e.key === 'Enter' || e.key === 'F2') && !composing) { e.preventDefault(); beginInline(b.id,row.id,field); }
+                      // A digit starts the date right away; a cell holding several 타설일 keeps Enter/F2, which edits the whole list.
+                      else if (/^[0-9]$/.test(e.key) && !composing && !e.ctrlKey && !e.metaKey && !e.altKey && !(field === 'actual' && record?.dates)) { e.preventDefault(); beginInline(b.id,row.id,field,false,e.key); }
+                      else moveCell(e,b.id,row.id,field);
+                    }}
                     className={cn('progress-cell',selected.includes(recordKey) && 'is-selected')}
                     style={background ? { background, '--progress-cell-background': background, '--progress-cell-ink': ink(background) } as React.CSSProperties : undefined}
                     onClick={() => selectCell(b.id,row.id)} aria-pressed={selected.includes(recordKey)}
@@ -509,7 +530,7 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
             })}</tr>;
           })}</tbody>
         </table></div>}
-      <p className="sr-only">예정일·타설일은 더블클릭 또는 Enter로 수정하고, 올바른 날짜 입력 완료 후 자동 저장됩니다. 차이는 타설일에서 예정일을 뺀 일수입니다. 완료 단계는 기준일 기준이며 전체 공정률이 아닙니다.</p></div>
+      <p className="sr-only">예정일·타설일은 더블클릭, Enter 또는 숫자 입력으로 수정하고, 올바른 날짜 입력 완료 후 자동 저장됩니다. 차이는 타설일에서 예정일을 뺀 일수입니다. 완료 단계는 기준일 기준이며 전체 공정률이 아닙니다.</p></div>
       {panel && <ProgressStructure document={document} buildingId={buildingId} stageId={stageId}
         disabled={saving || !snapshot || stale || readOnly || !!inlineEdit} adding={addingBuilding} onAdding={setAddingBuilding}
         onClose={() => {setPanel(null);setAddingBuilding(false);}} onSelect={selectStructure}

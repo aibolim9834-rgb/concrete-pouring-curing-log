@@ -186,7 +186,7 @@ body {
 .progress-page .progress-entry-count { font-size: .75rem; }
 .progress-page .progress-editor-note { padding-top: 12px; border-top: 1px solid var(--progress-line); }
 .progress-entry-report { display: none; }
-@media(max-width:760px) { .progress-page { padding: 16px 14px; } .progress-page .progress-work.has-panel { grid-template-columns: minmax(0,1fr); } .progress-page .progress-panel { grid-row: 1; } }
+@media(max-width:760px) { .progress-page { padding: 16px 14px; } .progress-page .progress-work.has-panel { grid-template-columns: minmax(0,1fr); } }
 @media print {
   .progress-page { padding: 0; color: black; background: white; border: 0; }
   .progress-page .progress-table { min-width: 0; color: black; background: white; }
@@ -313,7 +313,8 @@ body {
 .concrete-app .daily-report-items label { display: inline-flex; align-items: center; gap: .3rem; cursor: pointer; color: var(--b-ink, #212121); font-size: var(--ui-body, .75rem); line-height: var(--ui-line, 1.125rem); }
 .daily-report-items input { accent-color: var(--b-action, #007723); }
 .daily-report textarea { width: 100%; min-height: 12rem; resize: vertical; background: var(--b-soft, #F1F1F1); color: var(--b-ink, #212121); border: 1px solid var(--b-control, #7A8A7D); border-radius: .5rem; padding: .75rem; font-size: 14px; line-height: 1.65; white-space: pre-wrap; }
-.daily-report-actions { display: flex; flex-wrap: wrap; gap: .5rem; }@media(max-width: 760px) { .progress-work.has-panel { grid-template-columns: minmax(0,1fr); } .progress-panel { grid-row: 1; } }
+.daily-report-actions { display: flex; flex-wrap: wrap; gap: .5rem; }/* Phones stack the 동·층 관리 panel under the table, so the table stays next to the selection tools above it. */
+@media(max-width: 760px) { .progress-work.has-panel { grid-template-columns: minmax(0,1fr); } }
 @media(pointer: coarse) { .concrete-app :is(input:not([type=checkbox]),select,textarea) { font-size: 1rem; } .ui-button, .progress-cell { min-height: 2.75rem; } }
 @media print {
   .progress-page { color: black; }
