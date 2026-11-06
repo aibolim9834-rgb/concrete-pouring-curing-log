@@ -39,38 +39,6 @@
 .site-photos .photo-select{display:flex;align-items:center;gap:8px;padding:10px 12px;color:var(--b-ink);cursor:pointer}.site-photos .photo-select input{width:18px;height:18px;min-height:0;accent-color:var(--b-action)}
 .photo-card.is-selected{border-color:var(--b-action);box-shadow:0 0 0 1px var(--b-action)}
 
-/* 타설 사진: the photo column chip in 타설일지 (green with the count, + when the row has none) and the window it opens. */
-.log-photo-button{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-inline-size:44px;min-block-size:24px;padding:1px 8px;border:1px solid var(--b-line);border-radius:999px;background:var(--b-surface);color:var(--b-muted);font-size:11px;font-weight:600;cursor:pointer}
-.log-photo-button.has-photos{background:var(--b-selected);border-color:#9cc9a8;color:var(--b-action)}
-.log-photo-button:hover:not(:disabled){border-color:var(--b-action)}
-.log-photo-button:focus-visible{outline:2px solid var(--b-action);outline-offset:2px}
-.log-photo-dialog{width:min(980px,94vw)}
-.log-photo-dialog:modal{overscroll-behavior:contain}
-.log-photo-dialog::backdrop{overflow:hidden;overscroll-behavior:contain}
-.log-photo-heading-actions{display:flex;gap:8px;flex-shrink:0}
-/* On a phone the place line breaks only between items: words such as 슬라브 stay whole (keep-all),
-   and "36.5 m³ (7대)" moves to the next line as one piece instead of breaking after the number. */
-.log-photo-dialog .photo-viewer-heading p{word-break:keep-all}
-.log-photo-volume{white-space:nowrap}
-.log-photo-body{display:grid;gap:14px;padding:0 20px 20px}
-.log-photo-add{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:2px dashed #91af99;border-radius:8px;background:#f7faf7}
-.log-photo-add.is-over{background:var(--b-selected);border-color:var(--b-action)}
-.log-photo-add p{margin:0;font-size:12px;color:var(--b-muted)}.log-photo-add strong{color:var(--b-ink)}
-.log-photo-add>div{display:flex;gap:8px;flex-shrink:0}
-.log-photo-file{position:absolute;width:1px;height:1px;opacity:0;clip-path:inset(50%);padding:0}
-.log-photo-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
-.log-photo-dialog .ui-note{margin:0;font-size:12px}
-.log-photo-alert{margin:0;color:var(--b-danger)}
-.log-photo-dialog .photo-grid{grid-template-columns:repeat(4,minmax(0,1fr));padding:0}
-.concrete-app .log-photo-dialog .photo-thumb{height:150px}
-.log-photo-dialog .photo-info{padding:10px 12px}.log-photo-dialog .photo-info p{margin:0 0 8px}
-.log-photo-dialog .photo-select{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;color:var(--b-ink);cursor:pointer}
-.log-photo-tools .photo-select{padding:0}
-.log-photo-dialog .photo-select input{width:18px;height:18px;min-height:0;margin:0;accent-color:var(--b-action)}
-.log-photo-dialog .photo-delete{color:var(--b-danger)}
-@media(max-width:900px){.log-photo-dialog .photo-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-/* Two cards per row on phones leave about 125px, too narrow for 원본 받기 and 삭제 side by side, so they stack. */
-@media(max-width:640px){.log-photo-add{flex-direction:column;align-items:stretch}.log-photo-add>div>*{flex:1}.log-photo-dialog .photo-info>div{flex-direction:column;gap:6px}.log-photo-dialog .photo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.log-photo-body{padding:0 14px 14px}}
 /* 저장 공간 of the shared photo storage, at the end of the 등록한 사진 line: small text and a 56px bar, no extra row. */
 .photo-storage{display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:18px;color:var(--b-muted,#94a3b8);font-variant-numeric:tabular-nums;white-space:nowrap}
 .photo-storage-bar{inline-size:56px;block-size:6px;border-radius:999px;background:var(--b-line,#334155);overflow:hidden}

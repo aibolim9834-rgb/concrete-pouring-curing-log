@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
 import { Site } from '@/lib/types';
-import { normalizePhotoFloor } from '@/lib/floor';
+import { normalizePhotoBuilding, normalizePhotoFloor } from '@/lib/floor';
 import { normalizeShortDate, shortDate } from '@/lib/date-only';
 import { listPhotos, makePhotoThumbnail, markPhotosDeleted, latestDeletedBatch, photoBlob, photoPurgeLabel, photoStorageUsage, savePhoto, storageUsageLabel, updatePhotoLocation, updatePhotoLocations, SitePhoto, StorageUsage } from '@/lib/site-photos-cloud';
 import { cloudStorageEnabled } from '@/lib/cloud-storage';
@@ -12,7 +12,7 @@ function today() {const d=new Date();return `${d.getFullYear()}-${String(d.getMo
 function photoLocation(photo: SitePhoto) {const b=photo.building.trim(),f=photo.floor.trim();return `${/^\d+$/.test(b)?b+'동':b} · ${/^\d+$/.test(f)?f+'층':f}`;}
 // Each photo is saved as its own file under its original name; a short gap keeps browsers from dropping the later ones.
 // Returns the names that could not be saved.
-export async function downloadPhotoFiles(targets:SitePhoto[],onProgress:(index:number)=>void){
+async function downloadPhotoFiles(targets:SitePhoto[],onProgress:(index:number)=>void){
   const failed:string[]=[];
   for(let i=0;i<targets.length;i++){
     onProgress(i);
@@ -75,7 +75,7 @@ export function SitePhotos({site,blocked=false,onWorkPending}:{site:Site;blocked
     try {for(let i=0;i<files.length;i++) {
       if(!alive.current)break;
       setMessage(`${i+1} / ${files.length}장 처리 중`);
-      try {const file=files[i],id=crypto.randomUUID(),place=`${iso} ${building.trim().toUpperCase()} ${normalizePhotoFloor(floor)}`;await tracked({page:'사진',action:'사진 올리기',siteId:site.id,target:`${id} · ${place} · ${Math.round(file.size/1024)}KB ${file.type||'형식 모름'} · ${i+1}/${files.length}`},async()=>{const thumbnail=await makePhotoThumbnail(file);const photo:SitePhoto={id,siteId:site.id,date:iso,building:building.trim().toUpperCase(),floor:normalizePhotoFloor(floor),name:file.name,size:file.size,createdAt:Date.now()};await savePhoto(photo,file,thumbnail);saved++;if(alive.current)setPhotos(rows=>[...rows,photo]);});}
+      try {const file=files[i],id=crypto.randomUUID(),place=`${iso} ${normalizePhotoBuilding(building)} ${normalizePhotoFloor(floor)}`;await tracked({page:'사진',action:'사진 올리기',siteId:site.id,target:`${id} · ${place} · ${Math.round(file.size/1024)}KB ${file.type||'형식 모름'} · ${i+1}/${files.length}`},async()=>{const thumbnail=await makePhotoThumbnail(file);const photo:SitePhoto={id,siteId:site.id,date:iso,building:normalizePhotoBuilding(building),floor:normalizePhotoFloor(floor),name:file.name,size:file.size,createdAt:Date.now()};await savePhoto(photo,file,thumbnail);saved++;if(alive.current)setPhotos(rows=>[...rows,photo]);});}
       catch(e){errors.push(`${files[i].name}: ${e instanceof Error?e.message:'저장 실패'}`);}
     }
     if(alive.current){setMonth(m=>m&&iso.slice(0,7));setFilter('');setDay(iso);setLimit(20);setMessage(`${saved}장 저장 완료${errors.length?' · '+errors.join(' / '):''}`);}

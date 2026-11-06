@@ -6,10 +6,8 @@ import { newLog, filterLogs, LogFilters, LogSort, LogSortKey, volumeText } from 
 import { WateringSelect } from './WateringSelect';
 import { MobileLogSheet } from './MobileLogSheet';
 import { ShortDateInput } from './ShortDateInput';
-import { LogPhotos } from './LogPhotos';
 import { DailyReportDialog } from './DailyReportDialog';
 import { ReportOptions } from '@/lib/daily-report';
-import { listPhotos, SitePhoto } from '@/lib/site-photos-cloud';
 import { validDate } from '@/lib/pouring-progress';
 import { normalizeWatering } from '@/lib/watering';
 import { normalizeStrength } from '@/lib/strength';
@@ -25,7 +23,6 @@ import {
   Filter,
   Check,
   X,
-  Camera,
   ClipboardCopy
 } from 'lucide-react';
 
@@ -72,30 +69,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
   // Phones enter and edit logs in a full-screen sheet: undefined = closed, null = new log.
   const [sheetLog, setSheetLog] = useState<PouringLog | null | undefined>(undefined);
   const isPhone = () => typeof window !== 'undefined' && !!window.matchMedia?.('(max-width: 760px)').matches;
-  // 타설 사진 for the whole site, counted per log row; photoLogId is the row whose photo window is open.
-  const [photos, setPhotos] = useState<SitePhoto[]>([]);
-  const [photoError, setPhotoError] = useState('');
-  const [photoLogId, setPhotoLogId] = useState('');
   const [reportOpen, setReportOpen] = useState(false);
-  const siteId = site?.id;
-  const loadPhotos = useCallback(async () => {
-    if (!siteId) return;
-    try { setPhotos((await listPhotos(siteId)).filter(p => p.logId)); setPhotoError(''); }
-    catch (e) { setPhotoError(e instanceof Error ? e.message : '사진 정보를 불러오지 못했습니다.'); }
-  }, [siteId]);
-  // A deleted log takes its photos with it, so the list is read again whenever the log count changes.
-  useEffect(() => { void loadPhotos(); }, [loadPhotos, logs.length]);
-  const photoCounts = new Map<string, number>();
-  for (const photo of photos) if (!photo.deletedAt) photoCounts.set(photo.logId!, (photoCounts.get(photo.logId!) || 0) + 1);
-  const photoLog = logs.find(log => log.id === photoLogId);
-  const photoButton = (log: PouringLog) => {
-    const count = photoCounts.get(log.id) || 0;
-    if (!count && (readOnly || blocked)) return <span className="text-slate-600">-</span>;
-    return <button type="button" className={`log-photo-button ${count ? 'has-photos' : ''}`} onClick={() => setPhotoLogId(log.id)}
-      title={count ? `타설 사진 ${count}장 보기` : '타설 사진 추가'} aria-label={`${log.date} ${log.building} ${log.floor} 타설 사진 ${count ? `${count}장 보기` : '추가'}`}>
-      <Camera className="w-3.5 h-3.5" aria-hidden="true" />{count || '+'}
-    </button>;
-  };
   const workPending = pending || editingRowId !== null || sheetLog !== undefined;
   useEffect(() => {
     onWorkPending?.(workPending);
@@ -256,11 +230,11 @@ export const RecordTable: React.FC<RecordTableProps> = ({
         <table className="record-log-table w-full text-xs text-left text-slate-300 border-collapse">
           <caption className="sr-only">타설일지. 열 제목을 누르면 오름차순 또는 내림차순으로 정렬합니다. 구분은 현재 조회 순서의 자동 번호입니다.</caption>
           <colgroup>
-            {/* 번호, 일자, 동, 층, 부위, 최저·최고온도, 기상, 업체, 강도, 물량, 살수·보양, 사진, 관리.
+            {/* 번호, 일자, 동, 층, 부위, 최저·최고온도, 기상, 업체, 강도, 물량, 살수·보양, 관리.
                 일자·층·부위·기상·업체·강도·물량·살수·관리는 입력칸과 머리글이 들어가는 고정 폭이고(층은 "19F(옥상 파라펫)", 업체는 "레미콘사 ↕" 머리글,
-                강도는 "21, 27MPa"처럼 강도가 둘인 날, 물량은 "1386 m³ (231대)", 살수는 입력 줄의 "1일 3회 살수"가 한 줄에 들어가는 폭), 사진은 장수 버튼 폭,
+                강도는 "21, 27MPa"처럼 강도가 둘인 날, 물량은 "1386 m³ (231대)", 살수는 입력 줄의 "1일 3회 살수"가 한 줄에 들어가는 폭),
                 너비가 없는 동이 남는 폭을 모두 받습니다. */}
-            {['3%', '88px', undefined, '100px', '94px', '5.5%', '5.5%', '84px', '84px', '104px', '120px', '112px', '10%', '64px', '84px'].map((width, index) => <col key={index} style={width ? { width } : undefined} />)}
+            {['3%', '88px', undefined, '100px', '94px', '5.5%', '5.5%', '84px', '84px', '104px', '120px', '112px', '10%', '84px'].map((width, index) => <col key={index} style={width ? { width } : undefined} />)}
           </colgroup>
           <thead>
             {/* Row 1 Headers */}
@@ -294,9 +268,6 @@ export const RecordTable: React.FC<RecordTableProps> = ({
               </th>
               <th scope="colgroup" colSpan={2} className="px-3 py-2 border-r border-slate-800 bg-slate-950 text-amber-400">
                 양생방법
-              </th>
-              <th rowSpan={2} className="px-2 py-3 border-r border-slate-800">
-                사진
               </th>
               <th rowSpan={2} className="px-2 py-3 min-w-[80px]">
                 관리
@@ -477,9 +448,6 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                 />
               </td>
 
-              {/* 사진은 일지를 저장한 뒤 그 행에서 올립니다. */}
-              <td className="p-1.5 border-r border-slate-800" />
-
               {/* 빠른 행 추가 저장 버튼 */}
               <td className="p-1.5 text-center whitespace-nowrap">
                 <button
@@ -635,7 +603,6 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                         className="w-full bg-slate-800 border border-amber-500 rounded px-1.5 py-1 text-xs text-amber-300"
                       />
                     </td>
-                    <td className="p-1 border-r border-slate-800" />
                     <td className="p-1 text-center whitespace-nowrap">
                       <div className="record-row-actions flex items-center justify-center">
                         <button
@@ -736,9 +703,6 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                       <span className="text-slate-600">-</span>
                     )}
                   </td>
-                  <td className="px-1 py-3 border-r border-slate-800/80 text-center whitespace-nowrap">
-                    {photoButton(log)}
-                  </td>
                   <td className="px-2 py-3 text-center whitespace-nowrap">
                     <div className="record-row-actions flex items-center justify-center opacity-90 group-hover:opacity-100">
                       <button
@@ -785,10 +749,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
       {sheetLog !== undefined && <MobileLogSheet key={sheetLog?.id || 'new'} log={sheetLog} logs={logs} site={site}
         onAdd={async data => { if (!onQuickAddLog) throw new Error('등록 경로를 확인해주세요.'); await onQuickAddLog(data); }}
         onUpdate={async (id, data) => { if (!onQuickUpdateLog) throw new Error('수정 경로를 확인해주세요.'); await onQuickUpdateLog(id, data); }}
-        onDelete={onDeleteLog} onClose={() => setSheetLog(undefined)}
-        photoCount={sheetLog ? photoCounts.get(sheetLog.id) || 0 : 0} onOpenPhotos={sheetLog && !blocked ? () => setPhotoLogId(sheetLog.id) : undefined} />}
-      {site && photoLog && <LogPhotos key={`photos-${photoLog.id}`}site={site} log={photoLog} photos={photos.filter(p => p.logId === photoLog.id)} loadError={photoError}
-        readOnly={readOnly || blocked} onChanged={loadPhotos} onClose={() => setPhotoLogId('')} />}
+        onDelete={onDeleteLog} onClose={() => setSheetLog(undefined)} />}
       {site && reportOpen && <DailyReportDialog site={site} logs={logs} canSave={!readOnly && !blocked && !!onSaveReportOptions}
         onSaveOptions={async options => { if (!onSaveReportOptions) throw new Error('저장 경로를 확인해주세요.'); await onSaveReportOptions(options); }}
         onClose={() => setReportOpen(false)} />}

@@ -561,7 +561,7 @@ body {
 .mobile-log-error { font-size:12px; font-weight:500; }
 .mobile-log-group[aria-invalid=true] .mobile-log-chip, .mobile-log-group input[aria-invalid=true] { border-color:var(--b-danger, #A7262F)!important; }
 .mobile-log-alert { margin:0; padding:10px 12px; border-radius:8px; background:var(--b-danger-soft, #FDECEE); color:var(--b-danger, #A7262F); }
-.mobile-log-delete, .mobile-log-photos { justify-self:start; }
+.mobile-log-delete { justify-self:start; }
 .mobile-log-notice { flex:none; margin:0; padding:10px 16px; background:#1d2a21; color:#fff; font-size:14px; }
 .mobile-log-foot { flex:none; display:grid; grid-template-columns:1.4fr 1fr; gap:10px; padding:10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top:1px solid var(--b-line, #D8DFD9); background:var(--b-surface, #fff); }
 .mobile-log-foot > button { min-block-size:52px; border-radius:8px; font-size:16px; font-weight:700; }

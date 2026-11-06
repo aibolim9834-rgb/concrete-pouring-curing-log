@@ -1,4 +1,4 @@
-import { normalizePhotoFloor } from './floor';
+import { normalizePhotoBuilding, normalizePhotoFloor } from './floor';
 
 // A photo with logId is a 타설 사진 attached to that 타설일지 row; one without it is an 알폼핀 체결 사진.
 export interface SitePhoto {
@@ -65,7 +65,7 @@ export function latestDeletedBatch(photos: SitePhoto[]) {
   return latest.deletionBatchId?photos.filter(p=>p.deletedAt&&p.siteId===latest.siteId&&p.deletionBatchId===latest.deletionBatchId):[latest];
 }
 export async function updatePhotoLocations(photos: SitePhoto[], building: string, floor: string) {
-  building=building.trim().toUpperCase();floor=normalizePhotoFloor(floor);
+  building=normalizePhotoBuilding(building);floor=normalizePhotoFloor(floor);
   if(!building||!floor)throw Error('동·구역과 층을 모두 입력해주세요.');
   if(!photos.length||photos.some(p=>p.siteId!==photos[0].siteId))throw Error('같은 현장의 사진을 선택해주세요.');
   await write(['metadata'],tx=>{

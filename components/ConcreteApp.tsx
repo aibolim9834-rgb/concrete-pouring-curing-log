@@ -27,8 +27,6 @@ import { csvCell } from '@/lib/csv';
 import { normalizeWatering } from '@/lib/watering';
 import { normalizeStrength } from '@/lib/strength';
 import { normalizeFloor } from '@/lib/floor';
-import { listPhotos, markPhotosDeleted, SitePhoto } from '@/lib/site-photos-cloud';
-import { cloudStorageEnabled } from '@/lib/cloud-storage';
 import { ReportOptions } from '@/lib/daily-report';
 
 export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | 'progress' | 'photos' }) {
@@ -195,11 +193,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       if (siteLock.current) throw new Error('다른 작업을 처리 중입니다.');
       const target = siteLogs.find(log => log.id === id);
       if (!target) return;
-      // The log's 타설 사진 are deleted with it, so they are counted before asking.
-      let photos: SitePhoto[];
-      try { photos = (await listPhotos(target.site_id)).filter(photo => photo.logId === id && !photo.deletedAt); }
-      catch { throw new Error('이 일지의 사진 정보를 확인하지 못해 삭제하지 않았습니다. 연결을 확인하고 다시 시도해주세요.'); }
-      if (!await askConfirm({ title: '일지 삭제', message: `${target.date} ${target.building} ${target.floor} 일지를 삭제하시겠습니까?${photos.length ? `\n이 일지의 타설 사진 ${photos.length}장도 함께 삭제됩니다${cloudStorageEnabled() ? '(2일 뒤 서버에서 완전히 삭제)' : ''}.` : ''}`, confirmLabel: '삭제', danger: true })) return;
+      if (!await askConfirm({ title: '일지 삭제', message: `${target.date} ${target.building} ${target.floor} 일지를 삭제하시겠습니까?`, confirmLabel: '삭제', danger: true })) return;
       if (siteLock.current) throw new Error('다른 작업을 처리 중입니다.');
       siteLock.current = true; setLogBusy(true); setOperationError(''); setNotice('');
       deleting = { at: Date.now(), target: logTarget(target, id), siteId: target.site_id }; noteAction('일지 삭제');
@@ -213,10 +207,6 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
         if (!isSupabase) writeLocalData(localStorage, { sites, logs }, { sites, logs: nextLogs });
         setLogs(nextLogs); setNotice('일지를 삭제했습니다.');
         logEvent({ page: appPage, action: '일지 삭제', outcome: 'ok', siteId: deleting.siteId, target: deleting.target, durationMs: Date.now() - deleting.at });
-        if (photos.length) {
-          try { await markPhotosDeleted(photos, true); setNotice(`일지와 타설 사진 ${photos.length}장을 삭제했습니다.`); }
-          catch (e) { const d = describeError(e); logEvent({ page: appPage, action: '일지 사진 함께 삭제', outcome: 'error', siteId: target.site_id, target: `${id} · 사진 ${photos.length}장`, message: d.message, code: d.code, detail: d.detail }); setOperationError(`일지는 삭제했지만 타설 사진 ${photos.length}장은 삭제하지 못했습니다. 사진은 서버에 남아 있습니다.`); }
-        }
       } finally { siteLock.current = false; setLogBusy(false); }
     } catch (e) {
       const d = describeError(e);

@@ -14,3 +14,9 @@ export function normalizePhotoFloor(value?: string | null): string {
   const bare = /^([bB]?)(\d+)[fF]?$/.exec(floor);
   return bare ? `${bare[1].toUpperCase()}${bare[2]}F` : floor;
 }
+
+// 알폼핀 사진 buildings: a bare number is a 동 (101 → 101동), as the photo page has always shown it; anything else is kept, upper-cased.
+export function normalizePhotoBuilding(value?: string | null): string {
+  const building = (value ?? '').trim().toUpperCase();
+  return /^\d+$/.test(building) ? `${building}동` : building;
+}
