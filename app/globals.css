@@ -47,12 +47,14 @@
 :root {
   --background: #090d16;
   --foreground: #f8fafc;
+  /* Pretendard is self-hosted from the pretendard package (imported in app/layout.tsx); system fonts cover it until it loads. */
+  --app-font: "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: ui-sans-serif, system-ui, sans-serif; /* same stack as .concrete-app, so nothing outside it falls back to Arial */
+  font-family: var(--app-font); /* same stack as .concrete-app, so nothing outside it falls back to Arial */
   min-height: 100vh;
 }
 
@@ -198,7 +200,7 @@ body {
 }
 
 /* Shared typography and controls for the existing log and progress pages. */
-.concrete-app { --ui-body: .75rem; --ui-line: 1.125rem; font-family: ui-sans-serif, system-ui, sans-serif; font-variant-numeric: tabular-nums; color-scheme: only dark; }
+.concrete-app { --ui-body: .75rem; --ui-line: 1.125rem; font-family: var(--app-font); font-variant-numeric: tabular-nums; color-scheme: only dark; }
 .concrete-app .text-xs, .concrete-app [class*="text-[11px]"], .concrete-app [class*="text-[10px]"] { font-size: var(--ui-body); line-height: var(--ui-line); }
 .concrete-app button { white-space: nowrap; flex-shrink: 0; font-size: var(--ui-body); line-height: var(--ui-line); font-weight: 500; }
 .concrete-app button svg { flex-shrink: 0; }
