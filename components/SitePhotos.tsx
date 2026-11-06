@@ -41,8 +41,11 @@ export function SitePhotos({site,blocked=false,onWorkPending}:{site:Site;blocked
   const [viewId,setViewId]=useState(''),[zoom,setZoom]=useState(false);
   const [locationSaving,setLocationSaving]=useState(false),[downloading,setDownloading]=useState(false);
   const [usage,setUsage]=useState<StorageUsage|null>(null);
+  // A missing 촬영일·동·층 (or adding while the store is not ready) is told under the fields, next to the field to fix.
+  const [uploadError,setUploadError]=useState<{field:'date'|'building'|'floor'|'';text:string}|null>(null);
   const photoBusy=busy||locationSaving||downloading;
   const alive=useRef(true),lock=useRef(false),input=useRef<HTMLInputElement>(null),cameraInput=useRef<HTMLInputElement>(null),dialog=useRef<HTMLDialogElement>(null),outsideDown=useRef(false);
+  const fieldRefs={date:useRef<HTMLInputElement>(null),building:useRef<HTMLInputElement>(null),floor:useRef<HTMLInputElement>(null)};
   useEffect(()=>{alive.current=true;setBusy(true);setMessage(cloudStorageEnabled()?'서버 사진 확인 중입니다. 기존 브라우저 사진이 있으면 원본을 보존하며 이전합니다.':'사진을 불러오는 중입니다.');listPhotos(site.id).then(rows=>{if(alive.current){setPhotos(rows);setReady(true);setMessage('');}}).catch(e=>{const d=describeError(e);logEvent({page:'사진',action:'사진 불러오기',outcome:'error',siteId:site.id,message:d.message,code:d.code,detail:d.detail});if(alive.current)setMessage(e instanceof Error?e.message:'사진 저장소를 열지 못했습니다. 기존 자료는 유지됩니다.');}).finally(()=>{if(alive.current)setBusy(false);});return()=>{alive.current=false;};},[site.id]);
   useEffect(()=>{if(!photoBusy)return;const prevent=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',prevent);return()=>window.removeEventListener('beforeunload',prevent);},[photoBusy]);
   useEffect(()=>{if(viewId&&!dialog.current?.open)dialog.current?.showModal();},[viewId]);
@@ -60,15 +63,19 @@ export function SitePhotos({site,blocked=false,onWorkPending}:{site:Site;blocked
   const months=Array.from(new Set([month,today().slice(0,7),...live.map(p=>p.date.slice(0,7)),...Array.from({length:12},(_,i)=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;})])).filter(Boolean).sort().reverse();
   const deleted=latestDeletedBatch(own);
   function uploadInputsValid() {
-    if(!normalizeShortDate(date)){alert('올바른 촬영일을 먼저 입력한 뒤 사진을 넣어주세요.');return false;}
-    if(!building.trim()||!floor.trim()){alert('동·구역과 층을 먼저 입력한 뒤 사진을 넣어주세요.');return false;}
-    return true;
+    const missing=!normalizeShortDate(date)?{field:'date' as const,text:'올바른 촬영일을 먼저 입력한 뒤 사진을 넣어주세요. (예: 26.11.06)'}
+      :!building.trim()?{field:'building' as const,text:'동·구역을 먼저 입력한 뒤 사진을 넣어주세요.'}
+      :!floor.trim()?{field:'floor' as const,text:'층을 먼저 입력한 뒤 사진을 넣어주세요.'}:null;
+    setUploadError(missing);
+    if(missing)fieldRefs[missing.field].current?.focus();
+    return !missing;
   }
+  const fieldError=(field:'date'|'building'|'floor')=>uploadError?.field===field?{'aria-invalid':true,'aria-describedby':'photo-upload-error'}:{};
   async function attach(files: File[]) {
     if(input.current)input.current.value='';
     if(cameraInput.current)cameraInput.current.value='';
     if(!files.length)return;
-    if(lock.current||locationSaving||!ready||blocked){alert('사진 저장 준비가 완료된 뒤 다시 첨부해주세요.');return;}
+    if(lock.current||locationSaving||!ready||blocked){setUploadError({field:'',text:'사진 저장 준비가 끝나지 않았습니다. 잠시 뒤 다시 넣어주세요.'});return;}
     if(!uploadInputsValid()){logEvent({page:'사진',action:'사진 올리기',outcome:'warn',siteId:site.id,message:'촬영일·동·층 입력 확인에 막힘',target:`${files.length}장`});return;}
     const iso=normalizeShortDate(date)!;
     lock.current=true;setBusy(true);let saved=0;const errors:string[]=[];
@@ -109,7 +116,8 @@ export function SitePhotos({site,blocked=false,onWorkPending}:{site:Site;blocked
   return <div className="site-photos">
     <section className="photo-panel photo-upload">
       <div><h2 className="ui-page-title">알폼핀 체결 사진</h2><p className="ui-note">{site.name} · 촬영일과 위치를 입력한 뒤 사진을 추가하세요.</p>
-        <div className="photo-fields"><label>촬영일<input aria-label="촬영일" value={date} onChange={e=>setDate(e.target.value)} placeholder="26.10.26" disabled={photoBusy}/></label><label>동·구역<input aria-label="동·구역" value={building} onChange={e=>setBuilding(e.target.value)} placeholder="예: 101동" disabled={photoBusy} list="photo-buildings"/></label><label>층<input aria-label="층" value={floor} onChange={e=>setFloor(e.target.value)} placeholder="예: 5F" disabled={photoBusy}/></label></div>
+        <div className="photo-fields"><label>촬영일<input ref={fieldRefs.date} aria-label="촬영일" value={date} onChange={e=>{setDate(e.target.value);setUploadError(null);}} placeholder="26.10.26" disabled={photoBusy} {...fieldError('date')}/></label><label>동·구역<input ref={fieldRefs.building} aria-label="동·구역" value={building} onChange={e=>{setBuilding(e.target.value);setUploadError(null);}} placeholder="예: 101동" disabled={photoBusy} list="photo-buildings" {...fieldError('building')}/></label><label>층<input ref={fieldRefs.floor} aria-label="층" value={floor} onChange={e=>{setFloor(e.target.value);setUploadError(null);}} placeholder="예: 5F" disabled={photoBusy} {...fieldError('floor')}/></label></div>
+        {uploadError&&<p id="photo-upload-error" className="photo-upload-error" role="alert">{uploadError.text}</p>}
         <datalist id="photo-buildings">{Array.from(new Set(live.map(p=>p.building))).map(b=><option key={b} value={b}/>)}</datalist>
       </div>
       <div className={`photo-drop ${over?'is-over':''}`} onDragOver={e=>{e.preventDefault();setOver(true);}} onDragLeave={()=>setOver(false)} onDrop={e=>{e.preventDefault();setOver(false);void attach(Array.from(e.dataTransfer.files));}}>

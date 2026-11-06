@@ -225,7 +225,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
             <input
               type="text"
               aria-label="일지 검색"
-              placeholder="날짜, 위치, 레미콘사, 비고 검색..."
+              placeholder="날짜, 위치, 레미콘사 검색..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500 placeholder-slate-500"
@@ -742,7 +742,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                         onClick={() => isPhone() ? setSheetLog(log) : startInlineEdit(log)}
                         data-log-edit={log.id}
                         disabled={readOnly}
-                        title="셀 직접 수정"
+                        title="수정" aria-label={`${log.date} ${log.building} ${log.floor} 일지 수정`}
                         className="p-1.5 text-slate-400 hover:text-amber-400 rounded transition"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
@@ -750,7 +750,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                       <button
                         onClick={() => onDeleteLog(log.id)}
                         disabled={readOnly}
-                        title="삭제"
+                        title="삭제" aria-label={`${log.date} ${log.building} ${log.floor} 일지 삭제`}
                         className="p-1.5 text-slate-400 hover:text-red-400 rounded transition"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

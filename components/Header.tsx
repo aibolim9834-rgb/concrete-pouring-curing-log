@@ -59,9 +59,9 @@ export const Header: React.FC<HeaderProps> = ({
                   isSupabase 
                     ? 'bg-emerald-950 text-emerald-300 border-emerald-800' 
                     : 'bg-amber-950 text-amber-300 border-amber-800'
-                }`}>
-                  <Database className="w-3 h-3" />
-                  {isSupabase ? 'Supabase 연동됨' : '로컬 모드 (추후 DB 연동)'}
+                }`} title={isSupabase ? '일지·현황·사진이 서버에 저장되어 다른 기기에서도 보입니다.' : '이 브라우저에만 저장됩니다. 다른 기기에서는 보이지 않습니다.'}>
+                  <Database className="w-3 h-3" aria-hidden="true" />
+                  {isSupabase ? '서버에 저장' : '이 기기에만 저장'}
                 </span>
               </div>
               

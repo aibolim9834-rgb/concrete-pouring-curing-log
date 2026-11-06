@@ -101,7 +101,7 @@ npm run dev
    NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
    ```
-4. 앱 재시작 시 상단 뱃지가 **`⚡ Supabase 연동됨`**으로 바뀌며 실시간 DB로 연결됩니다.
+4. 앱 재시작 시 상단 뱃지가 **`서버에 저장`**으로 바뀌며(서버 연결이 없으면 `이 기기에만 저장`) 실시간 DB로 연결됩니다.
 
 ---
 

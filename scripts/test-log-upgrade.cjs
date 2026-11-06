@@ -256,6 +256,23 @@ function uiHarness(file, name, props, extra = {}) {
     const mixed=JSON.stringify(api.SitePhotos({site,onWorkPending(){}}));
     assert(mixed.includes('25.03.14'));assert(!mixed.includes('25.04.20'));
   });
+  await check('photo upload names the missing 촬영일·동·층 on the page instead of a browser alert',()=>{
+    let bucket={states:[[],true],refs:[]},cursor=0,refCursor=0;
+    const react={useState(initial){const i=cursor++;if(!(i in bucket.states))bucket.states[i]=typeof initial==='function'?initial():initial;return [bucket.states[i],v=>{bucket.states[i]=typeof v==='function'?v(bucket.states[i]):v;}];},useRef(value){return bucket.refs[refCursor++] ||= {current:value};},useEffect(){}};
+    react.default=react;react.Fragment='Fragment';
+    const jsx=(type,props)=>({type,props});
+    const all=(node,type)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,type)):[...(node.type===type?[node]:[]),...all(node.props?.children,type)];
+    // No alert global is given, so any alert() call would fail this check.
+    const api=load('components/SitePhotos.tsx',{react,'@/lib/event-log':eventLogStub,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/date-only':load('lib/date-only.ts'),'@/lib/floor':load('lib/floor.ts'),'@/lib/cloud-storage':{cloudStorageEnabled:()=>false},'./ConfirmDialog':{askConfirm:async()=>true},'@/lib/site-photos-cloud':{latestDeletedBatch:()=>[]}});
+    const page=()=>{cursor=0;refCursor=0;return api.SitePhotos({site,onWorkPending(){}});};
+    const input=(tree,label)=>all(tree,'input').find(n=>n.props['aria-label']===label);
+    let tree=page();let focused='';input(tree,'동·구역').props.ref.current={focus:()=>{focused='building';}};
+    all(tree,'button').find(n=>n.props.children==='사진 선택').props.onClick();
+    tree=page();assert(JSON.stringify(tree).includes('동·구역을 먼저 입력한 뒤 사진을 넣어주세요.'));assert.equal(focused,'building');
+    assert.equal(input(tree,'동·구역').props['aria-invalid'],true);assert.equal(input(tree,'층').props['aria-invalid'],undefined);
+    // Typing in a field clears the notice.
+    input(tree,'동·구역').props.onChange({target:{value:'101동'}});tree=page();assert(!JSON.stringify(tree).includes('photo-upload-error'));
+  });
   await check('corrupt JSON blocks reads without rewriting source',()=>{for(const key of ['cp_sites','cp_logs']){storage.entries.clear();storage.setItem(key,'{broken');assert.throws(()=>data.readLocalData(storage));assert.equal(storage.getItem(key),'{broken');}});
   await check('invalid arrays and fields are rejected',()=>{storage.entries.clear();storage.setItem('cp_sites','{}');assert.throws(()=>data.readLocalData(storage));assert.throws(()=>data.validateLogs([{...log,building:null}]));});
   await check('defaults contain no unconfirmed temperature volume weather or curing claims',()=>{const input=data.newLog(site.id);same([input.min_temp,input.max_temp,input.volume,input.weather,input.curing_watering,input.curing_protection],[null,null,'','','','']);});

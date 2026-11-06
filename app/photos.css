@@ -2,6 +2,7 @@
 .photo-panel{padding:24px;border:1px solid var(--b-line);border-radius:9px;background:var(--b-surface);min-width:0}
 .photo-upload{display:grid;grid-template-columns:minmax(420px,550px) minmax(0,1fr);gap:12px 28px}
 .photo-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:24px}
+.photo-upload-error{margin:8px 0 0;color:var(--b-danger);font-weight:600}.photo-fields input[aria-invalid=true]{border-color:var(--b-danger)}
 .site-photos label{display:grid;gap:6px;color:var(--b-muted);font-size:12px;font-weight:500}
 .site-photos input,.site-photos select{width:100%;min-width:0;min-height:40px;border:1px solid var(--b-control);border-radius:6px;padding:8px 12px;background:white;color:var(--b-ink)}
 .photo-drop{padding:18px;text-align:center;border:2px dashed #91af99;border-radius:8px;background:#f7faf7}
