@@ -531,6 +531,8 @@ body {
 .log-filters-toggle { display:none; justify-content:space-between; align-items:center; gap:8px; margin:12px 16px 0; inline-size:calc(100% - 32px); font-weight:600; }
 /* Phone log entry: a floating "+ 새 일지" button opens a full-screen form dialog. */
 .log-new-dock, .log-footer-phone { display:none; }
+/* Phone log list: one card per log in place of the wide table, and a sort select in place of the column headers. */
+.log-card-list, .log-sort-phone { display:none; }
 .log-footer-phone { margin:0; text-align:center; }
 .log-new-dock { position:fixed; inset-inline:0; inset-block-end:0; z-index:20; padding:12px max(16px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); background:linear-gradient(transparent, var(--b-canvas, #F4F5F4) 35%); pointer-events:none; }
 .log-new-button { pointer-events:auto; inline-size:100%; min-block-size:52px; border:0; border-radius:8px; background:var(--b-action, #007723); color:#fff; font-size:16px; font-weight:700; box-shadow:0 4px 14px rgb(0 0 0 / .18); }

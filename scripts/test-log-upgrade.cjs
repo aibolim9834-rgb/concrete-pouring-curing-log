@@ -62,7 +62,7 @@ function uiHarness(file, name, props, extra = {}) {
   const react={useState(initial){const i=cursor++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return [states[i],v=>{states[i]=typeof v==='function'?v(states[i]):v;}];},useEffect(fn){effects.push(fn);},useCallback(fn){return fn;},useRef(value){return refs[refCursor++] ||= {current:value};}};
   const jsx=(type,props)=>({type,props});
   const events=new Map();
-  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./ConfirmDialog':{askConfirm:async()=>true},'./WateringSelect':{WateringSelect:'WateringSelect'},'./MobileLogSheet':{MobileLogSheet:'MobileLogSheet'},'./ShortDateInput':{ShortDateInput:'ShortDateInput'},'./DailyReportDialog':{DailyReportDialog:'DailyReportDialog'},'./SiteAddressFields':{SiteAddressFields:'SiteAddressFields'},'@/lib/smooth-wheel':{smoothWheel(){}},'@/lib/event-log':eventLogStub,'@/lib/kma-area':load('lib/kma-area.ts'),'@/lib/site-photos-cloud':{listPhotos:async()=>[]},'@/lib/progress-structure':load('lib/progress-structure.ts'),'@/lib/site-archive':load('lib/site-archive.ts'),'@/lib/site-code':load('lib/site-code.ts'),'@/lib/date-only':load('lib/date-only.ts'),'@/lib/pouring-progress':load('lib/pouring-progress.ts'),'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name}),...extra},{Node:TestNode,requestAnimationFrame:fn=>fn(),document:{querySelector:()=>null,addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
+  const exports=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},'./Modal':{Modal:'Modal'},'./ConfirmDialog':{askConfirm:async()=>true},'./WateringSelect':{WateringSelect:'WateringSelect'},'./MobileLogSheet':{MobileLogSheet:'MobileLogSheet'},'./ShortDateInput':{ShortDateInput:'ShortDateInput'},'./DailyReportDialog':{DailyReportDialog:'DailyReportDialog'},'./SiteAddressFields':{SiteAddressFields:'SiteAddressFields'},'@/lib/smooth-wheel':{smoothWheel(){}},'@/lib/event-log':eventLogStub,'@/lib/kma-area':load('lib/kma-area.ts'),'@/lib/site-photos-cloud':{listPhotos:async()=>[]},'@/lib/progress-structure':load('lib/progress-structure.ts'),'@/lib/site-archive':load('lib/site-archive.ts'),'@/lib/site-code':load('lib/site-code.ts'),'@/lib/date-only':load('lib/date-only.ts'),'@/lib/pouring-progress':load('lib/pouring-progress.ts'),'@/lib/watering':load('lib/watering.ts'),'@/lib/strength':load('lib/strength.ts'),'@/lib/log-data':data,'lucide-react':new Proxy({}, {get:(_,name)=>name}),...extra},{Node:TestNode,CSS:{escape:value=>value},requestAnimationFrame:fn=>fn(),document:{querySelector:()=>null,addEventListener:(type,fn)=>events.set(type,fn),removeEventListener:(type)=>events.delete(type)},window:{addEventListener(){},removeEventListener(){}}});
   return {states,events,get effects(){return effects;},render(){cursor=0;refCursor=0;effects=[];return exports[name](props);}};
 }
 (async()=>{
@@ -134,6 +134,71 @@ function uiHarness(file, name, props, extra = {}) {
     const key=(target,extra={})=>row.props.onKeyDown({key:'Enter',repeat:false,target:{matches:()=>target==='field'},nativeEvent:{isComposing:false,keyCode:13,...extra},preventDefault:()=>prevented++});
     key('field',{isComposing:true});key('field',{keyCode:229});key('button');assert.equal(calls,0);assert.equal(prevented,2);
     key('field');await new Promise(setImmediate);assert.equal(calls,1);assert.equal(h.states[2],null);
+  });
+  await check('PC log keys: Enter adds from any field, Esc cancels an edit, and the cursor lands where the next step starts',async()=>{
+    const all=(node,type)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,type)):[...(node.type===type?[node]:[]),...all(node.props?.children,type)];
+    let added=0,updated=0,focused='';
+    const h=uiHarness('components/RecordTable.tsx','RecordTable',{logs:[log],site,filters:data.emptyLogFilters(),sort:data.defaultLogSort,onQuickAddLog:()=>{added++;return Promise.resolve();},onQuickUpdateLog:()=>{updated++;return Promise.resolve();}});
+    const settle=async()=>{await new Promise(setImmediate);const tree=h.render();h.effects.forEach(effect=>effect());return tree;};
+    const key=(row,name,target,extra={})=>row.props.onKeyDown({key:name,repeat:false,target:{matches:()=>target==='field'},nativeEvent:{isComposing:false,keyCode:name==='Enter'?13:27,...extra},preventDefault(){}});
+    const focusAs=name=>({querySelector:()=>({focus:()=>{focused=name;}})});
+    let tree=h.render();
+    all(tree,'input').find(n=>n.props['aria-label']==='새 일지 동·구역').props.ref.current={focus:()=>{focused='building';}};
+    all(tree,'table')[0].props.ref.current={querySelector:selector=>selector.includes(log.id)?{focus:()=>{focused='edit button';}}:null};
+    // The entry row: Enter in any field (date, temperature and select boxes included) adds, then the cursor waits in 동(구역).
+    const addRow=all(tree,'tr').find(n=>String(n.props.className).includes('log-quick-add-row'));
+    key(addRow,'Enter','field',{isComposing:true});key(addRow,'Enter','field',{keyCode:229});key(addRow,'Enter','button');key(addRow,'Escape','field');assert.equal(added,0);
+    key(addRow,'Enter','field');tree=await settle();assert.equal(added,1);assert.equal(focused,'building');
+    // Double-clicking a cell starts the edit with the cursor in that column.
+    all(tree,'tr').find(n=>n.props.onDoubleClick).props.onDoubleClick({target:{closest:()=>({cellIndex:3})}});
+    tree=h.render();let editRow=all(tree,'tr').find(n=>n.props.onBlur);
+    editRow.props.ref.current={cells:{3:focusAs('floor')}};h.effects.forEach(effect=>effect());assert.equal(focused,'floor');
+    // Esc cancels without saving and puts the cursor back on the row's edit button; Esc that ends Korean input does not.
+    key(editRow,'Escape','field',{isComposing:true});assert.equal(h.states[2],log.id);
+    key(editRow,'Escape','field');assert.equal(h.states[2],null);assert.equal(updated,0);
+    h.render();h.effects.forEach(effect=>effect());assert.equal(focused,'edit button');
+    // The edit button starts at 일자; Enter saves and the cursor returns to the edit button.
+    all(h.render(),'button').find(n=>n.props['data-log-edit']===log.id).props.onClick();
+    tree=h.render();editRow=all(tree,'tr').find(n=>n.props.onBlur);
+    editRow.props.ref.current={cells:{1:focusAs('date')}};h.effects.forEach(effect=>effect());assert.equal(focused,'date');
+    h.states[3]={...h.states[3],floor:'2F'};editRow=all(h.render(),'tr').find(n=>n.props.onBlur);
+    key(editRow,'Enter','field');await settle();assert.equal(updated,1);assert.equal(h.states[2],null);assert.equal(focused,'edit button');
+  });
+  await check('phones list one tappable card per log with date, weekday, place and pour summary, plus a sort select',async()=>{    const all=(node,type)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,type)):[...(node.type===type?[node]:[]),...all(node.props?.children,type)];
+    const logs=[{...log,id:'c1',date:'2026-11-05',building:'주차장#4',floor:'B1F, RF',member_type:'슬라브',strength:'30',volume:228},{...log,id:'c2',date:'2026-11-02',building:'101동',floor:'2F',strength:'',volume:null}];
+    let sorted=null;
+    const show=(props={})=>uiHarness('components/RecordTable.tsx','RecordTable',{logs,site,filters:data.emptyLogFilters(),sort:data.defaultLogSort,onSortChange:s=>{sorted=s;},...props});
+    const cardsOf=tree=>all(tree,'ul').find(n=>n.props.className==='log-card-list');
+    const h=show();let tree=h.render();const cards=all(cardsOf(tree),'button');
+    assert.equal(cards.length,2);
+    const first=JSON.stringify(cards[0]);for(const text of ['26-11-05 (목)','주차장#4','B1F, RF','슬라브','30MPa','228 m³'])assert(first.includes(text),text);
+    const second=JSON.stringify(cards[1]);assert(second.includes('26-11-02 (월)'));assert(!second.includes('MPa'));assert(!second.includes('m³'));
+    cards[1].props.onClick();assert.equal(h.states[6].id,'c2');
+    const sortSelect=all(tree,'select').find(n=>n.props['aria-label']==='정렬');
+    assert.equal(sortSelect.props.value,'date:desc');assert.equal(all(sortSelect,'option').length,4);
+    sortSelect.props.onChange({target:{value:'volume:desc'}});same(sorted,{key:'volume',direction:'desc'});
+    // An order picked from the PC headers shows as its own entry instead of a wrong one.
+    const custom=all(show({sort:{key:'min_temp',direction:'asc'}}).render(),'select').find(n=>n.props['aria-label']==='정렬');
+    assert.equal(all(custom,'option').length,5);assert.equal(all(custom,'option')[0].props.children.join(''),'최저온도 오름차순');
+    // A 종료 site lists cards that do not open the edit sheet; an empty site says how to start.
+    const closed=cardsOf(show({readOnly:true}).render());assert.equal(all(closed,'button').length,0);assert.equal(all(closed,'div').length,2);
+    assert(JSON.stringify(cardsOf(show({logs:[]}).render())).includes('아직 일지가 없습니다'));
+  });
+  await check('an inline edit with nothing changed closes without writing the log again',async()=>{
+    const all=(node,type)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,type)):[...(node.type===type?[node]:[]),...all(node.props?.children,type)];
+    const saved={...log,strength:'',volume:null,remarks:null,min_temp:5};let calls=0,focused='';
+    const h=uiHarness('components/RecordTable.tsx','RecordTable',{logs:[saved],site,filters:data.emptyLogFilters(),sort:data.defaultLogSort,onQuickUpdateLog:()=>{calls++;return Promise.resolve();}});
+    const start=()=>{all(h.render(),'tr').find(n=>n.props.onDoubleClick).props.onDoubleClick({target:{closest:()=>({cellIndex:2})}});return all(h.render(),'tr').find(n=>n.props.onBlur);};
+    all(h.render(),'table')[0].props.ref.current={querySelector:()=>({focus:()=>{focused='edit button';}})};
+    // Clicking outside an untouched row closes it.
+    let row=start();row.props.ref.current={contains:()=>false,cells:[]};h.effects.forEach(effect=>effect());
+    h.events.get('pointerdown')({target:new TestNode()});await new Promise(setImmediate);assert.equal(calls,0);assert.equal(h.states[2],null);
+    // Enter on an untouched row closes it and returns the cursor to the edit button.
+    row=start();row.props.onKeyDown({key:'Enter',repeat:false,target:{matches:()=>true},nativeEvent:{isComposing:false,keyCode:13},preventDefault(){}});
+    await new Promise(setImmediate);h.render();h.effects.forEach(effect=>effect());assert.equal(calls,0);assert.equal(h.states[2],null);assert.equal(focused,'edit button');
+    // Typing the same value back is still nothing changed; a real change saves.
+    start();h.states[3]={...h.states[3],building:'101동'};all(h.render(),'button').find(n=>n.props['aria-label']==='저장').props.onClick();await new Promise(setImmediate);assert.equal(calls,0);
+    start();h.states[3]={...h.states[3],min_temp:6};all(h.render(),'button').find(n=>n.props['aria-label']==='저장').props.onClick();await new Promise(setImmediate);assert.equal(calls,1);
   });
   await check('active log editing blocks route and site changes, completion restores navigation',()=>{
     const h=appHarness(null);let tree=h.render();find(tree,'RecordTable').props.onWorkPending(true);
@@ -383,6 +448,7 @@ function uiHarness(file, name, props, extra = {}) {
     const byId=(id)=>all(h.render(),'input').find(n=>n.props.id===id);
     const submit=()=>all(h.render(),'form')[0].props.onSubmit({preventDefault(){}});
     assert(JSON.stringify(h.render()).includes('일지 수정'));
+    await submit();assert.equal(updates.length,0);
     byId('mobile-log-volume').props.onChange({target:{value:'12a'}});await submit();assert.equal(updates.length,0);assert(JSON.stringify(h.render()).includes('타설물량은 숫자로 입력해주세요.'));
     byId('mobile-log-volume').props.onChange({target:{value:'20'}});byId('mobile-log-floor').props.onChange({target:{value:'2층'}});await submit();
     assert.equal(updates.length,1);assert.equal(updates[0][0],log.id);assert.equal(updates[0][1].floor,'2층');assert.equal(updates[0][1].volume,20);assert.equal(updates[0][1].building,'101동');

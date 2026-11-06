@@ -210,6 +210,28 @@
   .concrete-app .log-new-dock { display:block; }
   .concrete-app:has(.log-new-dock) > main { padding-bottom:96px; }
   .concrete-app .record-display-row { cursor:pointer; }
+  /* Cards replace the 1340px table on phones; the PC keeps the table. The search takes a whole row so its hint is readable. */
+  .concrete-app .record-log-wrap { display:none; }
+  /* Search on its own row; sort and weather split the second row beside 보고 문구. */
+  .concrete-app .log-toolbar .log-tools { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto; }
+  .concrete-app .log-toolbar .log-search { grid-column:1 / -1; }
+  .concrete-app .log-toolbar .log-report-button { padding-inline:10px; }
+  .concrete-app .log-weather { padding:0; border:0; background:none!important; }
+  .concrete-app .log-weather > svg { display:none; }
+  .concrete-app :is(.log-sort-phone, .log-weather select) { display:block; inline-size:100%; padding-inline:6px; border:1px solid var(--b-line); border-radius:5px; background:var(--b-surface); color:var(--b-ink); }
+  .concrete-app .log-card-list { display:block; list-style:none; margin:12px 0 0; padding:0; border-top:1px solid var(--b-line); }
+  .concrete-app .log-card-list > li + li { border-top:1px solid var(--b-line); }
+  .concrete-app .log-card { display:grid; gap:4px; inline-size:100%; padding:12px 16px; border:0; border-radius:0; background:var(--b-surface); color:var(--b-ink); text-align:start; white-space:normal; font-weight:400; }
+  .concrete-app .log-card-list > li:nth-child(even) .log-card { background:#F7F8F7; }
+  .concrete-app button.log-card:active { background:var(--b-selected); }
+  .concrete-app button.log-card:focus-visible { outline:3px solid var(--b-action); outline-offset:-3px; }
+  .concrete-app .log-card-line { display:flex; align-items:baseline; gap:4px 10px; min-inline-size:0; }
+  .concrete-app .log-card-date { flex:none; font-size:15px; line-height:22px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .concrete-app .log-card-place { min-inline-size:0; font-size:15px; line-height:22px; font-weight:600; color:var(--b-action); overflow-wrap:anywhere; }
+  .concrete-app .log-card-floor { flex:none; margin-inline-start:auto; font-size:15px; line-height:22px; font-weight:600; }
+  .concrete-app .log-card-meta { flex-wrap:wrap; font-size:14px; line-height:20px; font-variant-numeric:tabular-nums; }
+  .concrete-app .log-card-chip { padding:0 6px; border:1px solid var(--b-line); border-radius:4px; background:var(--b-soft); font-size:13px; }
+  .concrete-app .log-card-empty { padding:24px 16px; text-align:center; color:var(--b-muted); font-size:14px; }
 
   /* Progress: swatches slide sideways in one line, and the two record actions share one row. */
   .concrete-app .progress-selection-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }

@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PouringLog, PouringLogInput, Site } from '@/lib/types';
 import { newLog, filterLogs, LogFilters, LogSort, LogSortKey, volumeText } from '@/lib/log-data';
+import { shortDate } from '@/lib/date-only';
 import { WateringSelect } from './WateringSelect';
 import { MobileLogSheet } from './MobileLogSheet';
 import { ShortDateInput } from './ShortDateInput';
@@ -43,6 +44,32 @@ interface RecordTableProps {
   onSaveReportOptions?: (options: ReportOptions | null) => Promise<void>;
 }
 
+// The editable fields of a log, as the edit row holds them.
+const logDraft = (log: PouringLog): PouringLogInput => ({
+  site_id: log.site_id, category: log.category, date: log.date, building: log.building, floor: log.floor, member_type: log.member_type,
+  min_temp: log.min_temp, max_temp: log.max_temp, weather: log.weather, remicon_company: log.remicon_company,
+  strength: log.strength || '', volume: log.volume ?? '', curing_watering: log.curing_watering, curing_protection: log.curing_protection, remarks: log.remarks || '',
+});
+// Phone cards: the date as typed in the app (26-11-05) plus its weekday.
+const cardDate = (date: string) => {
+  const day = new Date(`${date}T00:00:00`);
+  return Number.isNaN(day.getTime()) ? date : `${shortDate(date)} (${'일월화수목금토'[day.getDay()]})`;
+};
+// Phones have no column headers to sort by, so the common orders sit in one select; an order chosen on the PC shows as its own entry.
+const sortLabels: Record<LogSortKey, string> = { date: '일자', building: '동(구역)', floor: '층', member_type: '벽/슬라브', min_temp: '최저온도', max_temp: '최고온도', weather: '기상', remicon_company: '레미콘사', strength: '타설강도', volume: '타설물량', curing_watering: '살수', curing_protection: '보양' };
+const phoneSorts: [string, LogSort][] = [['최신순', { key: 'date', direction: 'desc' }], ['오래된순', { key: 'date', direction: 'asc' }], ['동(구역)순', { key: 'building', direction: 'asc' }], ['물량순', { key: 'volume', direction: 'desc' }]];
+const editButtonOf = (table: HTMLTableElement | null, id: string) => table?.querySelector<HTMLElement>(`[data-log-edit="${CSS.escape(id)}"]`);
+// Keys shared by the new-entry row and the row being edited: Enter in a field saves, Esc cancels.
+// An Enter that confirms Korean input, or a held-down Enter, is left alone.
+function rowKeys(event: React.KeyboardEvent, save: () => void, cancel?: () => void) {
+  const composing = event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229;
+  if (event.key === 'Escape' && cancel && !composing) { event.preventDefault(); cancel(); return; }
+  if (event.key !== 'Enter' || !(event.target as HTMLElement).matches('input, select')) return;
+  event.preventDefault();
+  if (composing || event.repeat) return;
+  save();
+}
+
 export const RecordTable: React.FC<RecordTableProps> = ({
   logs,
   site,
@@ -60,6 +87,15 @@ export const RecordTable: React.FC<RecordTableProps> = ({
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [editingRowData, setEditingRowData] = useState<PouringLogInput | null>(null);
   const editingRowRef = useRef<HTMLTableRowElement>(null);
+  const tableRef = useRef<HTMLTableElement>(null), newBuildingRef = useRef<HTMLInputElement>(null);
+  const tableDisabled = busy || pending || blocked || !site;
+  // Saving disables the whole table, which drops keyboard focus, so where focus lands next waits here until the table is usable again.
+  const focusNext = useRef<(() => HTMLElement | null | undefined) | null>(null);
+  useEffect(() => {
+    if (tableDisabled || !focusNext.current) return;
+    const target = focusNext.current(); focusNext.current = null;
+    target?.focus();
+  });
 
   // Quick New Row State (Always available empty input row above existing records)
   const [newRowData, setNewRowData] = useState<PouringLogInput>(() => newLog(site?.id, String(logs.length + 1)));
@@ -105,49 +141,57 @@ export const RecordTable: React.FC<RecordTableProps> = ({
   const handleQuickAddSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (lock.current) return;
+    const from = document.activeElement as HTMLElement | null;
     lock.current = true; setPending(true); setError('');
     try {
       if (!onQuickAddLog) throw new Error('등록 경로를 확인해주세요.');
       await onQuickAddLog({ ...newRowData, site_id: site?.id || '' });
       setNewRowData(newLog(site?.id, String(logs.length + 2)));
-    } catch (e) { setError(e instanceof Error ? e.message : '저장에 실패했습니다. 입력은 유지됩니다.'); }
+      // The next log usually starts from its place, so the cursor waits in 동(구역).
+      focusNext.current = () => newBuildingRef.current;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '저장에 실패했습니다. 입력은 유지됩니다.');
+      focusNext.current = () => from?.isConnected ? from : newBuildingRef.current;
+    }
     finally { lock.current = false; setPending(false); }
   };
 
-  // Start inline edit for a row
-  const startInlineEdit = (log: PouringLog) => {
+  // Start inline edit for a row; the cursor goes to the double-clicked column, or to 일자 from the edit button.
+  const startInlineEdit = (log: PouringLog, column = 1) => {
     if (editingRowId || lock.current || busy || blocked || readOnly) return;
+    focusNext.current = () => editingRowRef.current?.cells[column]?.querySelector<HTMLElement>('input:not([type="date"]), select');
     setEditingRowId(log.id);
-    setEditingRowData({
-      site_id: log.site_id,
-      category: log.category,
-      date: log.date,
-      building: log.building,
-      floor: log.floor,
-      member_type: log.member_type,
-      min_temp: log.min_temp,
-      max_temp: log.max_temp,
-      weather: log.weather,
-      remicon_company: log.remicon_company,
-      strength: log.strength || '',
-      volume: log.volume !== null && log.volume !== undefined ? log.volume : '',
-      curing_watering: log.curing_watering,
-      curing_protection: log.curing_protection,
-      remarks: log.remarks || '',
-    });
+    setEditingRowData(logDraft(log));
   };
 
-  // Save inline edit
-  const saveInlineEdit = useCallback(async (id: string) => {
+  // Save inline edit. A save from the keyboard or the save button puts the cursor back on the row's edit button;
+  // a save from clicking elsewhere leaves focus where the click put it.
+  const saveInlineEdit = useCallback(async (id: string, returnFocus = false) => {
     if (!editingRowData || lock.current) return;
+    // Nothing changed (an accidental double-click, or Enter without typing): close quietly instead of writing the same log again.
+    const original = logs.find(item => item.id === id), base = original && logDraft(original);
+    if (base && (Object.keys(base) as (keyof PouringLogInput)[]).every(key => base[key] === editingRowData[key])) {
+      setEditingRowId(null); setEditingRowData(null);
+      if (returnFocus) focusNext.current = () => editButtonOf(tableRef.current, id);
+      return;
+    }
+    const from = document.activeElement as HTMLElement | null;
     lock.current = true; setPending(true); setError('');
     try {
       if (!onQuickUpdateLog) throw new Error('수정 경로를 확인해주세요.');
       await onQuickUpdateLog(id, editingRowData);
       setEditingRowId(null); setEditingRowData(null);
-    } catch (e) { setError(e instanceof Error ? e.message : '저장에 실패했습니다. 입력은 유지됩니다.'); }
+      if (returnFocus) focusNext.current = () => editButtonOf(tableRef.current, id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '저장에 실패했습니다. 입력은 유지됩니다.');
+      if (returnFocus) focusNext.current = () => from?.isConnected ? from : null;
+    }
     finally { lock.current = false; setPending(false); }
-  }, [editingRowData, onQuickUpdateLog]);
+  }, [editingRowData, onQuickUpdateLog, logs]);
+  const cancelInlineEdit = (id: string) => {
+    setEditingRowId(null); setEditingRowData(null);
+    focusNext.current = () => editButtonOf(tableRef.current, id);
+  };
 
   useEffect(() => {
     if (!editingRowId) return;
@@ -164,7 +208,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
     <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-lg overflow-hidden">
       
       {error && <p className="progress-error" role="alert">{error}</p>}
-      <fieldset disabled={busy || pending || blocked || !site}>
+      <fieldset disabled={tableDisabled}>
       {/* Table Top Toolbar */}
       <div className="log-toolbar p-4 border-b border-slate-800 bg-slate-900/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-baseline gap-2.5">
@@ -174,9 +218,9 @@ export const RecordTable: React.FC<RecordTableProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+        <div className="log-tools flex items-center gap-2 flex-wrap sm:flex-nowrap">
           {/* Search bar */}
-          <div className="relative flex-1 sm:w-64">
+          <div className="log-search relative flex-1 sm:w-64">
             <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -188,8 +232,15 @@ export const RecordTable: React.FC<RecordTableProps> = ({
             />
           </div>
 
+          <select className="log-sort-phone" aria-label="정렬" value={`${sort.key}:${sort.direction}`}
+            onChange={(e) => { const [key, direction] = e.target.value.split(':'); onSortChange({ key: key as LogSortKey, direction: direction as LogSort['direction'] }); }}>
+            {!phoneSorts.some(([, option]) => option.key === sort.key && option.direction === sort.direction) &&
+              <option value={`${sort.key}:${sort.direction}`}>{sortLabels[sort.key]} {sort.direction === 'asc' ? '오름차순' : '내림차순'}</option>}
+            {phoneSorts.map(([label, option]) => <option key={label} value={`${option.key}:${option.direction}`}>{label}</option>)}
+          </select>
+
           {/* Weather Filter */}
-          <div className="flex items-center gap-1 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs">
+          <div className="log-weather flex items-center gap-1 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs">
             <Filter className="w-3 h-3 text-slate-400" />
             <select
               aria-label="기상 필터"
@@ -227,7 +278,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
       </div>
       {/* Main Excel-styled Responsive Table */}
       <div className="record-log-wrap overflow-x-auto" role="region" aria-label="타설일지 표" tabIndex={0}>
-        <table className="record-log-table w-full text-xs text-left text-slate-300 border-collapse">
+        <table ref={tableRef} className="record-log-table w-full text-xs text-left text-slate-300 border-collapse">
           <caption className="sr-only">타설일지. 열 제목을 누르면 오름차순 또는 내림차순으로 정렬합니다. 구분은 현재 조회 순서의 자동 번호입니다.</caption>
           <colgroup>
             {/* 번호, 일자, 동, 층, 부위, 최저·최고온도, 기상, 업체, 강도, 물량, 살수·보양, 관리.
@@ -287,7 +338,8 @@ export const RecordTable: React.FC<RecordTableProps> = ({
           <tbody className="divide-y divide-slate-800">
             
             {/* ✏️ ALWAYS-AVAILABLE BLANK INPUT ROW ABOVE EXISTING RECORDS (직접 입력 빈칸 행) */}
-            {!readOnly && <tr className="log-quick-add-row bg-amber-950/20 border-t-2 border-dashed border-amber-500/50 hover:bg-amber-950/30 transition">
+            {!readOnly && <tr className="log-quick-add-row bg-amber-950/20 border-t-2 border-dashed border-amber-500/50 hover:bg-amber-950/30 transition"
+              onKeyDown={(event) => rowKeys(event, () => void handleQuickAddSubmit())}>
               {/* 구분 */}
               <td className="p-1.5 border-r border-slate-800 text-center text-slate-400">자동</td>
 
@@ -304,11 +356,11 @@ export const RecordTable: React.FC<RecordTableProps> = ({
               {/* 동(구역) */}
               <td className="p-1.5 border-r border-slate-800">
                 <input
+                  ref={newBuildingRef}
                   type="text"
                   aria-label="새 일지 동·구역"
                   value={newRowData.building}
                   onChange={(e) => setNewRowData({ ...newRowData, building: e.target.value })}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && !e.repeat && handleQuickAddSubmit()}
                   className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-300 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
                 />
               </td>
@@ -319,9 +371,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                   type="text"
                   aria-label="새 일지 층"
                   value={newRowData.floor}
-                  onChange={(e) => setNewRowData({ ...newRowData, floor: e.target.value })}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && !e.repeat && handleQuickAddSubmit()}
-                  className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-center text-slate-200 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
+                  onChange={(e) => setNewRowData({ ...newRowData, floor: e.target.value })}                  className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-center text-slate-200 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
                 />
               </td>
 
@@ -390,9 +440,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                   placeholder="레미콘사"
                   aria-label="새 일지 레미콘사"
                   value={newRowData.remicon_company}
-                  onChange={(e) => setNewRowData({ ...newRowData, remicon_company: e.target.value })}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && !e.repeat && handleQuickAddSubmit()}
-                  className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-slate-200 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
+                  onChange={(e) => setNewRowData({ ...newRowData, remicon_company: e.target.value })}                  className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-slate-200 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
                 />
               </td>
 
@@ -405,9 +453,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                   title="숫자만 입력하면 MPa가 자동으로 붙습니다."
                   value={newRowData.strength || ''}
                   onChange={(e) => setNewRowData({ ...newRowData, strength: e.target.value })}
-                  onBlur={(e) => { const strength = normalizeStrength(e.target.value); setNewRowData(current => ({ ...current, strength })); }}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && !e.repeat && handleQuickAddSubmit()}
-                  className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-center text-amber-300 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
+                  onBlur={(e) => { const strength = normalizeStrength(e.target.value); setNewRowData(current => ({ ...current, strength })); }}                  className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-center text-amber-300 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
                 />
               </td>
 
@@ -419,9 +465,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                   placeholder="물량"
                   aria-label="새 일지 타설물량"
                   value={newRowData.volume ?? ''}
-                  onChange={(e) => setNewRowData({ ...newRowData, volume: e.target.value ? parseFloat(e.target.value) : '' })}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && !e.repeat && handleQuickAddSubmit()}
-                  className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-center text-slate-200 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
+                  onChange={(e) => setNewRowData({ ...newRowData, volume: e.target.value ? parseFloat(e.target.value) : '' })}                  className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-center text-slate-200 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
                 />
               </td>
 
@@ -442,9 +486,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                   placeholder="보양 내용"
                   aria-label="새 일지 보양"
                   value={newRowData.curing_protection}
-                  onChange={(e) => setNewRowData({ ...newRowData, curing_protection: e.target.value })}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && !e.repeat && handleQuickAddSubmit()}
-                  className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-amber-300 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
+                  onChange={(e) => setNewRowData({ ...newRowData, curing_protection: e.target.value })}                  className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-amber-300 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
                 />
               </td>
 
@@ -474,13 +516,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                       onBlur={(event) => {
                         if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) void saveInlineEdit(log.id);
                       }}
-                      // Enter in any field saves the row, like the new-entry row; an Enter that confirms Korean input is left alone.
-                      onKeyDown={(event) => {
-                        if (event.key !== 'Enter' || !(event.target as HTMLElement).matches('input, select')) return;
-                        event.preventDefault();
-                        if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229 || event.repeat) return;
-                        void saveInlineEdit(log.id);
-                      }}>
+                      onKeyDown={(event) => rowKeys(event, () => void saveInlineEdit(log.id, true), () => cancelInlineEdit(log.id))}>
                     <td className="p-1 border-r border-slate-800 text-center">{index + 1}</td>
                     <td className="p-1 border-r border-slate-800 text-center">
                       <ShortDateInput
@@ -606,17 +642,14 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                     <td className="p-1 text-center whitespace-nowrap">
                       <div className="record-row-actions flex items-center justify-center">
                         <button
-                          onClick={() => saveInlineEdit(log.id)}
+                          onClick={() => saveInlineEdit(log.id, true)}
                           title="저장" aria-label="저장"
                           className="record-save-button p-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded shadow transition"
                         >
                           <Check className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => {
-                            setEditingRowId(null);
-                            setEditingRowData(null);
-                          }}
+                          onClick={() => cancelInlineEdit(log.id)}
                           title="취소" aria-label="취소"
                           className="p-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition"
                         >
@@ -640,7 +673,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                     if (busy || pending || blocked || readOnly || !site || editingRowId) return;
                     const cell = (event.target as HTMLElement).closest('td');
                     if (!cell || cell.cellIndex === 0 || cell.cellIndex >= 13) return;
-                    startInlineEdit(log);
+                    startInlineEdit(log, cell.cellIndex);
                   }}
                   className={`record-display-row transition group ${
                     index % 2 === 0 ? 'bg-slate-900/40' : 'bg-slate-900'
@@ -707,6 +740,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                     <div className="record-row-actions flex items-center justify-center opacity-90 group-hover:opacity-100">
                       <button
                         onClick={() => isPhone() ? setSheetLog(log) : startInlineEdit(log)}
+                        data-log-edit={log.id}
                         disabled={readOnly}
                         title="셀 직접 수정"
                         className="p-1.5 text-slate-400 hover:text-amber-400 rounded transition"
@@ -730,16 +764,28 @@ export const RecordTable: React.FC<RecordTableProps> = ({
           </tbody>
         </table>
       </div>
+      {/* Phones show one card per log instead of the wide table; tapping a card opens the edit sheet. */}
+      <ul className="log-card-list" aria-label="타설일지 목록">
+        {filteredLogs.map(log => {
+          const strength = normalizeStrength(log.strength), volume = volumeText(log.volume);
+          const body = <>
+            <span className="log-card-line"><span className="log-card-date">{cardDate(log.date)}</span><span className="log-card-place">{log.building}</span><span className="log-card-floor">{log.floor}</span></span>
+            <span className="log-card-line log-card-meta"><span className="log-card-chip">{log.member_type}</span>{strength && <span>{strength}</span>}{volume && <span>{volume}</span>}</span>
+          </>;
+          return <li key={log.id}>{readOnly ? <div className="log-card">{body}</div> : <button type="button" className="log-card" onClick={() => setSheetLog(log)}>{body}</button>}</li>;
+        })}
+        {!filteredLogs.length && <li className="log-card-empty">{logs.length ? '조회 조건에 맞는 일지가 없습니다.' : readOnly ? '일지가 없습니다.' : '아직 일지가 없습니다. 아래 + 새 일지로 입력하세요.'}</li>}
+      </ul>
 
       {/* Footer info */}
       <div className="p-3 bg-slate-950 border-t border-slate-800 text-[11px] text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
         {readOnly ? <p className="ui-note">종료된 현장이라 일지를 추가·수정·삭제할 수 없습니다. 조회·인쇄·CSV 내보내기는 그대로 됩니다.</p> : <>
-        <p className="log-footer-phone">아래 <strong>+ 새 일지</strong>로 입력하고, 표의 줄을 누르면 그 일지를 고치거나 지울 수 있습니다.</p>
+        <p className="log-footer-phone">아래 <strong>+ 새 일지</strong>로 입력하고, 일지 카드를 누르면 그 일지를 고치거나 지울 수 있습니다.</p>
         <div className="log-footer-desktop flex items-center gap-2">
           <span>✏️ <strong className="text-amber-400">표 직접 입력:</strong> 표 상단의 입력 행에 직접 입력 후 <strong className="text-slate-200">[추가]</strong> 또는 엔터를 누르면 바로 기록됩니다.</span>
         </div>
         <div className="log-footer-desktop">
-          등록된 데이터 칸을 더블클릭해 수정하고, 행 밖을 누르면 자동 저장됩니다.
+          등록된 데이터 칸을 더블클릭해 수정하고, Enter나 행 밖을 누르면 저장, Esc를 누르면 취소됩니다.
         </div>
         </>}
       </div>

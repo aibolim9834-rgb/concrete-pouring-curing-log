@@ -63,6 +63,8 @@ export function MobileLogSheet({ log, logs, site, onAdd, onUpdate, onDelete, onC
 
   async function save(keepGoing: boolean) {
     if (lock.current) return;
+    // Saving an opened log without changes only closes the sheet; the same log is not written again.
+    if (log && !dirty) { finish(); return; }
     const min = temperature(minText), max = temperature(maxText);
     const empty = required.filter(([key]) => !String(draft[key] ?? '').trim()).map(([key]) => key);
     setMissing(empty); setError(''); setNotice('');
