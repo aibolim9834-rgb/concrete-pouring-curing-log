@@ -7,6 +7,7 @@ import type { TodayWeather } from '@/lib/kma-weather';
 import type { SiteWarnings } from '@/lib/kma-warning';
 import {
   ClipboardList,
+  ExternalLink,
   Thermometer,
   Building
 } from 'lucide-react';
@@ -22,6 +23,14 @@ const degrees = (value: number | null) => value === null ? '-' : `${value}°`;
 // 강수확률 of 60% and above takes the yellow of the 비 예보 line (red stays for 기상특보 경보).
 const likelyRain = (pop: number | null | undefined) => pop != null && pop >= 60;
 const popClass = (pop: number | null | undefined, plain: string) => likelyRain(pop) ? 'summary-compact-alert is-advisory' : plain;
+
+// 기상청 날씨누리 레이더·낙뢰 page (whole country; the site's 기상 위치 is not passed), opened in a new tab from the PC and phone weather cards.
+const RADAR_URL = 'https://www.weather.go.kr/w/weather/radar/radar.do';
+const RadarLink = ({ className }: { className: string }) => (
+  <a className={`weather-radar-link ${className}`} href={RADAR_URL} target="_blank" rel="noopener noreferrer">
+    레이더<span className="sr-only"> (기상청 날씨누리, 새 탭)</span><ExternalLink aria-hidden="true" />
+  </a>
+);
 
 // 오늘 날씨 for the site's 기상 위치: loaded on open and every 30 minutes, and again on return to the tab if that time has passed.
 // A failed refresh keeps the last values on screen and says so.
@@ -146,7 +155,10 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
       <div className="summary-card-full today-weather-card bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-400">{`오늘 날씨${area ? ` · ${shortAreaLabel(area)}` : ''}`}</span>
-          <div className="p-2 bg-amber-500/10 text-amber-400 rounded-lg"><Thermometer className="w-4 h-4" /></div>
+          <div className="flex items-center gap-2">
+            <RadarLink className="is-full" />
+            <div className="p-2 bg-amber-500/10 text-amber-400 rounded-lg"><Thermometer className="w-4 h-4" /></div>
+          </div>
         </div>
         <div className="mt-3">
           {!area ? <>
@@ -220,6 +232,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
         {firstAlert
           ? <span className={`summary-compact-alert ${firstAlert.level === '주의보' ? 'is-advisory' : 'is-warning'}`}>{`${firstAlert.kind}${firstAlert.level}${alerts.data!.warnings.length > 1 ? ` 외 ${alerts.data!.warnings.length - 1}` : ''}`}</span>
           : (!weather || today.error) && <span className="text-slate-400">{!area ? site?.address ? '위치 선택 필요' : '주소 미등록' : weather ? `${clock(today.at)} 값` : today.error ? '불러오지 못함' : '불러오는 중'}</span>}
+        <RadarLink className="is-compact" />
       </div>
       <div className="summary-card-compact bg-slate-900 border border-slate-800 rounded-xl">
         <span className="text-slate-400">부위</span>

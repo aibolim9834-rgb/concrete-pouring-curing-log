@@ -641,6 +641,13 @@ body {
 .concrete-app .weather-alerts .is-advisory .weather-alert-badge { background: var(--b-warning, #b45309); }
 .concrete-app .weather-alerts .is-preview .weather-alert-badge { background: var(--b-info, #0369a1); }
 .concrete-app .weather-alerts .weather-alerts-source { color: var(--b-muted, #94a3b8); }
+/* 레이더 link on the weather cards: a small outlined button beside the thermometer (PC) or under the figures (phone). */
+.concrete-app .weather-radar-link { display: inline-flex; align-items: center; gap: 4px; flex: none; white-space: nowrap; font-size: 12px; line-height: 18px; font-weight: 600; color: var(--b-action, #34d399); background: var(--b-surface, #1e293b); border: 1px solid var(--b-control, #64748b); border-radius: 5px; padding: 3px 8px; text-decoration: none; }
+.concrete-app .weather-radar-link:hover { background: var(--b-soft, #334155); }
+.concrete-app .weather-radar-link:focus-visible { outline: 2px solid var(--b-brand, #22c55e); outline-offset: 2px; }
+.concrete-app .weather-radar-link svg { inline-size: 13px; block-size: 13px; flex: none; }
+.concrete-app .weather-radar-link.is-compact { justify-self: start; margin-top: 4px; padding: 2px 7px; }
+@media print { .concrete-app .weather-radar-link { display: none; } }
 .concrete-app .summary-compact-alert { font-weight: 700; }
 .concrete-app .summary-compact-alert.is-warning { color: var(--b-danger, #f87171); }
 .concrete-app .summary-compact-alert.is-advisory { color: var(--b-warning, #fbbf24); }
