@@ -47,3 +47,8 @@
 .photo-storage-bar i{display:block;block-size:100%;background:var(--b-action,#22c55e)}
 .photo-storage.is-warn{color:var(--b-warning,#f59e0b)}.photo-storage.is-warn .photo-storage-bar i{background:var(--b-warning,#f59e0b)}
 .photo-storage.is-full{color:var(--b-danger,#ef4444)}.photo-storage.is-full .photo-storage-bar i{background:var(--b-danger,#ef4444)}
+/* 원본 보관 (2026-11-09): whether the office PC has moved the original, and where it went. */
+.photo-archive{display:inline-block;margin:0 0 10px;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600}
+.photo-archive.is-archived{background:var(--b-selected);color:var(--b-action-hover)}
+.photo-archive.is-pending{background:var(--b-warning-soft);color:var(--b-warning)}
+.photo-viewer-heading p.photo-archive-path{font-size:12px;color:var(--b-muted);overflow-wrap:anywhere}

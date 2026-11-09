@@ -27,3 +27,4 @@ Thumbs.db
 
 # Local exports of server data
 /backups/
+/tools/photo-archive/node_modules

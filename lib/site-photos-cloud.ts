@@ -31,7 +31,9 @@ export function storageUsageLabel(bytes:number,limit=PHOTO_STORAGE_LIMIT,limitLa
 }
 
 const bucket = () => supabase.storage.from('site-photos');
-type PhotoRow = {id:string;site_id:string;metadata:SitePhoto;original_path:string;thumbnail_path:string;original_hash:string};
+// archived_at/archive_name: set once the office PC (tools/photo-archive) has moved the original to its own drive;
+// original_path then holds the 2048px copy and original_hash still describes the original.
+type PhotoRow = {id:string;site_id:string;metadata:SitePhoto;original_path:string;thumbnail_path:string;original_hash:string;archived_at?:string|null;archive_name?:string|null};
 const rows = new Map<string,PhotoRow>();
 const migrating = new Map<string,Promise<void>>();
 async function serverRows(site:string):Promise<PhotoRow[]> {
@@ -62,7 +64,8 @@ async function cloudSave(photo:SitePhoto,original:Blob,thumbnail:Blob):Promise<v
  if(readError)throw Error(readError.message);
  if(existing){
   if(existing.site_id!==photo.siteId || existing.original_hash!==hash || canonical(existing.metadata)!==canonical(photo))throw Error('같은 사진 ID의 서버 정보가 다릅니다. 덮어쓰지 않았습니다.');
-  if(await blobHash(await download(existing.original_path))!==hash)throw Error('서버 원본 검증에 실패했습니다.');
+  // An archived photo's server file is the 2048px copy, so only an unarchived one can be compared byte for byte.
+  if(!existing.archived_at && await blobHash(await download(existing.original_path))!==hash)throw Error('서버 원본 검증에 실패했습니다.');
   rows.set(photo.id,existing);return;
  }
  const path=`${photo.siteId}/${photo.id}`;
@@ -98,7 +101,20 @@ export async function photoBlob(photo:SitePhoto,original=false){
  let row=rows.get(photo.id);
  if(!row){const {data,error}=await timed(signal=>supabase.from('site_photos').select('*').eq('id',photo.id).eq('site_id',photo.siteId).abortSignal(signal).single(),READ_TIMEOUT_MESSAGE);if(error)throw Error(error.message);row=data as PhotoRow;rows.set(photo.id,row);}
  if(row.site_id!==photo.siteId)throw Error('사진 현장 정보가 일치하지 않습니다.');
- return download(original?row.original_path:row.thumbnail_path);
+ try{return await download(original?row.original_path:row.thumbnail_path);}
+ catch(e){
+  // The archive PC may have swapped the original for its 2048px copy since this page loaded: read the row again once.
+  if(!original)throw e;
+  const {data,error}=await timed(signal=>supabase.from('site_photos').select('*').eq('id',photo.id).eq('site_id',photo.siteId).abortSignal(signal).single(),READ_TIMEOUT_MESSAGE);
+  if(error||!data||data.original_path===row.original_path)throw e;
+  rows.set(photo.id,data as PhotoRow);return download((data as PhotoRow).original_path);
+ }
+}
+// Where the original is: null while it is still on the server, the archive PC's path once moved; undefined in browser-only mode.
+export function photoArchive(photo:SitePhoto):{path:string}|null|undefined{
+ if(!cloudStorageEnabled())return undefined;
+ const row=rows.get(photo.id);
+ return row?.archived_at?{path:row.archive_name||''}:null;
 }
 async function changePhotos(photos:SitePhoto[],transform:(photo:SitePhoto)=>SitePhoto){
  if(!photos.length||photos.length>1000||photos.some(p=>p.siteId!==photos[0].siteId))throw Error('같은 현장 사진을 1~1000장 선택해주세요.');

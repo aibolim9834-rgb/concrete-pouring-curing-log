@@ -51,6 +51,24 @@ function cloud({cap=500,fail=false,duplicate=false}={}){
   assert.equal(at('2026-11-02T20:00:00Z'),'2026-11-04T20:00:00.000Z');
   assert.equal(at('2026-11-02T20:00:00.001Z'),'2026-11-04T21:00:00.000Z');
  });
+ await check('archived photos report where the original went, and a viewer opened before archiving reads the 2048px copy',async()=>{
+  const sid=site.id,rows={a:{id:'a',site_id:sid,metadata:{id:'a',siteId:sid,name:'a.jpg'},original_path:`${sid}/a/original-1`,thumbnail_path:`${sid}/a/thumbnail-1`,original_hash:'1',archived_at:null,archive_name:null},
+   b:{id:'b',site_id:sid,metadata:{id:'b',siteId:sid,name:'b.jpg'},original_path:`${sid}/b/reduced-2048-9`,thumbnail_path:`${sid}/b/thumbnail-2`,original_hash:'2',archived_at:'2026-11-09T10:00:00Z',archive_name:'D:\\이도형\\알폼핀 체결 사진\\현장\\2026-11-04\\101동 2F_b.jpg'}};
+  const files=new Set([rows.a.original_path,rows.a.thumbnail_path,rows.b.original_path,rows.b.thumbnail_path]);
+  const supabase={from(){let id;const q={select(){return q;},abortSignal(){return q;},order(){return q;},eq(k,v){if(k==='id')id=v;return q;},async range(start){return {data:start?[]:Object.values(rows).map(r=>({...r})),error:null};},async single(){return {data:{...rows[id]},error:null};}};return q;},
+   storage:{from(){return {async download(path){return files.has(path)?{data:new Blob([path]),error:null}:{data:null,error:{message:'Object not found'}};}};}}};
+  const api=load('lib/site-photos-cloud.ts',{'./site-photos':{listPhotos:async()=>[]},'./supabase':{supabase},'./cloud-storage':{cloudStorageEnabled:()=>true},'./request-timeout':requestTimeout,'./floor':load('lib/floor.ts',{})});
+  const [a,b]=await api.listPhotos(sid);
+  assert.equal(api.photoArchive(a),null);assert.equal(api.photoArchive(b).path,rows.b.archive_name);
+  // The PC archives "a" while the page is open: its original file is gone and the row now points at the copy.
+  files.delete(rows.a.original_path);rows.a={...rows.a,original_path:`${sid}/a/reduced-2048-7`,archived_at:'2026-11-09T10:05:00Z',archive_name:'D:\\x\\a.jpg'};files.add(rows.a.original_path);
+  assert.equal(await (await api.photoBlob(a,true)).text(),rows.a.original_path);
+  assert.equal(api.photoArchive(a).path,'D:\\x\\a.jpg');
+  // A thumbnail that fails stays a failure; only the original re-reads the row.
+  files.delete(rows.b.thumbnail_path);await assert.rejects(api.photoBlob(b),/서버 사진을 불러오지 못했습니다/);
+  const browserOnly=load('lib/site-photos-cloud.ts',{'./site-photos':{listPhotos:async()=>[]},'./supabase':{supabase},'./cloud-storage':{cloudStorageEnabled:()=>false},'./request-timeout':requestTimeout,'./floor':load('lib/floor.ts',{})});
+  assert.equal(browserOnly.photoArchive(a),undefined);
+ });
  await check('photo listing rejects later-page errors instead of presenting a partial collection',async()=>{await assert.rejects(photosCloud(true).listPhotos(site.id),/사진 정보/);});
  for(const env of [{NEXT_PUBLIC_CON1_LOCAL_ONLY:'true'},{NEXT_PUBLIC_CON1_QA:'true'}]){
   await check('explicit isolated mode does not query Supabase '+Object.keys(env)[0],async()=>{let calls=0;const api=loadSupabase({createClient:()=>({from(){calls++;throw Error('network');}})},env);assert.equal(await api.checkSupabaseHealth(),false);assert.equal(calls,0);});
