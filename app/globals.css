@@ -618,6 +618,14 @@ body {
 .concrete-app .summary-card-value { font-size: 16px; line-height: 1.25; font-variant-numeric: tabular-nums; }
 /* 강수확률 sits one step below the temperatures (14px 600); 60%+ keeps the warning yellow at 700. */
 .concrete-app .today-weather-pop { font-size: 14px; line-height: 1.25; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* Stacked by default; two columns once the card is wide enough (container query, Baseline 2023). */
+.concrete-app .today-weather-card { container-type: inline-size; }
+.concrete-app .today-weather-rain-col > div:not(:first-child) { margin-top: 4px; }
+.concrete-app .today-weather-rain-col { margin-top: 4px; }
+@container (min-width: 360px) {
+  .concrete-app .today-weather-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 0 20px; align-items: start; }
+  .concrete-app .today-weather-rain-col { margin-top: 2px; padding-inline-start: 16px; border-inline-start: 1px solid var(--b-line); }
+}
 .concrete-app .today-weather-card .today-weather-stale { color: var(--b-warning, #f59e0b); }
 /* 기상특보 under 오늘 최저·최고: one long line that wraps only when it must. 경보 red, 주의보 amber, 예비특보 blue. */
 .concrete-app .weather-alerts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 0; padding: 0; list-style: none; font-size: var(--ui-body); line-height: var(--ui-line); }
@@ -632,9 +640,9 @@ body {
 .concrete-app .summary-compact-alert { font-weight: 700; }
 .concrete-app .summary-compact-alert.is-warning { color: var(--b-danger, #f87171); }
 .concrete-app .summary-compact-alert.is-advisory { color: var(--b-warning, #fbbf24); }
-/* Wide screens: the weather card is a little wider for that line. At 1,560px a line of one 특보 (256px) fits with room to spare,
-   and three 특보 (718px) take two lines here as they did at 1.5fr, so a wider card would only leave empty space. */
-@media (min-width: 1024px) { .concrete-app .summary-cards { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr); } }
+/* Wide screens: the weather card takes 1.6 shares (2026-11-09, was 1.2) so its 강수 column sits beside the temperatures
+   instead of adding rows; the 기록 and 부위 cards still fit their lines down to 1,024px. */
+@media (min-width: 1024px) { .concrete-app .summary-cards { grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr); } }
 
 /* 동·층 관리, compact on PC: one line per floor (타설일 on the right), smaller buttons and spacing so more floors fit.
    Phones keep the larger touch sizes. */
