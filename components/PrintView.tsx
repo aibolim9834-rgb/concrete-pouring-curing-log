@@ -47,21 +47,15 @@ export const PrintView: React.FC<PrintViewProps> = ({
   }
 
   return (
-    <div className="log-print-page min-h-screen bg-slate-950 text-slate-900 p-4 sm:p-8 print:p-0 print:bg-white">
-      
-      {/* Top Toolbar (Hidden on Print) */}
-      <div className="max-w-[1100px] mx-auto mb-6 flex items-center justify-between print:hidden">
-        <button
-          onClick={onBack}
-          className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
-        >
-          <ArrowLeft className="w-4 h-4" /> 대시보드로 돌아가기
+    <div className="log-print-page min-h-screen text-slate-900 p-4 sm:p-8 print:p-0 print:bg-white">
+
+      {/* Top Toolbar (Hidden on Print), in the app's own colors */}
+      <div className="log-print-toolbar max-w-[1100px] mx-auto mb-6 flex items-center justify-between gap-3 print:hidden">
+        <button type="button" onClick={onBack} className="log-print-back">
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" /> 타설일지로
         </button>
-        <button
-          onClick={handlePrint}
-          className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-5 py-2 rounded-lg text-xs flex items-center gap-2 transition shadow-lg"
-        >
-          <Printer className="w-4 h-4" /> 인쇄 / PDF 저장
+        <button type="button" onClick={handlePrint} className="log-print-run">
+          <Printer className="w-4 h-4" aria-hidden="true" /> 인쇄 / PDF 저장
         </button>
       </div>
 

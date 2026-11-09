@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PouringLog, PouringLogInput, Site } from '@/lib/types';
 import { newLog, filterLogs, LogFilters, LogSort, LogSortKey, volumeText } from '@/lib/log-data';
-import { shortDate } from '@/lib/date-only';
+import { shortDateDay } from '@/lib/date-only';
 import { WateringSelect } from './WateringSelect';
 import { MobileLogSheet } from './MobileLogSheet';
 import { ShortDateInput } from './ShortDateInput';
@@ -24,7 +24,9 @@ import {
   Filter,
   Check,
   X,
-  ClipboardCopy
+  ClipboardCopy,
+  Printer,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface RecordTableProps {
@@ -42,6 +44,9 @@ interface RecordTableProps {
   onWorkPending?: (pending: boolean) => void;
   // Keeps the 일일 보고 문구 format and items on the site.
   onSaveReportOptions?: (options: ReportOptions | null) => Promise<void>;
+  // 인쇄/보고서 서식 and CSV of the 출력·CSV 범위 below; shown on the PC toolbar only.
+  onPrint?: () => void;
+  onExportCSV?: () => void;
 }
 
 // The editable fields of a log, as the edit row holds them.
@@ -50,11 +55,6 @@ const logDraft = (log: PouringLog): PouringLogInput => ({
   min_temp: log.min_temp, max_temp: log.max_temp, weather: log.weather, remicon_company: log.remicon_company,
   strength: log.strength || '', volume: log.volume ?? '', curing_watering: log.curing_watering, curing_protection: log.curing_protection, remarks: log.remarks || '',
 });
-// Phone cards: the date as typed in the app (26-11-05) plus its weekday.
-const cardDate = (date: string) => {
-  const day = new Date(`${date}T00:00:00`);
-  return Number.isNaN(day.getTime()) ? date : `${shortDate(date)} (${'일월화수목금토'[day.getDay()]})`;
-};
 // Phones have no column headers to sort by, so the common orders sit in one select; an order chosen on the PC shows as its own entry.
 const sortLabels: Record<LogSortKey, string> = { date: '일자', building: '동(구역)', floor: '층', member_type: '벽/슬라브', min_temp: '최저온도', max_temp: '최고온도', weather: '기상', remicon_company: '레미콘사', strength: '타설강도', volume: '타설물량', curing_watering: '살수', curing_protection: '보양' };
 const phoneSorts: [string, LogSort][] = [['최신순', { key: 'date', direction: 'desc' }], ['오래된순', { key: 'date', direction: 'asc' }], ['동(구역)순', { key: 'building', direction: 'asc' }], ['물량순', { key: 'volume', direction: 'desc' }]];
@@ -75,7 +75,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
   site,
   onDeleteLog,
   onQuickAddLog,
-  onQuickUpdateLog, filters, onFiltersChange, outputScope, onOutputScopeChange, sort, onSortChange, busy = false, blocked = false, readOnly = false, onWorkPending, onSaveReportOptions,
+  onQuickUpdateLog, filters, onFiltersChange, outputScope, onOutputScopeChange, sort, onSortChange, busy = false, blocked = false, readOnly = false, onWorkPending, onSaveReportOptions, onPrint, onExportCSV,
 }) => {
   const searchQuery = filters.search, weatherFilter = filters.weather;
   const setSearchQuery = (search: string) => onFiltersChange({ ...filters, search });
@@ -125,7 +125,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
   const getWeatherIcon = (weather: string) => {
     switch (weather) {
       case '맑음':
-        return <Sun className="w-3.5 h-3.5 text-amber-400 inline mr-1" />;
+        return <Sun className="w-3.5 h-3.5 text-slate-400 inline mr-1" />;
       case '흐림':
         return <Cloud className="w-3.5 h-3.5 text-slate-400 inline mr-1" />;
       case '비':
@@ -261,6 +261,12 @@ export const RecordTable: React.FC<RecordTableProps> = ({
             title={logs.length ? '선택한 날짜의 일지로 카톡·문자용 보고 문구 만들기' : '일지가 있어야 보고 문구를 만들 수 있습니다'}>
             <ClipboardCopy className="w-4 h-4" aria-hidden="true" />보고 문구
           </button>
+          {onPrint && <button type="button" className="ui-button page-output-button" onClick={onPrint}>
+            <Printer className="w-4 h-4" aria-hidden="true" />인쇄
+          </button>}
+          {onExportCSV && <button type="button" className="ui-button page-output-button" onClick={onExportCSV}>
+            <FileSpreadsheet className="w-4 h-4" aria-hidden="true" />CSV
+          </button>}
         </div>
       </div>
 
@@ -269,8 +275,8 @@ export const RecordTable: React.FC<RecordTableProps> = ({
       </button>
       <div id="log-filters" className={`log-filters${filtersOpen ? '' : ' is-collapsed'}`}>
         {/* Half-typed dates are not applied, so the list does not flicker while a date is being typed. */}
-        <label htmlFor="logs-from">시작일<ShortDateInput id="logs-from" label="시작일" value={filters.from} onChange={v => { if (!v || validDate(v)) onFiltersChange({ ...filters, from: v }); }} /></label>
-        <label htmlFor="logs-to">종료일<ShortDateInput id="logs-to" label="종료일" value={filters.to} onChange={v => { if (!v || validDate(v)) onFiltersChange({ ...filters, to: v }); }} /></label>
+        <label htmlFor="logs-from">시작일<ShortDateInput id="logs-from" separator="." label="시작일" value={filters.from} onChange={v => { if (!v || validDate(v)) onFiltersChange({ ...filters, from: v }); }} /></label>
+        <label htmlFor="logs-to">종료일<ShortDateInput id="logs-to" separator="." label="종료일" value={filters.to} onChange={v => { if (!v || validDate(v)) onFiltersChange({ ...filters, to: v }); }} /></label>
         {(['building','floor','member'] as const).map((key, i) => <label key={key} htmlFor={`logs-${key}`}>{['동(구역)','층','구조부위'][i]}<select id={`logs-${key}`} value={filters[key]} onChange={e => onFiltersChange({ ...filters, [key]: e.target.value })}><option value="">전체</option>{Array.from(new Set(logs.map(log => log[key === 'member' ? 'member_type' : key]))).filter(Boolean).sort((a,b) => a.localeCompare(b, 'ko', { numeric: true })).map(value => <option key={value}>{value}</option>)}</select></label>)}
         <button className="ui-button" onClick={() => onFiltersChange({ search: '', weather: 'ALL', from: '', to: '', building: '', floor: '', member: '' })}>조회 초기화</button>
         <label htmlFor="logs-output">출력·CSV 범위<select id="logs-output" value={outputScope} onChange={e => onOutputScopeChange(e.target.value as 'filtered' | 'all')}><option value="filtered">현재 조회 결과 {filteredLogs.length}건</option><option value="all">현장 전체 {logs.length}건</option></select></label>
@@ -296,7 +302,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
               <th scope="col" aria-sort={sortState('date')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[80px]">
                 {sortButton('일자', 'date')}
               </th>
-              <th scope="colgroup" colSpan={3} className="px-3 py-2 border-r border-slate-800 bg-slate-950 text-amber-400">
+              <th scope="colgroup" colSpan={3} className="px-3 py-2 border-r border-slate-800 bg-slate-950 text-slate-300">
                 타설위치
               </th>
               <th scope="col" aria-sort={sortState('min_temp')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[65px]">
@@ -311,13 +317,13 @@ export const RecordTable: React.FC<RecordTableProps> = ({
               <th scope="col" aria-sort={sortState('remicon_company')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[100px]">
                 {sortButton('레미콘사', 'remicon_company')}
               </th>
-              <th scope="col" aria-sort={sortState('strength')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[85px] text-amber-300">
+              <th scope="col" aria-sort={sortState('strength')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[85px]">
                 {sortButton('타설강도', 'strength')}
               </th>
-              <th scope="col" aria-sort={sortState('volume')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[85px] text-amber-300">
+              <th scope="col" aria-sort={sortState('volume')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[85px]">
                 {sortButton('타설물량', 'volume')}
               </th>
-              <th scope="colgroup" colSpan={2} className="px-3 py-2 border-r border-slate-800 bg-slate-950 text-amber-400">
+              <th scope="colgroup" colSpan={2} className="px-3 py-2 border-r border-slate-800 bg-slate-950 text-slate-300">
                 양생방법
               </th>
               <th rowSpan={2} className="px-2 py-3 min-w-[80px]">
@@ -346,6 +352,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
               {/* 일자 */}
               <td className="p-1.5 border-r border-slate-800">
                 <ShortDateInput
+                  separator="."
                   label="새 일지 일자"
                   value={newRowData.date}
                   onChange={(date) => setNewRowData({ ...newRowData, date })}
@@ -361,7 +368,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                   aria-label="새 일지 동·구역"
                   value={newRowData.building}
                   onChange={(e) => setNewRowData({ ...newRowData, building: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-300 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
+                  className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
                 />
               </td>
 
@@ -453,7 +460,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                   title="숫자만 입력하면 MPa가 자동으로 붙습니다."
                   value={newRowData.strength || ''}
                   onChange={(e) => setNewRowData({ ...newRowData, strength: e.target.value })}
-                  onBlur={(e) => { const strength = normalizeStrength(e.target.value); setNewRowData(current => ({ ...current, strength })); }}                  className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-center text-amber-300 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
+                  onBlur={(e) => { const strength = normalizeStrength(e.target.value); setNewRowData(current => ({ ...current, strength })); }}                  className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-center text-slate-200 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
                 />
               </td>
 
@@ -475,7 +482,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                   aria-label="새 일지 살수"
                   value={newRowData.curing_watering}
                   onChange={(e) => setNewRowData({ ...newRowData, curing_watering: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-emerald-300 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
+                  className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-slate-200 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
                 />
               </td>
 
@@ -486,7 +493,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                   placeholder="보양 내용"
                   aria-label="새 일지 보양"
                   value={newRowData.curing_protection}
-                  onChange={(e) => setNewRowData({ ...newRowData, curing_protection: e.target.value })}                  className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-amber-300 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
+                  onChange={(e) => setNewRowData({ ...newRowData, curing_protection: e.target.value })}                  className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-slate-200 placeholder-slate-600 focus:ring-1 focus:ring-amber-500"
                 />
               </td>
 
@@ -520,6 +527,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                     <td className="p-1 border-r border-slate-800 text-center">{index + 1}</td>
                     <td className="p-1 border-r border-slate-800 text-center">
                       <ShortDateInput
+                        separator="."
                         label="수정 일지 일자"
                         value={editingRowData.date}
                         onChange={(date) => setEditingRowData({ ...editingRowData, date })}
@@ -532,7 +540,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                         aria-label="수정 일지 동·구역"
                         value={editingRowData.building}
                         onChange={(e) => setEditingRowData({ ...editingRowData, building: e.target.value })}
-                        className="w-full bg-slate-800 border border-amber-500 rounded px-1.5 py-1 text-xs text-amber-300"
+                        className="w-full bg-slate-800 border border-amber-500 rounded px-1.5 py-1 text-xs text-white"
                       />
                     </td>
                     <td className="p-1 border-r border-slate-800">
@@ -609,7 +617,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                         value={editingRowData.strength || ''}
                         onChange={(e) => setEditingRowData({ ...editingRowData, strength: e.target.value })}
                         onBlur={(e) => { const strength = normalizeStrength(e.target.value); setEditingRowData(current => current ? { ...current, strength } : current); }}
-                        className="w-full bg-slate-800 border border-amber-500 rounded px-1.5 py-1 text-xs text-center text-amber-300"
+                        className="w-full bg-slate-800 border border-amber-500 rounded px-1.5 py-1 text-xs text-center text-white"
                       />
                     </td>
                     <td className="p-1 border-r border-slate-800">
@@ -627,7 +635,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                         aria-label="수정 일지 살수"
                         value={editingRowData.curing_watering}
                         onChange={(e) => setEditingRowData({ ...editingRowData, curing_watering: e.target.value })}
-                        className="w-full bg-slate-800 border border-amber-500 rounded px-1.5 py-1 text-xs text-emerald-300"
+                        className="w-full bg-slate-800 border border-amber-500 rounded px-1.5 py-1 text-xs text-white"
                       />
                     </td>
                     <td className="p-1 border-r border-slate-800">
@@ -636,7 +644,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                         aria-label="수정 일지 보양"
                         value={editingRowData.curing_protection}
                         onChange={(e) => setEditingRowData({ ...editingRowData, curing_protection: e.target.value })}
-                        className="w-full bg-slate-800 border border-amber-500 rounded px-1.5 py-1 text-xs text-amber-300"
+                        className="w-full bg-slate-800 border border-amber-500 rounded px-1.5 py-1 text-xs text-white"
                       />
                     </td>
                     <td className="p-1 text-center whitespace-nowrap">
@@ -683,9 +691,9 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                     {index + 1}
                   </td>
                   <td className="px-2 py-3 text-center border-r border-slate-800/80 font-semibold text-slate-200 whitespace-nowrap">
-                    {log.date}
+                    {shortDateDay(log.date)}
                   </td>
-                  <td className="px-2.5 py-3 border-r border-slate-800/80 text-amber-300 font-medium whitespace-nowrap">
+                  <td className="px-2.5 py-3 border-r border-slate-800/80 text-slate-200 font-semibold whitespace-nowrap">
                     {log.building}
                   </td>
                   <td className="px-2.5 py-3 border-r border-slate-800/80 text-center font-medium text-slate-300 whitespace-nowrap">
@@ -712,7 +720,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                   <td className="px-2.5 py-3 border-r border-slate-800/80 font-medium text-slate-300 truncate max-w-[120px]">
                     {log.remicon_company || '-'}
                   </td>
-                  <td className="px-2.5 py-3 border-r border-slate-800/80 text-center font-semibold text-amber-300 whitespace-nowrap">
+                  <td className="px-2.5 py-3 border-r border-slate-800/80 text-center font-semibold text-slate-200 whitespace-nowrap">
                     {normalizeStrength(log.strength) || '-'}
                   </td>
                   <td className="px-2.5 py-3 border-r border-slate-800/80 text-center font-semibold text-slate-200 whitespace-nowrap">
@@ -720,7 +728,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                   </td>
                   <td className="px-2.5 py-3 border-r border-slate-800/80 text-slate-300">
                     {log.curing_watering ? (
-                      <span className="text-emerald-300 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded text-[11px] block truncate">
+                      <span className="log-curing-text block truncate">
                         {normalizeWatering(log.curing_watering)}
                       </span>
                     ) : (
@@ -729,7 +737,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                   </td>
                   <td className="px-2.5 py-3 border-r border-slate-800/80 text-slate-300">
                     {log.curing_protection ? (
-                      <span className="text-amber-300 bg-amber-950/40 border border-amber-800/40 px-2 py-0.5 rounded text-[11px] block truncate">
+                      <span className="log-curing-text block truncate">
                         {log.curing_protection}
                       </span>
                     ) : (
@@ -769,7 +777,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
         {filteredLogs.map(log => {
           const strength = normalizeStrength(log.strength), volume = volumeText(log.volume);
           const body = <>
-            <span className="log-card-line"><span className="log-card-date">{cardDate(log.date)}</span><span className="log-card-place">{log.building}</span><span className="log-card-floor">{log.floor}</span></span>
+            <span className="log-card-line"><span className="log-card-date">{shortDateDay(log.date)}</span><span className="log-card-place">{log.building}</span><span className="log-card-floor">{log.floor}</span></span>
             <span className="log-card-line log-card-meta"><span className="log-card-chip">{log.member_type}</span>{strength && <span>{strength}</span>}{volume && <span>{volume}</span>}</span>
           </>;
           return <li key={log.id}>{readOnly ? <div className="log-card">{body}</div> : <button type="button" className="log-card" onClick={() => setSheetLog(log)}>{body}</button>}</li>;

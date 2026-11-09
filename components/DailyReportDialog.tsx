@@ -3,7 +3,8 @@
 import React, { useRef, useState } from 'react';
 import { ClipboardCopy, X } from 'lucide-react';
 import { PouringLog, Site } from '@/lib/types';
-import { buildReport, REPORT_ITEMS, reportDates, reportFullDay, reportOptions, ReportOptions } from '@/lib/daily-report';
+import { buildReport, REPORT_ITEMS, reportDates, reportOptions, ReportOptions } from '@/lib/daily-report';
+import { shortDateDay } from '@/lib/date-only';
 import { Modal } from './Modal';
 
 // 일일 보고 문구: pick a day of this site's 타설일지, read the message, copy or share it.
@@ -55,7 +56,7 @@ export function DailyReportDialog({ site, logs, canSave, onSaveOptions, onClose 
         {!dates.length ? <p className="ui-note">이 현장에는 아직 일지가 없습니다.</p> : <>
           <label className="daily-report-row" htmlFor="daily-report-date"><span>날짜</span>
             <select id="daily-report-date" value={date} onChange={e => { setDate(e.target.value); setEdited(null); setStatus(''); }}>
-              {dates.map(d => <option key={d.date} value={d.date}>{reportFullDay(d.date)} · {d.count}건</option>)}
+              {dates.map(d => <option key={d.date} value={d.date}>{shortDateDay(d.date)} · {d.count}건</option>)}
             </select>
           </label>
           <div className="daily-report-row" role="group" aria-labelledby="daily-report-format"><span id="daily-report-format">형식</span>

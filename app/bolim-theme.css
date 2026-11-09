@@ -48,8 +48,6 @@
   .concrete-app > header { background:var(--b-surface)!important; border-color:var(--b-line)!important; box-shadow:none; border-top:3px solid var(--b-brand); }
   .concrete-app .app-header-identity { gap:14px; }
   .concrete-app .ui-button { min-block-size:38px; }
-  .concrete-app .app-header-actions { --header-action-size:44px; }
-  .concrete-app .app-header-actions > :is(button,button.app-return-button) { box-sizing:border-box; block-size:var(--header-action-size); min-block-size:var(--header-action-size); min-height:var(--header-action-size); padding-block:0; display:inline-flex; align-items:center; justify-content:center; line-height:20px; }
   .concrete-app .bolim-logo { inline-size:42px; block-size:30px; object-fit:contain; }
   .concrete-app h1 { font-size:19px; line-height:28px; letter-spacing:-.02em; }
   .concrete-app [class*="bg-slate-900"], .concrete-app [class*="bg-slate-950"] { background:var(--b-surface)!important; }
@@ -74,12 +72,6 @@
   .concrete-app .ui-button.ui-primary, .concrete-app .progress-page .ui-button.ui-primary { background:var(--b-action); color:var(--b-surface); border-color:var(--b-action); }
   .concrete-app .ui-button.ui-primary:hover:not(:disabled) { background:var(--b-action-hover); }
   .concrete-app .ui-button.ui-danger, .concrete-app .progress-page .ui-button.ui-danger { color:var(--b-danger); }
-  .concrete-app .app-header-actions .app-return-button { color:var(--b-action); background:var(--b-selected); border-color:var(--b-action); }
-  .concrete-app .app-header-actions .app-return-button:hover:not(:disabled) { background:var(--b-selected); }
-  .concrete-app .app-header-actions .app-progress-button { min-inline-size:128px; padding-inline:16px; gap:8px; background:var(--b-selected); color:var(--b-action-hover); border:2px solid var(--b-action); font-weight:700; }
-  .concrete-app .app-header-actions .app-progress-button:hover:not(:disabled) { background:var(--b-action); color:var(--b-surface); }
-  .concrete-app .app-header-actions .app-progress-button:active:not(:disabled) { background:var(--b-action-hover); color:var(--b-surface); }
-  .concrete-app .app-header-actions .app-progress-button:focus-visible { outline:3px solid var(--b-action); outline-offset:3px; }
   .concrete-app .record-log-wrap { max-inline-size:100%; }
   .concrete-app .record-row-actions { gap:6px; }
   .concrete-app .record-row-actions button { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; padding:0; border:1px solid var(--b-line); border-radius:5px; background:var(--b-surface); }
@@ -151,8 +143,7 @@
   .concrete-app .record-row-actions .record-save-button:hover:not(:disabled) { background:var(--b-action-hover); border-color:var(--b-action-hover); }
   /* Strengthen journal text contrast without changing backgrounds or action buttons. */
   .concrete-app .record-log-table { --b-muted:#46534B; }
-  .concrete-app .record-log-table tbody td.text-amber-300,
-  .concrete-app .record-log-table tbody td > span:is([class*="bg-emerald-950"],[class*="bg-amber-950"]) { color:#005C1A!important; }
+  .concrete-app .record-log-table .log-curing-text { color:var(--b-muted); }
   .concrete-app .progress-comparison-table tbody tr:hover > td { background-color:transparent; }
   .app-modal { color:var(--b-ink); }
   .app-modal::backdrop { background:rgb(20 40 25 / .38); backdrop-filter:blur(2px); }
@@ -162,12 +153,6 @@
 @media screen and (prefers-contrast:more) { .concrete-app { --b-line:var(--b-control); } }
 @media screen and (forced-colors:active) { .concrete-app { --b-canvas:Canvas; --b-surface:Canvas; --b-soft:Canvas; --b-ink:CanvasText; --b-muted:CanvasText; --b-line:CanvasText; --b-control:ButtonText; --b-action:LinkText; --b-selected:Canvas; } }
 
-@media screen and (pointer:coarse) { .concrete-app .app-header-actions { --header-action-size:48px; } }
-/* Medium windows: print and CSV keep only their icons (named by aria-label and title) so the header fits one row. */
-@media screen and (min-width:761px) and (max-width:1200px) {
-  .concrete-app .app-header-actions > button.app-header-icon-action { inline-size:var(--header-action-size); padding-inline:0; justify-content:center; }
-  .concrete-app .app-header-action-label { position:absolute; inline-size:1px; block-size:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
-}
 
 /* Touch devices: 16px fields stop iOS from zooming on focus, and controls get a 44px tap height.
    Table internals, in-cell editors, swatches and the picker icon inside date fields keep their compact sizes. */
@@ -187,10 +172,6 @@
   .concrete-app .app-header-status, .concrete-app .app-header-site-label { display:none; }
   .concrete-app .app-header-site-row { flex-wrap:nowrap; margin-top:8px; }
   .concrete-app .app-header-site-row select { inline-size:auto; flex:1 1 auto; }
-  .concrete-app .app-header-actions { flex-wrap:nowrap; inline-size:100%; }
-  .concrete-app .app-header-actions > :is(.app-progress-button,.app-return-button) { flex:1 1 0; min-inline-size:0; padding-inline:8px; }
-  .concrete-app .app-header-actions > .app-header-icon-action { flex:0 0 var(--header-action-size); inline-size:var(--header-action-size); padding:0; justify-content:center; }
-  .concrete-app .app-header-action-label { position:absolute; inline-size:1px; block-size:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 
   /* Logs: one-line summary, collapsible filters, and the row number and date columns pinned while the table scrolls sideways. */
   .concrete-app .summary-cards > .summary-card-full { display:none; }
@@ -227,7 +208,7 @@
   .concrete-app button.log-card:focus-visible { outline:3px solid var(--b-action); outline-offset:-3px; }
   .concrete-app .log-card-line { display:flex; align-items:baseline; gap:4px 10px; min-inline-size:0; }
   .concrete-app .log-card-date { flex:none; font-size:15px; line-height:22px; font-weight:700; font-variant-numeric:tabular-nums; }
-  .concrete-app .log-card-place { min-inline-size:0; font-size:15px; line-height:22px; font-weight:600; color:var(--b-action); overflow-wrap:anywhere; }
+  .concrete-app .log-card-place { min-inline-size:0; font-size:15px; line-height:22px; font-weight:600; color:var(--b-ink); overflow-wrap:anywhere; }
   .concrete-app .log-card-floor { flex:none; margin-inline-start:auto; font-size:15px; line-height:22px; font-weight:600; }
   .concrete-app .log-card-meta { flex-wrap:wrap; font-size:14px; line-height:20px; font-variant-numeric:tabular-nums; }
   .concrete-app .log-card-chip { padding:0 6px; border:1px solid var(--b-line); border-radius:4px; background:var(--b-soft); font-size:13px; }
@@ -303,7 +284,7 @@
 /* Button heights on PC (2026-11-02), four steps with 12px text: 34px page navigation, 30px ordinary buttons,
    28px buttons inside panels and lists, 24px per-row buttons. Touch screens keep their larger sizes. */
 @media (min-width: 761px) and (pointer: fine) {
-  .concrete-app .app-header-actions { --header-action-size: 34px; }
+  .concrete-app .app-nav a { min-block-size: 34px; }
 }
 @media (min-width: 761px) {
   .concrete-app .progress-entry-form .ui-button,
@@ -354,4 +335,33 @@
   /* 동 이동 chips wrap instead of running past the card, at the phone's 14px button size. */
   .concrete-app .progress-page .progress-building-row { flex-wrap: wrap; }
   .concrete-app .progress-page .progress-building-chip { font-size: 14px; }
+}
+
+/* Page tabs (2026-11-09): 타설일지 · 타설현황 · 알폼핀 사진 sit in the same place on every page.
+   Green marks only the current page; the others stay in the muted text color until hovered. */
+@media screen {
+  .concrete-app .app-nav { display:flex; gap:2px; margin-top:8px; }
+  .concrete-app .app-nav a { display:inline-flex; align-items:center; justify-content:center; min-block-size:40px; padding-inline:14px; border-block-end:3px solid transparent; color:var(--b-muted); font-size:14px; line-height:20px; font-weight:600; text-decoration:none; white-space:nowrap; }
+  .concrete-app .app-nav a:hover { color:var(--b-ink); background:var(--b-soft); }
+  .concrete-app .app-nav a[aria-current="page"] { color:var(--b-action); border-block-end-color:var(--b-action); font-weight:700; }
+  .concrete-app .app-nav a[aria-current="page"]:hover { background:none; }
+  .concrete-app .app-nav a:focus-visible { outline:2px solid var(--b-action); outline-offset:-2px; }
+}
+@media screen and (max-width:760px) {
+  .concrete-app .app-nav { gap:0; }
+  .concrete-app .app-nav a { flex:1 1 0; min-inline-size:0; min-block-size:48px; padding-inline:4px; font-size:15px; }
+  /* 인쇄 and CSV are PC tasks; on phones the toolbars keep their room for entering and finding logs. */
+  .concrete-app .page-output-button { display:none; }
+}
+
+/* 인쇄/보고서 서식 screen (2026-11-09): the toolbar above the sheet uses the app's colors instead of the old navy and orange.
+   The sheet itself and the printed page are unchanged. */
+@media screen {
+  .log-print-page { background:var(--b-canvas); border-top:3px solid var(--b-brand); }
+  .log-print-toolbar button { display:inline-flex; align-items:center; gap:6px; min-block-size:36px; padding-inline:16px; border-radius:5px; font-size:13px; font-weight:600; cursor:pointer; }
+  .log-print-back { background:var(--b-selected); color:var(--b-action); border:1px solid var(--b-action); }
+  .log-print-back:hover { background:var(--b-surface); }
+  .log-print-run { background:var(--b-action); color:var(--b-surface); border:1px solid var(--b-action); }
+  .log-print-run:hover { background:var(--b-action-hover); border-color:var(--b-action-hover); }
+  .log-print-toolbar button:focus-visible { outline:3px solid var(--b-action); outline-offset:3px; }
 }

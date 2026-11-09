@@ -409,6 +409,13 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
+  // 일지 opens the 인쇄/보고서 서식 view; 타설현황 prints its own table.
+  const printPage = () => {
+    if (!canLeavePhotos()) return;
+    if (!ready || dataIssue || !currentSite) { setOperationError('현장을 선택하고 자료를 정상적으로 불러온 뒤 출력해주세요.'); return; }
+    if (initialView === 'progress') window.print(); else setIsPrintViewOpen(true);
+  };
+
   if (isPrintViewOpen) {
     return (
       <PrintView
@@ -432,17 +439,9 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
         onSelectSite={id => { if (!siteLock.current && canLeavePhotos()) { setSelectedSiteId(id); setFilters(emptyLogFilters()); setNotice(''); } }}
         onOpenAddSite={openSiteManager}
         onOpenHome={() => { if (initialView !== 'logs') { if (currentSite) openPage('logs'); else if (canLeavePhotos()) window.location.assign('/'); } }}
-        onOpenPrintView={() => {
-          if (!canLeavePhotos()) return;
-          if (!ready || dataIssue || !currentSite) { setOperationError('현장을 선택하고 자료를 정상적으로 불러온 뒤 출력해주세요.'); return; }
-          if (initialView === 'progress') window.print(); else setIsPrintViewOpen(true);
-        }}
-        onExportExcel={initialView === 'progress' ? () => window.dispatchEvent(new Event('cp-progress-export')) : handleExportCSV}
         isSupabase={isSupabase}
-        isProgress={initialView === 'progress'}
-        isPhotos={initialView === 'photos'}
-        onOpenPhotos={() => openPage(initialView === 'photos' ? 'logs' : 'photos')}
-        onOpenProgress={() => openPage(initialView === 'progress' ? 'logs' : 'progress')}
+        current={initialView}
+        onNavigate={openPage}
       />
 
       <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4">
@@ -461,7 +460,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
         {initialView === 'logs' && <SummaryCards logs={viewedLogs} site={currentSite} />}
 
         {/* Concrete Pouring & Curing Log Table */}
-        {initialView === 'photos' ? loading ? <p role="status">현장을 불러오는 중입니다.</p> : currentSite ? <SitePhotos key={currentSite.id} site={currentSite} blocked={!ready || !!dataIssue || readOnly} onWorkPending={value=>{photoWorkPending.current=value;}} /> : <div className="progress-empty">현장을 먼저 선택하거나 추가해주세요.</div> : initialView === 'progress' ? loading ? <p className="ui-note" role="status">현장을 불러오는 중입니다.</p> : currentSite ? <PouringProgress key={currentSite.id} site={currentSite} readOnly={readOnly} onWorkPending={value=>{progressWorkPending.current=value;}} /> : <div className="progress-empty"><h2 className="ui-page-title">현장을 먼저 추가해주세요</h2><button className="ui-button ui-primary" onClick={openSiteManager}>현장 추가</button></div> : loading ? <p role="status">일지를 불러오는 중입니다.</p> : <RecordTable
+        {initialView === 'photos' ? loading ? <p role="status">현장을 불러오는 중입니다.</p> : currentSite ? <SitePhotos key={currentSite.id} site={currentSite} blocked={!ready || !!dataIssue || readOnly} onWorkPending={value=>{photoWorkPending.current=value;}} /> : <div className="progress-empty">현장을 먼저 선택하거나 추가해주세요.</div> : initialView === 'progress' ? loading ? <p className="ui-note" role="status">현장을 불러오는 중입니다.</p> : currentSite ? <PouringProgress key={currentSite.id} site={currentSite} readOnly={readOnly} onPrint={printPage} onWorkPending={value=>{progressWorkPending.current=value;}} /> : <div className="progress-empty"><h2 className="ui-page-title">현장을 먼저 추가해주세요</h2><button className="ui-button ui-primary" onClick={openSiteManager}>현장 추가</button></div> : loading ? <p role="status">일지를 불러오는 중입니다.</p> : <RecordTable
           key={currentSite?.id || 'empty'}
           logs={siteLogs}
           filters={filters}
@@ -477,6 +476,8 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
           site={currentSite}
           onDeleteLog={handleDeleteLog}
           onQuickAddLog={(inputData) => handleSaveLog(inputData)}
+          onPrint={printPage}
+          onExportCSV={handleExportCSV}
           onQuickUpdateLog={(id, inputData) => handleSaveLog(inputData, id)}
           onSaveReportOptions={currentSite ? options => handleSaveReportOptions(currentSite.id, options) : undefined}
         />}

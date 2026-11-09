@@ -43,8 +43,9 @@ const ink = (hex: string) => {
 };
 const blankEntry = (): EntryDraft => ({ member: '슬라브', zone: '', volume: '', remarks: '' });
 const panelKey = 'cp_progress_structure_panel';
-interface Props { site: Site; readOnly?: boolean; onWorkPending?: (pending: boolean) => void }
-export function PouringProgress({ site, readOnly = false, onWorkPending }: Props) {
+// onPrint: the app checks that the data loaded and nothing is mid-edit, then prints this table.
+interface Props { site: Site; readOnly?: boolean; onWorkPending?: (pending: boolean) => void; onPrint?: () => void }
+export function PouringProgress({ site, readOnly = false, onWorkPending, onPrint }: Props) {
   const [snapshot, setSnapshot] = useState<ProgressSnapshot | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -144,10 +145,6 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
     strip.addEventListener('wheel', wheel, { passive: false });
     return () => strip.removeEventListener('wheel', wheel);
   }, []);
-  useEffect(() => {
-    window.addEventListener('cp-progress-export', exportCSV);
-    return () => window.removeEventListener('cp-progress-export', exportCSV);
-  });
 
   useEffect(() => {
     let active = true;
@@ -470,6 +467,8 @@ export function PouringProgress({ site, readOnly = false, onWorkPending }: Props
     <div ref={stickyRef} className="progress-sticky">
     <div className="progress-heading"><div><div className="progress-title-row"><h2 className="ui-page-title">동별 타설현황</h2><span className="ui-note progress-site-name">{site.name}</span><p className="progress-floor-note print:hidden">※ 타설일은 각 층 바닥 슬래브를 타설한 날로 입력합니다(예: 5F = 5층 바닥 타설일).</p></div></div>
       <div className="progress-actions progress-heading-actions print:hidden">
+        {onPrint && <button type="button" className="ui-button page-output-button" onClick={onPrint}>인쇄</button>}
+        <button type="button" className="ui-button page-output-button" onClick={exportCSV}>CSV</button>
         <button className="ui-button" disabled={!history.length || saving || readOnly || !!inlineEdit} onClick={undo}>실행 취소</button>
         <button className="ui-button" disabled={!snapshot || saving || !!inlineEdit} onClick={() => { setPanel('structure'); setAddingBuilding(false); showPanel(); }}>동·층 관리</button>
         <button type="button" className="ui-button ui-primary progress-add-trigger" disabled={!snapshot || saving || stale || readOnly || !!inlineEdit} aria-expanded={addingBuilding} aria-controls="structure-panel" onClick={openBuildingForm}>+ 동 추가</button>

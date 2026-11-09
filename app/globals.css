@@ -231,13 +231,6 @@ body {
 .app-header-title-row > span, .app-header-site-row > span { white-space: nowrap; flex-shrink: 0; }
 .app-header-site-row { margin-top: .375rem; }
 .app-header-site-row select { max-width: 100%; flex: 1 1 12rem; width: 15rem; min-width: 0; }
-.app-header-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
-.app-header-actions button { min-height: 2.25rem; }
-.concrete-app .app-header-actions .app-return-button { min-block-size:44px; padding-inline:14px; gap:8px; background:#93c5fd; color:#10253c; border-color:#bfdbfe; font-weight:700; }
-.concrete-app .app-header-actions .app-return-button:hover:not(:disabled) { background:#bfdbfe; }
-.concrete-app .app-header-actions .app-return-button:active:not(:disabled) { background:#60a5fa; }
-.app-return-arrow { font-size:20px; line-height:1; }
-@media(pointer:coarse) { .concrete-app .app-header-actions .app-return-button { min-block-size:48px; } }
 .progress-page { color: #cbd5e1; font-size: .75rem; line-height: 1.125rem; }
 .progress-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
 .progress-heading h2 { margin: .25rem 0; }

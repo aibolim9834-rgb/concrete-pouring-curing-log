@@ -170,7 +170,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
           {Object.keys(memberCounts).length > 0 ? (
             Object.entries(memberCounts).map(([member, count]) => (
               <span key={member} className="bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded text-[11px] font-medium">
-                {member}: <strong className="text-amber-400">{count}</strong>
+                {member}: <strong className="text-slate-100">{count}</strong>
               </span>
             ))
           ) : (
