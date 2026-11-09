@@ -233,13 +233,13 @@ function uiHarness(file, name, props, extra = {}) {
     const promise=find(render(node.type,props,editor),'form').props.onSubmit({preventDefault(){}});
     let parentTree=render(api.SitePhotos,{site,onWorkPending:value=>pending=value},parent);
     parent.effects[parent.effects.length-1]();assert.equal(pending,true);assert.equal(editorNode(parentTree).props.blocked,true);
-    resolveSave();await new Promise(setImmediate);assert.equal(parent.states[18],true);
+    resolveSave();await new Promise(setImmediate);assert.equal(parent.states[17],true);
     resolveRefresh();await promise;
     render(api.SitePhotos,{site,onWorkPending:value=>pending=value},parent);parent.effects[parent.effects.length-1]();assert.equal(pending,false);
     render(node.type,props,editor).props.onClick();
     const failed=find(render(node.type,props,editor),'form').props.onSubmit({preventDefault(){}});
     rejectSave(new Error('offline'));await failed;
-    const retained=render(node.type,props,editor);assert(find(retained,'form'));assert(JSON.stringify(retained).includes('offline'));assert.equal(parent.states[18],false);assert.equal(editor.states[1],'101동');
+    const retained=render(node.type,props,editor);assert(find(retained,'form'));assert(JSON.stringify(retained).includes('offline'));assert.equal(parent.states[17],false);assert.equal(editor.states[1],'101동');
   });
   await check('photo page opens on 전체 기간 and lists photos from earlier months',()=>{
     let bucket,cursor=0,refCursor=0;
