@@ -156,10 +156,10 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
             <div className="flex items-baseline justify-between text-xs"><span className="text-slate-400">{`현재 기온${weather.observedAt ? ` (${weather.observedAt} 관측)` : ''}`}</span><span className="today-weather-now font-extrabold text-slate-100">{degrees(weather.temp)}</span></div>
             <div className="mt-1 flex items-center justify-between text-xs"><span className="text-slate-400">오늘 최저 / 최고 (예보)</span><span className="summary-card-value font-bold"><span className="text-blue-400">{degrees(weather.min)}</span><span className="text-slate-400"> / </span><span className="text-red-400">{degrees(weather.max)}</span></span></div>
             {/* 강수 for the rest of today and for tomorrow, from the newest 단기예보 issue; wet hours get their own warning line. */}
-            {weather.pop != null && <div className="mt-1 flex items-center justify-between text-xs"><span className="text-slate-400">강수확률 (오늘 남은 시간)</span><span className={`summary-card-value font-bold ${popClass(weather.pop, 'text-slate-100')}`}>{`최고 ${weather.pop}%`}</span></div>}
-            {weather.rain && <p className="summary-compact-alert is-advisory text-xs mt-0.5">{`오늘 ${weather.rain.hours} ${weather.rain.kind} 예보`}</p>}
-            {weather.popTomorrow != null && <div className="mt-1 flex items-center justify-between text-xs"><span className="text-slate-400">내일 강수확률</span><span className={`summary-card-value font-bold ${popClass(weather.popTomorrow, 'text-slate-100')}`}>{`최고 ${weather.popTomorrow}%`}</span></div>}
-            {weather.rainTomorrow && <p className="summary-compact-alert is-advisory text-xs mt-0.5">{`내일 ${weather.rainTomorrow.hours} ${weather.rainTomorrow.kind} 예보`}</p>}
+            {weather.pop != null && <div className="mt-1 flex items-center justify-between text-xs"><span className="text-slate-400">강수확률 (오늘 남은 시간)</span><span className={`today-weather-pop ${popClass(weather.pop, 'text-slate-100')}`}>{`최고 ${weather.pop}%`}</span></div>}
+            {weather.rain && <p className="summary-compact-alert is-advisory text-xs mt-0.5">{`오늘 ${weather.rain.hours} ${weather.rain.kind} 예보${weather.rain.amount ? ` · ${weather.rain.amount}` : ''}`}</p>}
+            {weather.popTomorrow != null && <div className="mt-1 flex items-center justify-between text-xs"><span className="text-slate-400">내일 강수확률</span><span className={`today-weather-pop ${popClass(weather.popTomorrow, 'text-slate-100')}`}>{`최고 ${weather.popTomorrow}%`}</span></div>}
+            {weather.rainTomorrow && <p className="summary-compact-alert is-advisory text-xs mt-0.5">{`내일 ${weather.rainTomorrow.hours} ${weather.rainTomorrow.kind} 예보${weather.rainTomorrow.amount ? ` · ${weather.rainTomorrow.amount}` : ''}`}</p>}
             {today.error && <p className="ui-note today-weather-stale mt-2">{`${clock(today.at)} 값 · 새로 불러오지 못해 이전 값을 보여 줍니다. ${today.error}`}</p>}
           </>}
           {area && <div className="mt-2">{warningLine(alerts.data, alerts.error)}</div>}
@@ -201,6 +201,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
         {weather && <span className="text-slate-400">{`예보 ${weather.min ?? '-'}~${weather.max ?? '-'}°`}</span>}
         {weather?.pop != null && <span className={popClass(weather.pop, 'text-slate-400')}>{`강수 ${weather.pop}%`}</span>}
         {weather?.rain && <span className="summary-compact-alert is-advisory">{`${weather.rain.kind} ${weather.rain.hours}`}</span>}
+        {weather?.rain?.amount && <span className="summary-compact-alert is-advisory">{weather.rain.amount}</span>}
         {weather?.popTomorrow != null && <span className={popClass(weather.popTomorrow, 'text-slate-400')}>{`내일 강수 ${weather.popTomorrow}%`}</span>}
         {firstAlert
           ? <span className={`summary-compact-alert ${firstAlert.level === '주의보' ? 'is-advisory' : 'is-warning'}`}>{`${firstAlert.kind}${firstAlert.level}${alerts.data!.warnings.length > 1 ? ` 외 ${alerts.data!.warnings.length - 1}` : ''}`}</span>

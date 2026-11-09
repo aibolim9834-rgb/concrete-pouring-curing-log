@@ -15,7 +15,8 @@ export interface TodayWeather {
   popTomorrow: number | null;
   rainTomorrow: RainSpell | null;
 }
-export interface RainSpell { hours: string; kind: string } // e.g. { hours: '14~17시', kind: '비' }
+// e.g. { hours: '14~17시', kind: '비', amount: '약 6mm' }; amount is '' when the issue carries no 강수량 (PCP).
+export interface RainSpell { hours: string; kind: string; amount: string }
 
 const HOUR = 3600_000;
 // Clock parts in KST whatever the server's time zone is.
@@ -90,6 +91,23 @@ function spellHours(hours: number[]) {
   const text = runs.slice(0, 2).map(([a, b]) => a === b ? `${p(a)}시` : `${p(a)}~${p(b)}시`).join(', ');
   return runs.length > 2 ? `${text} 외` : text;
 }
+// Hourly 강수량 strings as sent: 강수없음 · 0 · "1mm 미만" · "2.0mm"; the guide's range forms "30.0~50.0mm" and
+// "50.0mm 이상" count their lower bound and mark the total as "이상".
+export function rainAmount(values: string[]) {
+  let total = 0, trace = false, atLeast = false, known = false;
+  for (const raw of values) {
+    const v = raw.trim();
+    if (v === '강수없음' || v === '0') { known = true; continue; }
+    let m: RegExpExecArray | null;
+    if ((m = /^(\d+(?:\.\d+)?)\s*mm\s*미만$/.exec(v))) { known = true; trace = true; }
+    else if ((m = /^(\d+(?:\.\d+)?)\s*~\s*\d+(?:\.\d+)?\s*mm$/.exec(v)) || (m = /^(\d+(?:\.\d+)?)\s*mm\s*이상$/.exec(v))) { known = true; atLeast = true; total += Number(m[1]); }
+    else if ((m = /^(\d+(?:\.\d+)?)\s*(?:mm)?$/.exec(v))) { known = true; total += Number(m[1]); }
+  }
+  if (!known || total === 0 && !trace) return '';
+  if (total === 0) return '1mm 미만';
+  return `약 ${Math.round(total)}mm${atLeast ? ' 이상' : ''}`;
+}
+
 // Highest 강수확률 and the hours with 강수 for one day (YYYYMMDD), counting only hours from fromHour on.
 export function rainOutlook(items: KmaItem[], ymd: string, fromHour = 0): { pop: number | null; rain: RainSpell | null } {
   const hourly = (category: string) => items.filter(i => i.category === category && i.fcstDate === ymd && Number((i.fcstTime ?? '').slice(0, 2)) >= fromHour);
@@ -98,7 +116,7 @@ export function rainOutlook(items: KmaItem[], ymd: string, fromHour = 0): { pop:
   const hours = Array.from(new Set(wet.map(i => Number(i.fcstTime!.slice(0, 2))))).sort((a, b) => a - b);
   return {
     pop: pops.length ? Math.max(...pops) : null,
-    rain: hours.length ? { hours: spellHours(hours), kind: spellKind(new Set(wet.map(i => i.fcstValue!.trim()))) } : null,
+    rain: hours.length ? { hours: spellHours(hours), kind: spellKind(new Set(wet.map(i => i.fcstValue!.trim()))), amount: rainAmount(hourly('PCP').map(i => i.fcstValue ?? '')) } : null,
   };
 }
 // data.go.kr gives an already-encoded key and a decoded one; either may be pasted into the environment variable.

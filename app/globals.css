@@ -616,6 +616,8 @@ body {
 .concrete-app .today-weather-now { font-size: 20px; line-height: 1.2; font-variant-numeric: tabular-nums; }
 /* Second-line values in the summary cards (volume, logged and forecast temperatures) share one size so the cards line up. */
 .concrete-app .summary-card-value { font-size: 16px; line-height: 1.25; font-variant-numeric: tabular-nums; }
+/* 강수확률 sits one step below the temperatures (14px 600); 60%+ keeps the warning yellow at 700. */
+.concrete-app .today-weather-pop { font-size: 14px; line-height: 1.25; font-weight: 600; font-variant-numeric: tabular-nums; }
 .concrete-app .today-weather-card .today-weather-stale { color: var(--b-warning, #f59e0b); }
 /* 기상특보 under 오늘 최저·최고: one long line that wraps only when it must. 경보 red, 주의보 amber, 예비특보 blue. */
 .concrete-app .weather-alerts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 0; padding: 0; list-style: none; font-size: var(--ui-body); line-height: var(--ui-line); }

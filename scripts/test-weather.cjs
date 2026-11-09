@@ -185,12 +185,14 @@ const KST = (iso) => Date.parse(`${iso}+09:00`);
     const f = (category, date, hour, value) => ({ category, fcstDate: date, fcstTime: String(hour).padStart(2, '0') + '00', fcstValue: String(value) });
     const latest = [f('POP', '20261105', 13, 90), f('POP', '20261105', 14, 30), f('POP', '20261105', 15, 60), f('POP', '20261105', 23, 10),
       f('PTY', '20261105', 13, 1), f('PTY', '20261105', 14, 0), ...[15, 16, 17].map(h => f('PTY', '20261105', h, 1)), f('PTY', '20261105', 20, 4),
-      f('POP', '20261106', 6, 80), f('POP', '20261106', 12, 20), ...[6, 7, 8].map(h => f('PTY', '20261106', h, 3)), f('PTY', '20261106', 9, 1), f('PTY', '20261106', 12, 0)];
+      f('POP', '20261106', 6, 80), f('POP', '20261106', 12, 20), ...[6, 7, 8].map(h => f('PTY', '20261106', h, 3)), f('PTY', '20261106', 9, 1), f('PTY', '20261106', 12, 0),
+      f('PCP', '20261105', 13, '9.0mm'), f('PCP', '20261105', 15, '2.0mm'), f('PCP', '20261105', 16, '3.0mm'), f('PCP', '20261105', 17, '1mm 미만'), f('PCP', '20261105', 20, '1.0mm'), f('PCP', '20261105', 21, '강수없음'),
+      ...[6, 7, 8, 9].map(h => f('PCP', '20261106', h, '1mm 미만'))];
     const r = route('k', url => url.pathname.endsWith('getUltraSrtNcst') ? ok([{ category: 'T1H', obsrValue: '12' }])
       : url.searchParams.get('base_time') === '0200' ? ok([{ category: 'TMN', fcstDate: '20261105', fcstValue: '3' }, { category: 'TMX', fcstDate: '20261105', fcstValue: '13' }, f('POP', '20261105', 15, 99)])
       : url.searchParams.get('base_time') === '1400' ? ok(latest) : { status: 500, text: '' }, now);
     const res = await r.get('nx=60&ny=125');
-    same(res.body, { date: '2026-11-05', temp: 12, observedAt: '14:00', min: 3, max: 13, pop: 60, rain: { hours: '15~17시, 20시', kind: '비' }, popTomorrow: 80, rainTomorrow: { hours: '06~09시', kind: '비·눈' } });
+    same(res.body, { date: '2026-11-05', temp: 12, observedAt: '14:00', min: 3, max: 13, pop: 60, rain: { hours: '15~17시, 20시', kind: '비', amount: '약 6mm' }, popTomorrow: 80, rainTomorrow: { hours: '06~09시', kind: '비·눈', amount: '1mm 미만' } });
     const issues = r.calls.filter(c => c.url.pathname.endsWith('getVilageFcst'));
     same(issues.map(c => c.url.searchParams.get('base_time')), ['0200', '1400']);assert(issues.every(c => c.url.searchParams.get('numOfRows') === '1000'));
     // Before the 05시 issue the 02시 issue serves both parts with one call.
@@ -203,7 +205,14 @@ const KST = (iso) => Date.parse(`${iso}+09:00`);
     same(at('2026-11-05T23:20:00'), { base_date: '20261105', base_time: '2300' });same(at('2026-11-05T02:10:00'), { base_date: '20261104', base_time: '2300' });
     same(weather.rainOutlook([], '20261105', 0), { pop: null, rain: null });
     const snow = [3, 4, 5, 9, 12, 13].map(h => ({ category: 'PTY', fcstDate: '20261105', fcstTime: String(h).padStart(2, '0') + '00', fcstValue: '3' }));
-    same(weather.rainOutlook(snow, '20261105'), { pop: null, rain: { hours: '03~05시, 09시 외', kind: '눈' } });
+    same(weather.rainOutlook(snow, '20261105'), { pop: null, rain: { hours: '03~05시, 09시 외', kind: '눈', amount: '' } });
+  });
+  await check('강수량 adds the hourly amounts, keeps "1mm 미만" for traces and marks range forms as 이상', () => {
+    assert.equal(weather.rainAmount(['강수없음', '0']), '');assert.equal(weather.rainAmount([]), '');
+    assert.equal(weather.rainAmount(['1mm 미만', '강수없음']), '1mm 미만');
+    assert.equal(weather.rainAmount(['2.0mm', '1mm 미만', '4.0mm']), '약 6mm');assert.equal(weather.rainAmount(['1.0mm', '1.0mm', '0.6mm']), '약 3mm');
+    assert.equal(weather.rainAmount(['30.0~50.0mm', '2.0mm']), '약 32mm 이상');assert.equal(weather.rainAmount(['50.0mm 이상']), '약 50mm 이상');
+    assert.equal(weather.rainAmount(['알수없음']), '');
   });
   console.log(`${count} weather checks passed; no network calls.`);
 })().catch(e => { console.error(e); process.exit(1); });
