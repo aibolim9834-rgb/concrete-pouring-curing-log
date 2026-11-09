@@ -187,11 +187,13 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
         {(minTemp !== null || maxTemp !== null) && <span className="text-slate-400">{`기록 ${minTemp ?? '-'}~${maxTemp ?? '-'}°`}</span>}
       </div>
       <div className="summary-card-compact bg-slate-900 border border-slate-800 rounded-xl">
-        <span className="text-slate-400">{weather ? `현재 ${degrees(weather.temp)}` : '오늘 날씨'}</span>
-        <strong className="text-slate-100">{weather ? `${weather.min ?? '-'}~${weather.max ?? '-'}°` : '-'}</strong>
+        {/* The big figure is the current temperature, as on the PC card; the forecast range sits below it. */}
+        <span className="text-slate-400">{weather ? '현재 기온' : '오늘 날씨'}</span>
+        <strong className="text-slate-100">{weather ? degrees(weather.temp) : '-'}</strong>
+        {weather && <span className="text-slate-400">{`예보 ${weather.min ?? '-'}~${weather.max ?? '-'}°`}</span>}
         {firstAlert
           ? <span className={`summary-compact-alert ${firstAlert.level === '주의보' ? 'is-advisory' : 'is-warning'}`}>{`${firstAlert.kind}${firstAlert.level}${alerts.data!.warnings.length > 1 ? ` 외 ${alerts.data!.warnings.length - 1}` : ''}`}</span>
-          : <span className="text-slate-400">{!area ? site?.address ? '위치 선택 필요' : '주소 미등록' : weather ? today.error ? `${clock(today.at)} 값` : '오늘 예보' : today.error ? '불러오지 못함' : '불러오는 중'}</span>}
+          : (!weather || today.error) && <span className="text-slate-400">{!area ? site?.address ? '위치 선택 필요' : '주소 미등록' : weather ? `${clock(today.at)} 값` : today.error ? '불러오지 못함' : '불러오는 중'}</span>}
       </div>
       <div className="summary-card-compact bg-slate-900 border border-slate-800 rounded-xl">
         <span className="text-slate-400">부위</span>

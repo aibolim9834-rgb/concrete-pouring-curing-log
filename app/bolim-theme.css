@@ -330,6 +330,8 @@
 /* The close mark's own 22px was lost to the generic button size. */
 .concrete-app .mobile-log-close { font-size: 22px; }
 @media (max-width: 760px) {
+  /* Page and section titles match the 16px app title, so the app name in the header reads first (2026-11-09). */
+  .concrete-app :is(.ui-page-title, .log-toolbar h2.ui-section-title) { font-size: 16px; line-height: 24px; }
   /* Backup and restore stay a PC task; the box only appears in local mode anyway. */
   .concrete-app .backup-manager { display: none; }
   /* 동 이동 chips wrap instead of running past the card, at the phone's 14px button size. */

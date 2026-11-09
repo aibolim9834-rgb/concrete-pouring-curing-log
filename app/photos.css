@@ -10,6 +10,10 @@
 .photo-upload-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:12px}
 .photo-upload-actions .photo-camera-button{display:none}
 @media(pointer:coarse){.photo-upload-actions .photo-camera-button{display:inline-flex}}
+/* Required fields carry a red mark; touch screens cannot drag files, so they get the 찍기·고르기 wording instead. */
+.photo-required{color:var(--b-danger);font-weight:700;margin-inline-start:2px}
+.photo-drop-touch{display:none}
+@media(pointer:coarse){.photo-drop-pointer{display:none}.photo-drop-touch{display:inline}}
 .photo-drop strong{font-size:14px;font-weight:600}.photo-drop p{margin:8px 0}.photo-status{grid-column:1/-1;overflow-wrap:anywhere}
 /* With nothing to report the status line takes no space but stays in the accessibility tree, so upload messages are still announced. */
 .photo-status:empty{position:absolute;inline-size:1px;block-size:1px;overflow:hidden;clip-path:inset(50%)}

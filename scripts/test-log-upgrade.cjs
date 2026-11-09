@@ -410,9 +410,10 @@ function uiHarness(file, name, props, extra = {}) {
     assert(text(null,banpo).includes('오늘 날씨를 불러오는 중입니다.'));
     const at=new Date(2026,10,5,14,30).getTime(),weather={date:'2026-11-05',temp:12.3,observedAt:'14:00',min:3,max:13};
     const shown=text({grid:'60,125',weather,at,error:''},banpo);
-    for(const part of ['오늘 날씨 · 서초구 반포동','12.3°','3°','13°','(14:00 관측)','오늘 최저 / 최고 (예보)','현재 12.3°','3~13°','오늘 예보','기상특보 확인 중'])assert(shown.includes(part),part);
+    for(const part of ['오늘 날씨 · 서초구 반포동','12.3°','3°','13°','(14:00 관측)','오늘 최저 / 최고 (예보)','현재 기온','예보 3~13°','기상특보 확인 중'])assert(shown.includes(part),part);
+    assert(!shown.includes('오늘 예보'));assert(!shown.includes('현재 12.3°'));
     assert(!shown.includes('30분마다'));
-    const stale=text({grid:'60,125',weather,at,error:'기상청 하루 호출 한도를 넘었습니다.'},banpo);assert(stale.includes('14:30 값 · 새로 불러오지 못해 이전 값을 보여 줍니다. 기상청 하루 호출 한도를 넘었습니다.'));assert(stale.includes('12.3°'));
+    const stale=text({grid:'60,125',weather,at,error:'기상청 하루 호출 한도를 넘었습니다.'},banpo);assert(stale.includes('14:30 값 · 새로 불러오지 못해 이전 값을 보여 줍니다. 기상청 하루 호출 한도를 넘었습니다.'));assert(stale.includes('12.3°'));assert(stale.includes('14:30 값'));
     assert(text({grid:'60,125',weather:null,at:0,error:'기상청 연결 키가 아직 설정되지 않았습니다.'},banpo).includes('기상청 연결 키가 아직 설정되지 않았습니다.'));
     // Values of another site's grid are not shown while the new site loads.
     assert(text({grid:'89,90',weather,at,error:''},banpo).includes('오늘 날씨를 불러오는 중입니다.'));
