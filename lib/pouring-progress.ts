@@ -76,7 +76,7 @@ export function completedStages(b: ProgressBuilding, basis: string) {
   // Actual dates define completion, including legacy records saved as "partial".
   return b.stages.filter(s => { const date = b.records[s.id]?.date || ''; return validDate(date) && date <= basis; }).sort((a, c) => c.order - a.order);
 }
-export function downloadFile(name: string, content: string, type: string) {
+export function downloadFile(name: string, content: BlobPart, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const a = document.createElement('a'); a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);

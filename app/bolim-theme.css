@@ -350,7 +350,7 @@
 @media screen and (max-width:760px) {
   .concrete-app .app-nav { gap:0; }
   .concrete-app .app-nav a { flex:1 1 0; min-inline-size:0; min-block-size:48px; padding-inline:4px; font-size:15px; }
-  /* 인쇄 and CSV are PC tasks; on phones the toolbars keep their room for entering and finding logs. */
+  /* 인쇄 and 엑셀 are PC tasks; on phones the toolbars keep their room for entering and finding logs. */
   .concrete-app .page-output-button { display:none; }
 }
 

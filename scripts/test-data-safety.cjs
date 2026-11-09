@@ -104,10 +104,23 @@ function cloud({cap=500,fail=false,duplicate=false}={}){
   await assert.rejects(api.loadCloudLogData(),new RegExp(requestTimeout.READ_TIMEOUT_MESSAGE.slice(0,12)));
  });
  await check('healthy cloud mode stays cloud',async()=>{const query={select(){return query;},abortSignal(){return query;},limit:async()=>({error:null})};const api=loadSupabase({createClient:()=>({from:()=>query})});assert.equal(await api.checkSupabaseHealth(),true);});
- await check('CSV formula text is exported as text; numbers, quotes and original input survive',()=>{
-  const {csvCell}=load('lib/csv.ts');
-  for(const value of ['=1+1','+SUM(A1)','-1+2','@SUM(A1)','  =1+1','＝1+1'])assert.equal(csvCell(value), '"\t'+value+'"');
-  assert.equal(csvCell(-5),'"-5"');assert.equal(csvCell('가,나"다'),'"가,나""다"');assert.equal(csvCell('26.10.27'),'"26.10.27"');
+ await check('Excel export is a valid stored zip whose text never becomes a formula and whose dates, numbers and widths survive',()=>{
+  const x=load('lib/xlsx.ts',{},{TextEncoder});
+  const bytes=Buffer.from(x.xlsxFile('타설일지',[{header:'구분',kind:'number'},{header:'일자',kind:'date'},{header:'비고'},{header:'물량',kind:'number'}],[
+   [1,'2026-01-01','=1+1','10'],[2,'2026-02-30','가<나>&"다"',null],[3,'',' +SUM(A1)','약 5']]));
+  const files={};let at=0;
+  while(bytes.readUInt32LE(at)===0x04034b50){const size=bytes.readUInt32LE(at+18),nameLen=bytes.readUInt16LE(at+26),crc=bytes.readUInt32LE(at+14);assert.equal(bytes.readUInt16LE(at+8),0);
+   const name=bytes.subarray(at+30,at+30+nameLen).toString(),data=bytes.subarray(at+30+nameLen,at+30+nameLen+size);assert.equal(require('node:zlib').crc32(data),crc,name);files[name]=data.toString('utf8');at+=30+nameLen+size;}
+  assert.deepEqual(Object.keys(files),['[Content_Types].xml','_rels/.rels','xl/workbook.xml','xl/_rels/workbook.xml.rels','xl/styles.xml','xl/worksheets/sheet1.xml']);
+  const end=bytes.length-22;assert.equal(bytes.readUInt32LE(end),0x06054b50);assert.equal(bytes.readUInt16LE(end+10),6);assert.equal(bytes.readUInt32LE(end+16),at);assert.equal(bytes.readUInt32LE(end+12),end-at);assert.equal(bytes.readUInt32LE(at),0x02014b50);
+  const sheet=files['xl/worksheets/sheet1.xml'];
+  assert(!sheet.includes('<f>'));assert(sheet.includes('<t xml:space="preserve">=1+1</t>'));assert(sheet.includes('<t xml:space="preserve"> +SUM(A1)</t>'));
+  assert(sheet.includes('<c r="B2" s="4"><v>46023</v></c>'));assert(sheet.includes('<t xml:space="preserve">2026-02-30</t>'));assert(sheet.includes('<c r="B4" s="2"/>'));
+  assert(sheet.includes('<c r="D2" s="3"><v>10</v></c>'));assert(sheet.includes('<t xml:space="preserve">약 5</t>'));
+  assert(sheet.includes('가&lt;나&gt;&amp;"다"'));assert(sheet.includes('<col min="2" max="2" width="16" customWidth="1"/>'));
+  assert(sheet.includes('<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>'));assert(sheet.includes('<autoFilter ref="A1:D4"/>'));
+  assert(files['xl/workbook.xml'].includes("'타설일지'!$1:$1"));assert(files['xl/styles.xml'].includes('[$-412]yy.mm.dd(aaa)'));
+  assert.equal(x.excelDate('2026-10-02'),46297);assert.equal(x.excelDate('26-10-02'),null);
  });
  console.log(count+' data safety checks passed; no network calls.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

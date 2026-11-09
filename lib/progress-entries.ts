@@ -1,7 +1,7 @@
 import { buildingLabel, ProgressDocument, ProgressEntry, ProgressRecord, validateProgressEntry, validateProgressRecord, validDate } from './pouring-progress';
 import { scheduleMetrics } from './progress-schedule';
 import { progressColor } from './progress-color';
-import { csvCell } from './csv';
+import type { XlsxColumn, XlsxValue } from './xlsx';
 import { normalizeShortDate } from './date-only';
 
 export interface EntryDraft { id?: string; member: string; zone: string; volume: string; remarks: string }
@@ -32,9 +32,14 @@ export function removeProgressEntry(record: ProgressRecord, id: string): Progres
   return { ...record, status: record.date ? 'done' : 'none', entries: record.entries.filter(e => e.id !== id) };
 }
 
-// Retain the basis argument for existing callers; exports display every recorded date.
-export function progressCsv(document: ProgressDocument, filter: string, _basis: string) {
-  const lines: (string | number)[][] = [['동', '층·단계', '타설일', '타설일 목록', '상태', '구조부위', '구역', '물량(m³)', '비고', '색상', '예정 타설일', '예정 작업일', '실시 작업일', '계획 대비 차이(일)']];
+export const PROGRESS_COLUMNS: XlsxColumn[] = [
+  { header: '동' }, { header: '층·단계' }, { header: '타설일', kind: 'date' }, { header: '타설일 목록' }, { header: '상태' }, { header: '구조부위' }, { header: '구역' },
+  { header: '물량(m³)', kind: 'number' }, { header: '비고' }, { header: '색상' }, { header: '예정 타설일', kind: 'date' },
+  { header: '예정 작업일', kind: 'number' }, { header: '실시 작업일', kind: 'number' }, { header: '계획 대비 차이(일)', kind: 'number' },
+];
+// Rows of the 타설현황 Excel export; every recorded date is shown whatever the basis date.
+export function progressSheetRows(document: ProgressDocument, filter: string) {
+  const lines: XlsxValue[][] = [];
   for (const b of document.buildings.filter(b => filter === 'all' || b.id === filter)) {
     for (const s of [...b.stages].sort((a, c) => c.order - a.order)) {
       const r = b.records[s.id];
@@ -45,7 +50,7 @@ export function progressCsv(document: ProgressDocument, filter: string, _basis: 
       else lines.push([...base, '', '', '', '', progressColor(r) || '', ...schedule]);
     }
   }
-  return '\uFEFF' + lines.map(row => row.map(csvCell).join(',')).join('\r\n');
+  return lines;
 }
 
 export const pourDates = (record: ProgressRecord | undefined) => record?.dates || (record?.date ? [record.date] : []);

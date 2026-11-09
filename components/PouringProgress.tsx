@@ -14,10 +14,11 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Site } from '@/lib/types';
 import { buildingLabel, completedStages, downloadFile, emptyProgress, ProgressDocument, progressId, progressRows, validDate } from '@/lib/pouring-progress';
-import { EntryDraft, entryFromDraft, parsePourDateList, pourDates, pourDatesLabel, progressCsv, removeProgressEntry, setPourDates, upsertProgressEntry } from '@/lib/progress-entries';
+import { EntryDraft, entryFromDraft, parsePourDateList, pourDates, pourDatesLabel, PROGRESS_COLUMNS, progressSheetRows, removeProgressEntry, setPourDates, upsertProgressEntry } from '@/lib/progress-entries';
 import { loadProgress, ProgressSnapshot, saveProgress } from '@/lib/progress-storage';
 import { describeError, logEvent, tracked } from '@/lib/event-log';
 import { cloudStorageEnabled } from '@/lib/cloud-storage';
+import { XLSX_TYPE, xlsxFile } from '@/lib/xlsx';
 
 import { progressEditor, visibleSelection } from '@/lib/progress-editor';
 
@@ -385,9 +386,9 @@ export function PouringProgress({ site, readOnly = false, onWorkPending, onPrint
       setAddingBuilding(false); setPanel('structure'); setNotice('이전 상태로 되돌렸습니다.');
     }
   }
-  function exportCSV() {
-    if (!snapshot) { setError('타설현황을 불러온 뒤 CSV로 내보내주세요.'); return; }
-    downloadFile(`${site.name}_타설현황.csv`, progressCsv(document, filter, basis), 'text/csv;charset=utf-8');
+  function exportExcel() {
+    if (!snapshot) { setError('타설현황을 불러온 뒤 엑셀로 내보내주세요.'); return; }
+    downloadFile(`${site.name}_타설현황.xlsx`, xlsxFile('타설현황', PROGRESS_COLUMNS, progressSheetRows(document, filter)), XLSX_TYPE);
   }
 
   // Each extra pour date shown on one line widens that building's actual-date column.
@@ -468,7 +469,7 @@ export function PouringProgress({ site, readOnly = false, onWorkPending, onPrint
     <div className="progress-heading"><div><div className="progress-title-row"><h2 className="ui-page-title">동별 타설현황</h2><span className="ui-note progress-site-name">{site.name}</span><p className="progress-floor-note print:hidden">※ 타설일은 각 층 바닥 슬래브를 타설한 날로 입력합니다(예: 5F = 5층 바닥 타설일).</p></div></div>
       <div className="progress-actions progress-heading-actions print:hidden">
         {onPrint && <button type="button" className="ui-button page-output-button" onClick={onPrint}>인쇄</button>}
-        <button type="button" className="ui-button page-output-button" onClick={exportCSV}>CSV</button>
+        <button type="button" className="ui-button page-output-button" onClick={exportExcel}>엑셀</button>
         <button className="ui-button" disabled={!history.length || saving || readOnly || !!inlineEdit} onClick={undo}>실행 취소</button>
         <button className="ui-button" disabled={!snapshot || saving || !!inlineEdit} onClick={() => { setPanel('structure'); setAddingBuilding(false); showPanel(); }}>동·층 관리</button>
         <button type="button" className="ui-button ui-primary progress-add-trigger" disabled={!snapshot || saving || stale || readOnly || !!inlineEdit} aria-expanded={addingBuilding} aria-controls="structure-panel" onClick={openBuildingForm}>+ 동 추가</button>

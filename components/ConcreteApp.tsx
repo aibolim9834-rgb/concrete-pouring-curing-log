@@ -16,14 +16,15 @@ import { SitePhotos } from '@/components/SitePhotos';
 import { PouringProgress } from '@/components/PouringProgress';
 
 import { archiveSite, assertNewSiteName, isClosedSite, listSiteArchives, pickerSites, removeLocalSite, restoreLocalSite, SiteArchive, sortSites } from '@/lib/site-archive';
-import { progressId, validDate } from '@/lib/pouring-progress';
+import { downloadFile, progressId, validDate } from '@/lib/pouring-progress';
 import { shortDate } from '@/lib/date-only';
 import { readLocalData, writeLocalData, validateLogInput, filterLogs, emptyLogFilters, LogFilters, sortLogs, defaultLogSort, LogSort } from '@/lib/log-data';
 import { BackupManager } from './BackupManager';
 import { askConfirm, ConfirmHost } from '@/components/ConfirmDialog';
 import { nextSiteCode } from '@/lib/site-code';
 import { loadCloudLogData } from '@/lib/cloud-log-data';
-import { csvCell } from '@/lib/csv';
+import { LOG_COLUMNS, logRows } from '@/lib/log-export';
+import { XLSX_TYPE, xlsxFile } from '@/lib/xlsx';
 import { normalizeWatering } from '@/lib/watering';
 import { normalizeStrength } from '@/lib/strength';
 import { normalizeFloor } from '@/lib/floor';
@@ -137,7 +138,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
   }, [selectedSiteId, loading, ready, dataIssue]);
 
   const currentSite = sites.find((s) => s.id === selectedSiteId) || sites.find(s => !isClosedSite(s)) || sites[0];
-  // A 종료 site is shown read-only: viewing, printing and CSV still work, every edit path is closed.
+  // A 종료 site is shown read-only: viewing, printing and Excel export still work, every edit path is closed.
   const readOnly = isClosedSite(currentSite);
   const assertOpenSite = () => { if (readOnly) throw new Error('종료된 현장은 읽기 전용입니다. 고치려면 먼저 "다시 진행"으로 바꿔주세요.'); };
   const openPage = (view: 'logs' | 'progress' | 'photos') => {
@@ -366,47 +367,14 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
     } finally { siteLock.current = false; }
   };
 
-  // Export to CSV
-  const handleExportCSV = () => {
+  // Excel file of the logs in the 출력·엑셀 범위, with widths and real dates (CSV could not keep either).
+  const handleExportExcel = () => {
     if (!ready || dataIssue) { setOperationError('자료 읽기 오류를 해결한 뒤 내보내주세요.'); return; }
     if (!currentSite) {
       alert('내보낼 현장을 선택해주세요.');
       return;
     }
-    const headers = ['구분', '일자', '동(구역)', '층', '벽/슬라브', '최저온도(°C)', '최고온도(°C)', '기상', '레미콘사', '타설강도', '타설물량(m³)', '양생-살수', '양생-보양', '비고'];
-    
-    const rows = outputLogs.map((log, index) => [
-      index + 1,
-      log.date,
-      log.building,
-      log.floor,
-      log.member_type,
-      log.min_temp ?? '',
-      log.max_temp ?? '',
-      log.weather,
-      log.remicon_company,
-      normalizeStrength(log.strength),
-      log.volume ?? '',
-      normalizeWatering(log.curing_watering),
-      log.curing_protection,
-      log.remarks || '',
-    ]);
-
-    const csvContent =
-      '\uFEFF' +
-      [headers, ...rows]
-        .map((row) => row.map(csvCell).join(','))
-        .join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `${currentSite?.name || '현장'}_콘크리트_타설_양생_일지.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    downloadFile(`${currentSite.name || '현장'}_콘크리트_타설_양생_일지.xlsx`, xlsxFile('타설일지', LOG_COLUMNS, logRows(outputLogs)), XLSX_TYPE);
   };
 
   // 일지 opens the 인쇄/보고서 서식 view; 타설현황 prints its own table.
@@ -477,7 +445,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
           onDeleteLog={handleDeleteLog}
           onQuickAddLog={(inputData) => handleSaveLog(inputData)}
           onPrint={printPage}
-          onExportCSV={handleExportCSV}
+          onExportExcel={handleExportExcel}
           onQuickUpdateLog={(id, inputData) => handleSaveLog(inputData, id)}
           onSaveReportOptions={currentSite ? options => handleSaveReportOptions(currentSite.id, options) : undefined}
         />}

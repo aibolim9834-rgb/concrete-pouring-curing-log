@@ -41,7 +41,7 @@ function appHarness(result, local = false, overrides = {}) {
   const deps = {react,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/supabase':{supabase,checkSupabaseHealth:async()=>false},'@/lib/log-data':data,'@/lib/site-archive':load('lib/site-archive.ts'),'@/lib/pouring-progress':model,'./BackupManager':{BackupManager:'BackupManager'}};
   deps['@/lib/site-code']=load('lib/site-code.ts');
   deps['@/lib/cloud-log-data']={loadCloudLogData:async()=>({sites:[site],logs:[log]})};
-  deps['@/lib/csv']=load('lib/csv.ts');
+  deps['@/lib/xlsx']=load('lib/xlsx.ts',{},{TextEncoder});deps['@/lib/log-export']=load('lib/log-export.ts',{'./strength':load('lib/strength.ts'),'./watering':load('lib/watering.ts')});deps['@/lib/pouring-progress']={...model,downloadFile:(name,content)=>{assert(name.endsWith('.xlsx'));csv=Buffer.from(content).toString('utf8');}};
   deps['@/lib/watering']=load('lib/watering.ts');
   deps['@/lib/strength']=load('lib/strength.ts');
   deps['@/lib/floor']=load('lib/floor.ts');
@@ -85,7 +85,7 @@ function uiHarness(file, name, props, extra = {}) {
     const before={...log,strength:'33',curing_protection:'원본 보양'};
     await find(h.render(),'RecordTable').props.onQuickUpdateLog(log.id,before);
     same(JSON.parse(storage.getItem('cp_logs'))[0],{...before,strength:'33MPa'});
-    find(h.render(),'RecordTable').props.onExportCSV();assert(h.csv.includes('33MPa'));assert(!h.csv.includes('MPaMPa'));
+    find(h.render(),'RecordTable').props.onExportExcel();assert(h.csv.includes('33MPa'));assert(!h.csv.includes('MPaMPa'));
   });
   await check('watering dropdown offers four choices and retains nonstandard existing content',()=>{
     const props={value:'1일 2회 살수 실시',onChange(){},'aria-label':'살수'};
@@ -333,7 +333,7 @@ function uiHarness(file, name, props, extra = {}) {
   await check('print scope uses the same filtered data as the table',()=>{const h=appHarness(null),second={...log,id:'b',date:'2026-09-01'};h.states[2]=[log,second];let tree=h.render();find(tree,'RecordTable').props.onFiltersChange({...data.emptyLogFilters(),from:'2026-09-01'});tree=h.render();find(tree,'RecordTable').props.onPrint();tree=h.render();same(find(tree,'PrintView').props.logs.map(l=>l.id),['b']);});
   await check('whole-site print scope remains available after filtering',()=>{const h=appHarness(null);h.states[2]=[log,{...log,id:'b',date:'2026-09-01'}];let tree=h.render();find(tree,'RecordTable').props.onFiltersChange({...data.emptyLogFilters(),from:'2026-09-01'});tree=h.render();find(tree,'RecordTable').props.onOutputScopeChange('all');tree=h.render();find(tree,'RecordTable').props.onPrint();assert.equal(find(h.render(),'PrintView').props.logs.length,2);});
   await check('actual initialization blocks corrupt data without an auto-save',async()=>{storage.entries.clear();storage.setItem('cp_sites','{broken');const h=appHarness(null,true);h.states[0]=[];h.states[1]='';h.states[2]=[];h.states[6]=true;h.states[8]=false;h.render();h.effects[0]();await new Promise(r=>setImmediate(r));h.render();h.effects[1]();assert.equal(storage.getItem('cp_sites'),'{broken');assert.equal(h.states[8],false);assert.match(h.states[7],/입력/);});
-  await check('CSV follows filtered or whole-site scope and quotes remarks',()=>{const h=appHarness(null);h.states[2]=[{...log,remarks:'특이 "기록"'},{...log,id:'b',building:'102동',date:'2026-09-01'}];let tree=h.render();find(tree,'RecordTable').props.onFiltersChange({...data.emptyLogFilters(),building:'101동'});tree=h.render();find(tree,'RecordTable').props.onExportCSV();assert(h.csv.includes('101동'));assert(!h.csv.includes('102동'));assert(h.csv.includes('특이 ""기록""'));find(tree,'RecordTable').props.onOutputScopeChange('all');tree=h.render();find(tree,'RecordTable').props.onExportCSV();assert(h.csv.includes('102동'));});
+  await check('Excel export follows filtered or whole-site scope and keeps remarks',()=>{const h=appHarness(null);h.states[2]=[{...log,remarks:'특이 "기록"'},{...log,id:'b',building:'102동',date:'2026-09-01'}];let tree=h.render();find(tree,'RecordTable').props.onFiltersChange({...data.emptyLogFilters(),building:'101동'});tree=h.render();find(tree,'RecordTable').props.onExportExcel();assert(h.csv.includes('101동'));assert(!h.csv.includes('102동'));assert(h.csv.includes('특이 "기록"'));find(tree,'RecordTable').props.onOutputScopeChange('all');tree=h.render();find(tree,'RecordTable').props.onExportExcel();assert(h.csv.includes('102동'));});
   await check('empty summary shows dashes without alert or success boxes',()=>{const h=uiHarness('components/SummaryCards.tsx','SummaryCards',{logs:[],site});const text=JSON.stringify(h.render());assert(!text.includes('확인 필요'));assert(!text.includes('경고 없음'));assert(text.includes('"-"'));});
   await check('automatic site codes avoid existing codes without changing them',()=>{const {nextSiteCode}=load('lib/site-code.ts');const existing=[{code:'a0001'},{code:' A0002 '},{code:'LEGACY'},{code:undefined}];const original=JSON.stringify(existing);assert.equal(nextSiteCode([]),'A0001');assert.equal(nextSiteCode(existing),'A0003');assert.equal(JSON.stringify(existing),original);assert.equal(nextSiteCode([{code:'A0001'},{code:'A0003'}]),'A0004');assert.equal(nextSiteCode([{code:'A9998'}]),'A9999');assert.equal(nextSiteCode([{code:'A9999'}]),'');assert.equal(nextSiteCode(Array.from({length:1000},(_,i)=>({code:`A${String(i+1).padStart(4,'0')}`}))),'A1001');});
   await check('site registration generates codes and reserves archived codes while preserving logs',async()=>{storage.entries.clear();const originalSite={...site,code:'A0001'};storage.setItem('cp_sites',JSON.stringify([originalSite]));storage.setItem('cp_logs',JSON.stringify([log]));const archived=load('lib/site-archive.ts').archiveSite(storage,{id:'archived-site',name:'보관 현장',code:'A0002'},[],'local');const archivedRaw=storage.getItem(archived.key);const h=appHarness(null,true);h.states[0]=[originalSite];await find(h.render(),'SiteModal').props.onAddSite('자동 등록 현장');assert.equal(h.states[0].find(s=>s.name==='자동 등록 현장').code,'A0003');same(h.states[0].find(s=>s.id===originalSite.id),originalSite);same(JSON.parse(storage.getItem('cp_logs')),[log]);await find(h.render(),'SiteModal').props.onAddSite('다음 현장');const added=h.states[0].find(s=>s.name==='다음 현장');assert.equal(added.code,'A0004');assert.equal(JSON.stringify(h.states[0].map(s=>s.name)),JSON.stringify(['검증 현장','다음 현장','자동 등록 현장']));assert.equal(storage.getItem(archived.key),archivedRaw);assert.equal(h.states[1],added.id);});
@@ -353,11 +353,11 @@ function uiHarness(file, name, props, extra = {}) {
     const rows=[{...log,id:'ten',building:'110동'},{...log,id:'two-a',building:'102동'},{...log,id:'one',building:'101동'},{...log,id:'two-b',building:'102동'}];
     same(data.sortLogs(rows,{key:'building',direction:'asc'}).map(l=>l.id),['one','two-a','two-b','ten']);
   });
-  await check('sorting and filtering feed matching table print and sequential CSV output',()=>{
+  await check('sorting and filtering feed matching table print and sequential Excel output',()=>{
     const h=appHarness(null);const rows=[{...log,id:'ten',category:'49',volume:10},{...log,id:'two',category:'49',volume:2},{...log,id:'other',category:'1',building:'102동',volume:20}];h.states[2]=rows;const before=JSON.stringify(rows);
     let tree=h.render();find(tree,'RecordTable').props.onSortChange({key:'volume',direction:'asc'});tree=h.render();same(find(tree,'RecordTable').props.logs.map(l=>l.id),['two','ten','other']);
-    find(tree,'RecordTable').props.onFiltersChange({...data.emptyLogFilters(),building:'101동'});tree=h.render();find(tree,'RecordTable').props.onExportCSV();
-    const csv=h.csv.split('\n').slice(1).map(line=>line.split(',').slice(0,3));same(csv.map(row=>row[0]),['"1"','"2"']);assert(!h.csv.includes('102동'));
+    find(tree,'RecordTable').props.onFiltersChange({...data.emptyLogFilters(),building:'101동'});tree=h.render();find(tree,'RecordTable').props.onExportExcel();
+    same([...h.csv.matchAll(/<c r="A(\d+)" s="3"><v>(\d+)<\/v>/g)].map(m=>m[1]+':'+m[2]),['2:1','3:2']);assert(!h.csv.includes('102동'));
     find(tree,'RecordTable').props.onPrint();same(find(h.render(),'PrintView').props.logs.map(l=>l.id),['two','ten']);assert.equal(JSON.stringify(h.states[2]),before);
   });
   await check('display numbers ignore duplicate categories',()=>{

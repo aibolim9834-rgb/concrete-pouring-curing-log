@@ -44,9 +44,9 @@ interface RecordTableProps {
   onWorkPending?: (pending: boolean) => void;
   // Keeps the 일일 보고 문구 format and items on the site.
   onSaveReportOptions?: (options: ReportOptions | null) => Promise<void>;
-  // 인쇄/보고서 서식 and CSV of the 출력·CSV 범위 below; shown on the PC toolbar only.
+  // 인쇄/보고서 서식 and Excel file of the 출력·엑셀 범위 below; shown on the PC toolbar only.
   onPrint?: () => void;
-  onExportCSV?: () => void;
+  onExportExcel?: () => void;
 }
 
 // The editable fields of a log, as the edit row holds them.
@@ -75,7 +75,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
   site,
   onDeleteLog,
   onQuickAddLog,
-  onQuickUpdateLog, filters, onFiltersChange, outputScope, onOutputScopeChange, sort, onSortChange, busy = false, blocked = false, readOnly = false, onWorkPending, onSaveReportOptions, onPrint, onExportCSV,
+  onQuickUpdateLog, filters, onFiltersChange, outputScope, onOutputScopeChange, sort, onSortChange, busy = false, blocked = false, readOnly = false, onWorkPending, onSaveReportOptions, onPrint, onExportExcel,
 }) => {
   const searchQuery = filters.search, weatherFilter = filters.weather;
   const setSearchQuery = (search: string) => onFiltersChange({ ...filters, search });
@@ -264,8 +264,8 @@ export const RecordTable: React.FC<RecordTableProps> = ({
           {onPrint && <button type="button" className="ui-button page-output-button" onClick={onPrint}>
             <Printer className="w-4 h-4" aria-hidden="true" />인쇄
           </button>}
-          {onExportCSV && <button type="button" className="ui-button page-output-button" onClick={onExportCSV}>
-            <FileSpreadsheet className="w-4 h-4" aria-hidden="true" />CSV
+          {onExportExcel && <button type="button" className="ui-button page-output-button" onClick={onExportExcel}>
+            <FileSpreadsheet className="w-4 h-4" aria-hidden="true" />엑셀
           </button>}
         </div>
       </div>
@@ -279,7 +279,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
         <label htmlFor="logs-to">종료일<ShortDateInput id="logs-to" separator="." label="종료일" value={filters.to} onChange={v => { if (!v || validDate(v)) onFiltersChange({ ...filters, to: v }); }} /></label>
         {(['building','floor','member'] as const).map((key, i) => <label key={key} htmlFor={`logs-${key}`}>{['동(구역)','층','구조부위'][i]}<select id={`logs-${key}`} value={filters[key]} onChange={e => onFiltersChange({ ...filters, [key]: e.target.value })}><option value="">전체</option>{Array.from(new Set(logs.map(log => log[key === 'member' ? 'member_type' : key]))).filter(Boolean).sort((a,b) => a.localeCompare(b, 'ko', { numeric: true })).map(value => <option key={value}>{value}</option>)}</select></label>)}
         <button className="ui-button" onClick={() => onFiltersChange({ search: '', weather: 'ALL', from: '', to: '', building: '', floor: '', member: '' })}>조회 초기화</button>
-        <label htmlFor="logs-output">출력·CSV 범위<select id="logs-output" value={outputScope} onChange={e => onOutputScopeChange(e.target.value as 'filtered' | 'all')}><option value="filtered">현재 조회 결과 {filteredLogs.length}건</option><option value="all">현장 전체 {logs.length}건</option></select></label>
+        <label htmlFor="logs-output">출력·엑셀 범위<select id="logs-output" value={outputScope} onChange={e => onOutputScopeChange(e.target.value as 'filtered' | 'all')}><option value="filtered">현재 조회 결과 {filteredLogs.length}건</option><option value="all">현장 전체 {logs.length}건</option></select></label>
         {filters.from && filters.to && filters.from > filters.to && <p className="progress-error" role="alert">시작일이 종료일보다 늦습니다.</p>}
       </div>
       {/* Main Excel-styled Responsive Table */}
@@ -787,7 +787,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
 
       {/* Footer info */}
       <div className="p-3 bg-slate-950 border-t border-slate-800 text-[11px] text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
-        {readOnly ? <p className="ui-note">종료된 현장이라 일지를 추가·수정·삭제할 수 없습니다. 조회·인쇄·CSV 내보내기는 그대로 됩니다.</p> : <>
+        {readOnly ? <p className="ui-note">종료된 현장이라 일지를 추가·수정·삭제할 수 없습니다. 조회·인쇄·엑셀 내보내기는 그대로 됩니다.</p> : <>
         <p className="log-footer-phone">아래 <strong>+ 새 일지</strong>로 입력하고, 일지 카드를 누르면 그 일지를 고치거나 지울 수 있습니다.</p>
         <div className="log-footer-desktop flex items-center gap-2">
           <span>✏️ <strong className="text-amber-400">표 직접 입력:</strong> 표 상단의 입력 행에 직접 입력 후 <strong className="text-slate-200">[추가]</strong> 또는 엔터를 누르면 바로 기록됩니다.</span>
