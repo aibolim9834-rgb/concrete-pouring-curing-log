@@ -153,20 +153,27 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
             <div className="flex items-center justify-between text-xs"><span className="text-slate-400">현재 기온</span><span className="font-bold text-slate-100">-</span></div>
             <p className="ui-note mt-2">{site?.address ? '현장 관리에서 ⋯ › 주소 수정으로 기상 위치를 고르면 표시됩니다.' : '현장 관리에서 현장 주소를 넣으면 표시됩니다.'}</p>
           </> : !weather ? <p className="ui-note">{today.error || '오늘 날씨를 불러오는 중입니다.'}</p> : <>
-            {/* Temperatures on the left, 강수 on the right when the card is wide enough (stacked otherwise), so the row keeps its height. */}
-            <div className="today-weather-grid">
-              <div>
-                <div className="flex items-baseline justify-between text-xs"><span className="text-slate-400">{`현재 기온${weather.observedAt ? ` (${weather.observedAt} 관측)` : ''}`}</span><span className="today-weather-now font-extrabold text-slate-100">{degrees(weather.temp)}</span></div>
-                <div className="mt-1 flex items-center justify-between text-xs"><span className="text-slate-400">오늘 최저 / 최고 (예보)</span><span className="summary-card-value font-bold"><span className="text-blue-400">{degrees(weather.min)}</span><span className="text-slate-400"> / </span><span className="text-red-400">{degrees(weather.max)}</span></span></div>
-              </div>
-              {/* 강수 for the rest of today and for tomorrow, from the newest 단기예보 issue; wet hours get their own warning line. */}
-              {(weather.pop != null || weather.popTomorrow != null) && <div className="today-weather-rain-col">
-                {weather.pop != null && <div className="flex items-center justify-between text-xs" title="지금부터 자정까지 시간별 강수확률 중 가장 높은 값"><span className="text-slate-400">오늘 강수확률</span><span className={`today-weather-pop ${popClass(weather.pop, 'text-slate-100')}`}>{`${weather.pop}%`}</span></div>}
-                {weather.rain && <p className="summary-compact-alert is-advisory text-xs mt-0.5">{`오늘 ${weather.rain.hours} ${weather.rain.kind} 예보${weather.rain.amount ? ` · ${weather.rain.amount}` : ''}`}</p>}
-                {weather.popTomorrow != null && <div className="flex items-center justify-between text-xs" title="내일 0시~23시 시간별 강수확률 중 가장 높은 값"><span className="text-slate-400">내일 강수확률</span><span className={`today-weather-pop ${popClass(weather.popTomorrow, 'text-slate-100')}`}>{`${weather.popTomorrow}%`}</span></div>}
-                {weather.rainTomorrow && <p className="summary-compact-alert is-advisory text-xs mt-0.5">{`내일 ${weather.rainTomorrow.hours} ${weather.rainTomorrow.kind} 예보${weather.rainTomorrow.amount ? ` · ${weather.rainTomorrow.amount}` : ''}`}</p>}
-              </div>}
-            </div>
+            {/* Temperatures on the left, 강수 on the right when the card is wide enough (stacked otherwise), so the row keeps its height.
+                Each line is its own cell numbered by --row, so 현재 기온 and 오늘 강수확률 share a text line, as do 최저/최고 and the next 강수 line. */}
+            {(() => {
+              const left = [
+                <div key="now" className="flex items-baseline justify-between text-xs"><span className="text-slate-400">{`현재 기온${weather.observedAt ? ` (${weather.observedAt} 관측)` : ''}`}</span><span className="today-weather-now font-extrabold text-slate-100">{degrees(weather.temp)}</span></div>,
+                <div key="range" className="flex items-center justify-between text-xs"><span className="text-slate-400">오늘 최저 / 최고 (예보)</span><span className="summary-card-value font-bold"><span className="text-blue-400">{degrees(weather.min)}</span><span className="text-slate-400"> / </span><span className="text-red-400">{degrees(weather.max)}</span></span></div>,
+              ];
+              // 강수 for the rest of today and for tomorrow, from the newest 단기예보 issue; wet hours get their own warning line.
+              const right = [
+                weather.pop != null && <div key="pop" className="flex items-center justify-between text-xs" title="지금부터 자정까지 시간별 강수확률 중 가장 높은 값"><span className="text-slate-400">오늘 강수확률</span><span className={`today-weather-pop ${popClass(weather.pop, 'text-slate-100')}`}>{`${weather.pop}%`}</span></div>,
+                weather.rain && <p key="rain" className="summary-compact-alert is-advisory text-xs">{`오늘 ${weather.rain.hours} ${weather.rain.kind} 예보${weather.rain.amount ? ` · ${weather.rain.amount}` : ''}`}</p>,
+                weather.popTomorrow != null && <div key="pop-next" className="flex items-center justify-between text-xs" title="내일 0시~23시 시간별 강수확률 중 가장 높은 값"><span className="text-slate-400">내일 강수확률</span><span className={`today-weather-pop ${popClass(weather.popTomorrow, 'text-slate-100')}`}>{`${weather.popTomorrow}%`}</span></div>,
+                weather.rainTomorrow && <p key="rain-next" className="summary-compact-alert is-advisory text-xs">{`내일 ${weather.rainTomorrow.hours} ${weather.rainTomorrow.kind} 예보${weather.rainTomorrow.amount ? ` · ${weather.rainTomorrow.amount}` : ''}`}</p>,
+              ].filter(Boolean);
+              const cell = (side: string) => (el: React.ReactNode, i: number) => <div key={`${side}${i}`} className={`today-weather-cell is-${side}`} style={{ '--row': i + 1 } as React.CSSProperties}>{el}</div>;
+              return <div className={`today-weather-grid${right.length ? ' has-rain' : ''}`} style={{ '--rows': Math.max(left.length, right.length) } as React.CSSProperties}>
+                {left.map(cell('left'))}
+                {right.length > 0 && <div className="today-weather-divider" aria-hidden="true" />}
+                {right.map(cell('right'))}
+              </div>;
+            })()}
             {today.error && <p className="ui-note today-weather-stale mt-2">{`${clock(today.at)} 값 · 새로 불러오지 못해 이전 값을 보여 줍니다. ${today.error}`}</p>}
           </>}
           {area && <div className="mt-2">{warningLine(alerts.data, alerts.error)}</div>}
