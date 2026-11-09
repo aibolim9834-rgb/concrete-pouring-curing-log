@@ -161,7 +161,7 @@ const KST = (iso) => Date.parse(`${iso}+09:00`);
       : ok([{ category: 'TMN', fcstDate: '20261105', fcstValue: '3' }, { category: 'TMX', fcstDate: '20261105', fcstValue: '13' }]), now);
     const res = await r.get('nx=60&ny=125');
     assert.equal(res.status, 200); assert.equal(res.headers['Cache-Control'], 'no-store');
-    same(res.body, { date: '2026-11-05', temp: 12.3, observedAt: '14:00', min: 3, max: 13 });
+    same(res.body, { date: '2026-11-05', temp: 12.3, observedAt: '14:00', min: 3, max: 13, pop: null, rain: null, popTomorrow: null, rainTomorrow: null });
     const [nowcast, forecast] = [r.calls.find(c => c.url.pathname.endsWith('getUltraSrtNcst')), r.calls.find(c => c.url.pathname.endsWith('getVilageFcst'))];
     assert.equal(nowcast.url.searchParams.get('base_time'), '1400'); assert.equal(forecast.url.searchParams.get('base_time'), '0200');
     assert.equal(forecast.url.searchParams.get('base_date'), '20261105'); assert.equal(forecast.url.searchParams.get('nx'), '60');
@@ -175,11 +175,35 @@ const KST = (iso) => Date.parse(`${iso}+09:00`);
       ? (url.searchParams.get('base_time') === '1400' ? { text: JSON.stringify({ response: { header: { resultCode: '03' } } }) } : ok([{ category: 'T1H', obsrValue: '11' }]))
       : { status: 500, text: '' }, now);
     let res = await r.get('nx=60&ny=125');
-    assert.equal(res.status, 200); same(res.body, { date: '2026-11-05', temp: 11, observedAt: '13:00', min: null, max: null });
+    assert.equal(res.status, 200); same(res.body, { date: '2026-11-05', temp: 11, observedAt: '13:00', min: null, max: null, pop: null, rain: null, popTomorrow: null, rainTomorrow: null });
     r = route('k', () => ({ text: '<OpenAPI_ServiceResponse><cmmMsgHeader><returnReasonCode>30</returnReasonCode></cmmMsgHeader></OpenAPI_ServiceResponse>' }), now);
     res = await r.get('nx=60&ny=125');
     assert.equal(res.status, 502); assert.match(res.body.error, /키가 아직 등록되지 않았거나/);
   });
 
+  await check('강수 comes from the newest issue: the rest of today from this hour, all of tomorrow, wet hours as runs', async () => {
+    const f = (category, date, hour, value) => ({ category, fcstDate: date, fcstTime: String(hour).padStart(2, '0') + '00', fcstValue: String(value) });
+    const latest = [f('POP', '20261105', 13, 90), f('POP', '20261105', 14, 30), f('POP', '20261105', 15, 60), f('POP', '20261105', 23, 10),
+      f('PTY', '20261105', 13, 1), f('PTY', '20261105', 14, 0), ...[15, 16, 17].map(h => f('PTY', '20261105', h, 1)), f('PTY', '20261105', 20, 4),
+      f('POP', '20261106', 6, 80), f('POP', '20261106', 12, 20), ...[6, 7, 8].map(h => f('PTY', '20261106', h, 3)), f('PTY', '20261106', 9, 1), f('PTY', '20261106', 12, 0)];
+    const r = route('k', url => url.pathname.endsWith('getUltraSrtNcst') ? ok([{ category: 'T1H', obsrValue: '12' }])
+      : url.searchParams.get('base_time') === '0200' ? ok([{ category: 'TMN', fcstDate: '20261105', fcstValue: '3' }, { category: 'TMX', fcstDate: '20261105', fcstValue: '13' }, f('POP', '20261105', 15, 99)])
+      : url.searchParams.get('base_time') === '1400' ? ok(latest) : { status: 500, text: '' }, now);
+    const res = await r.get('nx=60&ny=125');
+    same(res.body, { date: '2026-11-05', temp: 12, observedAt: '14:00', min: 3, max: 13, pop: 60, rain: { hours: '15~17시, 20시', kind: '비' }, popTomorrow: 80, rainTomorrow: { hours: '06~09시', kind: '비·눈' } });
+    const issues = r.calls.filter(c => c.url.pathname.endsWith('getVilageFcst'));
+    same(issues.map(c => c.url.searchParams.get('base_time')), ['0200', '1400']);assert(issues.every(c => c.url.searchParams.get('numOfRows') === '1000'));
+    // Before the 05시 issue the 02시 issue serves both parts with one call.
+    const early = route('k', url => url.pathname.endsWith('getUltraSrtNcst') ? ok([]) : ok([]), KST('2026-11-05T04:00:00'));
+    await early.get('nx=60&ny=125');assert.equal(early.calls.filter(c => c.url.pathname.endsWith('getVilageFcst')).length, 1);
+  });
+  await check('the newest issue is the last one served with margin, and before 02:15 it is yesterday\'s 23시', () => {
+    const at = s => weather.latestForecastBase(KST(s));
+    same(at('2026-11-05T14:40:00'), { base_date: '20261105', base_time: '1400' });same(at('2026-11-05T14:14:00'), { base_date: '20261105', base_time: '1100' });
+    same(at('2026-11-05T23:20:00'), { base_date: '20261105', base_time: '2300' });same(at('2026-11-05T02:10:00'), { base_date: '20261104', base_time: '2300' });
+    same(weather.rainOutlook([], '20261105', 0), { pop: null, rain: null });
+    const snow = [3, 4, 5, 9, 12, 13].map(h => ({ category: 'PTY', fcstDate: '20261105', fcstTime: String(h).padStart(2, '0') + '00', fcstValue: '3' }));
+    same(weather.rainOutlook(snow, '20261105'), { pop: null, rain: { hours: '03~05시, 09시 외', kind: '눈' } });
+  });
   console.log(`${count} weather checks passed; no network calls.`);
 })().catch(e => { console.error(e); process.exit(1); });

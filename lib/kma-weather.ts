@@ -9,7 +9,13 @@ export interface TodayWeather {
   observedAt: string;        // HH:MM of that 실황
   min: number | null;        // 오늘 최저 (단기예보 TMN)
   max: number | null;        // 오늘 최고 (단기예보 TMX)
+  // From the latest 단기예보 issue: the highest 강수확률 (POP, %) and the hours with 강수형태 (PTY) for the rest of today and for tomorrow.
+  pop: number | null;
+  rain: RainSpell | null;
+  popTomorrow: number | null;
+  rainTomorrow: RainSpell | null;
 }
+export interface RainSpell { hours: string; kind: string } // e.g. { hours: '14~17시', kind: '비' }
 
 const HOUR = 3600_000;
 // Clock parts in KST whatever the server's time zone is.
@@ -18,6 +24,7 @@ function kst(ms: number) {
   const p = (n: number) => String(n).padStart(2, '0');
   return { ymd: `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}`, hour: d.getUTCHours(), minute: d.getUTCMinutes(), p };
 }
+export const kstHour = (ms: number) => kst(ms).hour;
 export const kstDate = (ms: number) => { const { ymd } = kst(ms); return `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6)}`; };
 
 // 실황 for the last full hour that is already served; 5 minutes of margin past the guide's HH:10.
@@ -32,7 +39,14 @@ export function forecastBase(ms: number) {
   return { base_date: kst(ms - 24 * HOUR).ymd, base_time: '2300' };
 }
 
-export interface KmaItem { category: string; obsrValue?: string; fcstValue?: string; fcstDate?: string; baseTime?: string }
+// The newest 단기예보 issue already served (HH:10 per the guide, 5 minutes of margin); before 02:15 it is yesterday's 23시 issue.
+export function latestForecastBase(ms: number) {
+  const now = kst(ms), served = [23, 20, 17, 14, 11, 8, 5, 2].find(h => now.hour > h || now.hour === h && now.minute >= 15);
+  if (served === undefined) return { base_date: kst(ms - 24 * HOUR).ymd, base_time: '2300' };
+  return { base_date: now.ymd, base_time: `${now.p(served)}00` };
+}
+
+export interface KmaItem { category: string; obsrValue?: string; fcstValue?: string; fcstDate?: string; fcstTime?: string; baseTime?: string }
 
 // Error codes from the guide's 에러 코드 정리: 20·21·30·31 are key problems, 22 is the daily quota, 03 is NODATA.
 function kmaError(code: string, message: string) {
@@ -61,6 +75,31 @@ export const nowcastTemp = (items: KmaItem[]) => num(items.find(i => i.category 
 export function todayRange(items: KmaItem[], ymd: string) {
   const value = (category: string) => num(items.find(i => i.category === category && i.fcstDate === ymd)?.fcstValue);
   return { min: value('TMN'), max: value('TMX') };
+}
+
+// PTY 1 비 · 2 비/눈 · 3 눈 · 4 소나기 (0 is none).
+function spellKind(codes: Set<string>) {
+  const snow = codes.has('3'), rain = codes.has('1') || codes.has('4');
+  return codes.has('2') || snow && rain ? '비·눈' : snow ? '눈' : '비';
+}
+// Wet hours as runs: [14,15,16,17] → 14~17시; more than two runs end with 외.
+function spellHours(hours: number[]) {
+  const runs: [number, number][] = [];
+  for (const h of hours) { const last = runs[runs.length - 1]; if (last && h === last[1] + 1) last[1] = h; else runs.push([h, h]); }
+  const p = (n: number) => String(n).padStart(2, '0');
+  const text = runs.slice(0, 2).map(([a, b]) => a === b ? `${p(a)}시` : `${p(a)}~${p(b)}시`).join(', ');
+  return runs.length > 2 ? `${text} 외` : text;
+}
+// Highest 강수확률 and the hours with 강수 for one day (YYYYMMDD), counting only hours from fromHour on.
+export function rainOutlook(items: KmaItem[], ymd: string, fromHour = 0): { pop: number | null; rain: RainSpell | null } {
+  const hourly = (category: string) => items.filter(i => i.category === category && i.fcstDate === ymd && Number((i.fcstTime ?? '').slice(0, 2)) >= fromHour);
+  const pops = hourly('POP').map(i => num(i.fcstValue)).filter((n): n is number => n !== null);
+  const wet = hourly('PTY').filter(i => i.fcstValue && i.fcstValue.trim() !== '0');
+  const hours = Array.from(new Set(wet.map(i => Number(i.fcstTime!.slice(0, 2))))).sort((a, b) => a - b);
+  return {
+    pop: pops.length ? Math.max(...pops) : null,
+    rain: hours.length ? { hours: spellHours(hours), kind: spellKind(new Set(wet.map(i => i.fcstValue!.trim()))) } : null,
+  };
 }
 // data.go.kr gives an already-encoded key and a decoded one; either may be pasted into the environment variable.
 export const serviceKeyParam = (key: string) => /%[0-9A-Fa-f]{2}/.test(key) ? key : encodeURIComponent(key);

@@ -37,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Title and Site Picker */}
           <div className="app-header-identity">
-            <img className="bolim-logo" src="https://cdn.imweb.me/thumbnail/20220701/9fa5f0628c150.png" width="42" height="30" alt="보림토건" />
+            <img className="bolim-logo" src="/bolim-logo.png" width="42" height="30" alt="보림토건" />
             <div className="app-header-copy">
               <div className="app-header-title-row">
                 <h1 className="text-lg font-bold text-slate-100 tracking-tight">

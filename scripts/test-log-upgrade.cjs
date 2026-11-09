@@ -408,9 +408,12 @@ function uiHarness(file, name, props, extra = {}) {
     const none=text(null,null);assert(none.includes('현장 관리에서 현장 주소를 넣으면 표시됩니다.'));assert(none.includes('주소 미등록'));
     const unpicked=JSON.stringify(uiHarness('components/SummaryCards.tsx','SummaryCards',{logs:[log],site:{...site,address:'OO산업단지',weather_area:null}}).render());assert(unpicked.includes('⋯ › 주소 수정으로 기상 위치를 고르면 표시됩니다.'));assert(unpicked.includes('위치 선택 필요'));
     assert(text(null,banpo).includes('오늘 날씨를 불러오는 중입니다.'));
-    const at=new Date(2026,10,5,14,30).getTime(),weather={date:'2026-11-05',temp:12.3,observedAt:'14:00',min:3,max:13};
+    const at=new Date(2026,10,5,14,30).getTime(),weather={date:'2026-11-05',temp:12.3,observedAt:'14:00',min:3,max:13,pop:60,rain:{hours:'15~17시',kind:'비'},popTomorrow:20,rainTomorrow:null};
     const shown=text({grid:'60,125',weather,at,error:''},banpo);
-    for(const part of ['오늘 날씨 · 서초구 반포동','12.3°','3°','13°','(14:00 관측)','오늘 최저 / 최고 (예보)','현재 기온','예보 3~13°','기상특보 확인 중'])assert(shown.includes(part),part);
+    for(const part of ['오늘 날씨 · 서초구 반포동','12.3°','3°','13°','(14:00 관측)','오늘 최저 / 최고 (예보)','현재 기온','예보 3~13°','기상특보 확인 중','강수확률 (오늘 남은 시간)','최고 60%','오늘 15~17시 비 예보','내일 강수확률','최고 20%','강수 60%','비 15~17시','내일 강수 20%'])assert(shown.includes(part),part);
+    assert(!shown.includes('내일 null'));const dry=text({grid:'60,125',weather:{...weather,pop:null,rain:null,popTomorrow:null},at,error:''},banpo);assert(!dry.includes('강수'));
+    assert(shown.includes('{"className":"summary-compact-alert is-advisory","children":"강수 60%"}'));assert(shown.includes('{"className":"text-slate-400","children":"내일 강수 20%"}'));assert(shown.includes('summary-card-value font-bold summary-compact-alert is-advisory'));
+    const edge=text({grid:'60,125',weather:{...weather,pop:59,popTomorrow:60},at,error:''},banpo);assert(edge.includes('{"className":"text-slate-400","children":"강수 59%"}'));assert(edge.includes('{"className":"summary-compact-alert is-advisory","children":"내일 강수 60%"}'));
     assert(!shown.includes('오늘 예보'));assert(!shown.includes('현재 12.3°'));
     assert(!shown.includes('30분마다'));
     const stale=text({grid:'60,125',weather,at,error:'기상청 하루 호출 한도를 넘었습니다.'},banpo);assert(stale.includes('14:30 값 · 새로 불러오지 못해 이전 값을 보여 줍니다. 기상청 하루 호출 한도를 넘었습니다.'));assert(stale.includes('12.3°'));assert(stale.includes('14:30 값'));
