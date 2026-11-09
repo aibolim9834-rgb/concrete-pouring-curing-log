@@ -110,6 +110,24 @@ export async function photoBlob(photo:SitePhoto,original=false){
   rows.set(photo.id,data as PhotoRow);return download((data as PhotoRow).original_path);
  }
 }
+// 원본 보관 지연: photos of every site (not marked deleted) whose original still waits on the server for the office PC,
+// and when the oldest of them was uploaded. null in browser-only mode, where nothing is archived.
+export type PendingArchive={count:number;oldest:number};
+export async function pendingArchive():Promise<PendingArchive|null>{
+ if(!cloudStorageEnabled())return null;
+ const {data,error}=await timed(signal=>supabase.from('site_photos').select('created:metadata->createdAt,deleted:metadata->deletedAt').is('archived_at',null).abortSignal(signal).limit(10000),READ_TIMEOUT_MESSAGE);
+ if(error)throw Error('원본 보관 상태를 불러오지 못했습니다. '+error.message);
+ const waiting=((data??[]) as {created:unknown;deleted:unknown}[]).filter(r=>typeof r.deleted!=='number'&&typeof r.created==='number').map(r=>r.created as number);
+ return {count:waiting.length,oldest:waiting.length?Math.min(...waiting):0};
+}
+// The archive runs every evening at 19:00 and at sign-in, so a wait past 48 hours means the office PC or its SSD needs a look.
+// days counts whole days waited (49h → 2, "2일째").
+export const ARCHIVE_LATE_MS=48*3600000;
+export function archiveDelay(pending:PendingArchive|null,now:number):{days:number;count:number;oldest:number}|null{
+ if(!pending?.count)return null;
+ const waited=now-pending.oldest;
+ return waited>ARCHIVE_LATE_MS?{days:Math.floor(waited/86400000),count:pending.count,oldest:pending.oldest}:null;
+}
 // Where the original is: null while it is still on the server, the archive PC's path once moved; undefined in browser-only mode.
 export function photoArchive(photo:SitePhoto):{path:string}|null|undefined{
  if(!cloudStorageEnabled())return undefined;

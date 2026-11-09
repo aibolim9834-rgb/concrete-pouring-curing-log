@@ -69,6 +69,22 @@ function cloud({cap=500,fail=false,duplicate=false}={}){
   const browserOnly=load('lib/site-photos-cloud.ts',{'./site-photos':{listPhotos:async()=>[]},'./supabase':{supabase},'./cloud-storage':{cloudStorageEnabled:()=>false},'./request-timeout':requestTimeout,'./floor':load('lib/floor.ts',{})});
   assert.equal(browserOnly.photoArchive(a),undefined);
  });
+ await check('archive delay counts every site\'s waiting originals, skips deleted ones, and shows only past 48 hours',async()=>{
+  const h=3600000,now=Date.parse('2026-11-09T09:00:00+09:00');
+  const waiting=[{created:now-49*h,deleted:null},{created:now-5*h,deleted:null},{created:now-80*h,deleted:now-70*h},{created:null,deleted:null}];
+  let filter=null;
+  const supabase={from(table){assert.equal(table,'site_photos');const q={select(cols){assert.match(cols,/metadata->createdAt/);return q;},is(col,v){filter=[col,v];return q;},abortSignal(){return q;},async limit(){return {data:waiting,error:null};}};return q;}};
+  const make=on=>load('lib/site-photos-cloud.ts',{'./site-photos':{listPhotos:async()=>[]},'./supabase':{supabase},'./cloud-storage':{cloudStorageEnabled:()=>on},'./request-timeout':requestTimeout,'./floor':load('lib/floor.ts',{})});
+  const api=make(true),pending=await api.pendingArchive();
+  assert.equal(JSON.stringify(filter),JSON.stringify(['archived_at',null]));
+  assert.equal(JSON.stringify(pending),JSON.stringify({count:2,oldest:now-49*h}));
+  assert.equal(JSON.stringify(api.archiveDelay(pending,now)),JSON.stringify({days:2,count:2,oldest:now-49*h}));
+  assert.equal(api.archiveDelay({count:2,oldest:now-48*h},now),null);       // exactly 48h: not yet
+  assert.equal(api.archiveDelay({count:3,oldest:now-73*h},now).days,3);     // 3일째
+  assert.equal(api.archiveDelay({count:0,oldest:0},now),null);
+  assert.equal(api.archiveDelay(null,now),null);
+  assert.equal(await make(false).pendingArchive(),null);                     // browser-only mode archives nothing
+ });
  await check('photo listing rejects later-page errors instead of presenting a partial collection',async()=>{await assert.rejects(photosCloud(true).listPhotos(site.id),/사진 정보/);});
  for(const env of [{NEXT_PUBLIC_CON1_LOCAL_ONLY:'true'},{NEXT_PUBLIC_CON1_QA:'true'}]){
   await check('explicit isolated mode does not query Supabase '+Object.keys(env)[0],async()=>{let calls=0;const api=loadSupabase({createClient:()=>({from(){calls++;throw Error('network');}})},env);assert.equal(await api.checkSupabaseHealth(),false);assert.equal(calls,0);});

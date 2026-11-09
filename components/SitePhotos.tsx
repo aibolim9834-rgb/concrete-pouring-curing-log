@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Site } from '@/lib/types';
 import { normalizePhotoBuilding, normalizePhotoFloor } from '@/lib/floor';
 import { normalizeShortDate, shortDate } from '@/lib/date-only';
-import { listPhotos, makePhotoThumbnail, markPhotosDeleted, latestDeletedBatch, photoBlob, photoPurgeLabel, photoArchive, photoStorageUsage, savePhoto, storageUsageLabel, updatePhotoLocation, updatePhotoLocations, SitePhoto, StorageUsage } from '@/lib/site-photos-cloud';
+import { listPhotos, makePhotoThumbnail, markPhotosDeleted, latestDeletedBatch, photoBlob, photoPurgeLabel, archiveDelay, pendingArchive, PendingArchive, photoArchive, photoStorageUsage, savePhoto, storageUsageLabel, updatePhotoLocation, updatePhotoLocations, SitePhoto, StorageUsage } from '@/lib/site-photos-cloud';
 import { cloudStorageEnabled } from '@/lib/cloud-storage';
 import { describeError, logEvent, tracked } from '@/lib/event-log';
 import { askConfirm } from './ConfirmDialog';
@@ -11,6 +11,8 @@ import { askConfirm } from './ConfirmDialog';
 function today() {const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 // Server mode only: whether the office PC has already moved this photo's original to its archive drive.
 function archiveChip(photo: SitePhoto) {const a=photoArchive(photo);return a===undefined?null:<span className={`photo-archive ${a?'is-archived':'is-pending'}`}>{a?'원본 보관됨':'원본 서버에 있음'}</span>;}
+// "11.07(토) 08:30" for the 원본 보관 지연 tooltip.
+function uploadedAt(ms: number) {const d=new Date(ms),p=(n:number)=>String(n).padStart(2,'0');return `${d.getMonth()+1}.${p(d.getDate())}(${'일월화수목금토'[d.getDay()]}) ${p(d.getHours())}:${p(d.getMinutes())}`;}
 function photoLocation(photo: SitePhoto) {const b=photo.building.trim(),f=photo.floor.trim();return `${/^\d+$/.test(b)?b+'동':b} · ${/^\d+$/.test(f)?f+'층':f}`;}
 // Each photo is saved as its own file under its original name; a short gap keeps browsers from dropping the later ones.
 // Returns the names that could not be saved.
@@ -45,6 +47,8 @@ export function SitePhotos({site,blocked=false,onWorkPending}:{site:Site;blocked
   const [usage,setUsage]=useState<StorageUsage|null>(null);
   // A missing 촬영일·동·층 (or adding while the store is not ready) is told under the fields, next to the field to fix.
   const [uploadError,setUploadError]=useState<{field:'date'|'building'|'floor'|'';text:string}|null>(null);
+  // Originals of every site still waiting for the office PC; shown next to the title once the oldest waits over 2 days.
+  const [archiveWait,setArchiveWait]=useState<PendingArchive|null>(null);
   const photoBusy=busy||locationSaving||downloading;
   const alive=useRef(true),lock=useRef(false),input=useRef<HTMLInputElement>(null),cameraInput=useRef<HTMLInputElement>(null),dialog=useRef<HTMLDialogElement>(null),outsideDown=useRef(false);
   const fieldRefs={date:useRef<HTMLInputElement>(null),building:useRef<HTMLInputElement>(null),floor:useRef<HTMLInputElement>(null)};
@@ -54,6 +58,7 @@ export function SitePhotos({site,blocked=false,onWorkPending}:{site:Site;blocked
   // 저장 공간 of the shared photo storage: read on open and again whenever a photo is added (deletes only free space at the purge).
   // A failed read just leaves the figure off; it is not needed to work with photos.
   useEffect(()=>{let active=true;photoStorageUsage().then(u=>{if(active)setUsage(u);}).catch(()=>{if(active)setUsage(null);});return()=>{active=false;};},[photos.length]);
+  useEffect(()=>{let active=true;pendingArchive().then(p=>{if(active)setArchiveWait(p);}).catch(()=>{if(active)setArchiveWait(null);});return()=>{active=false;};},[photos.length]);
   useEffect(()=>{onWorkPending?.(photoBusy);return()=>onWorkPending?.(false);},[photoBusy,onWorkPending]);
   // 타설 사진 (logId) belong to 타설일지 rows and stay off this page.
   const own=photos.filter(p=>!p.logId), live=own.filter(p=>!p.deletedAt), filtered=live.filter(p=>(!month||p.date.startsWith(month))&&(!filter||p.building===filter));
@@ -64,6 +69,7 @@ export function SitePhotos({site,blocked=false,onWorkPending}:{site:Site;blocked
   const viewIndex=dayPhotos.findIndex(p=>p.id===viewId),view=dayPhotos[viewIndex],viewArchive=view?photoArchive(view):undefined;
   const months=Array.from(new Set([month,today().slice(0,7),...live.map(p=>p.date.slice(0,7)),...Array.from({length:12},(_,i)=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;})])).filter(Boolean).sort().reverse();
   const deleted=latestDeletedBatch(own);
+  const late=archiveDelay(archiveWait,Date.now());
   function uploadInputsValid() {
     const missing=!normalizeShortDate(date)?{field:'date' as const,text:'올바른 촬영일을 먼저 입력한 뒤 사진을 넣어주세요. (예: 26.11.06)'}
       :!building.trim()?{field:'building' as const,text:'동·구역을 먼저 입력한 뒤 사진을 넣어주세요.'}
@@ -117,7 +123,7 @@ export function SitePhotos({site,blocked=false,onWorkPending}:{site:Site;blocked
   }
   return <div className="site-photos">
     <section className="photo-panel photo-upload">
-      <div><h2 className="ui-page-title">알폼핀 체결 사진</h2><p className="ui-note">{site.name} · 촬영일과 위치를 입력한 뒤 사진을 추가하세요.</p>
+      <div><div className="photo-title-row"><h2 className="ui-page-title">알폼핀 체결 사진</h2>{late&&<span className="photo-archive-late" role="status" title={`가장 오래된 사진 ${uploadedAt(late.oldest)}에 올림. 보관은 매일 저녁 7시와 사무실 PC에 로그인할 때 실행됩니다.`}>원본 보관 {late.days}일째 밀림 · {late.count}장 대기<span className="photo-archive-late-hint"> · 사무실 PC·SSD 확인</span></span>}</div><p className="ui-note">{site.name} · 촬영일과 위치를 입력한 뒤 사진을 추가하세요.</p>
         <div className="photo-fields"><label>촬영일<input ref={fieldRefs.date} aria-label="촬영일" value={date} onChange={e=>{setDate(e.target.value);setUploadError(null);}} placeholder="26.10.26" disabled={photoBusy} {...fieldError('date')}/></label><label>동·구역<input ref={fieldRefs.building} aria-label="동·구역" value={building} onChange={e=>{setBuilding(e.target.value);setUploadError(null);}} placeholder="예: 101동" disabled={photoBusy} list="photo-buildings" {...fieldError('building')}/></label><label>층<input ref={fieldRefs.floor} aria-label="층" value={floor} onChange={e=>{setFloor(e.target.value);setUploadError(null);}} placeholder="예: 5F" disabled={photoBusy} {...fieldError('floor')}/></label></div>
         {uploadError&&<p id="photo-upload-error" className="photo-upload-error" role="alert">{uploadError.text}</p>}
         <datalist id="photo-buildings">{Array.from(new Set(live.map(p=>p.building))).map(b=><option key={b} value={b}/>)}</datalist>
