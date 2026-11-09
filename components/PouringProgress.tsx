@@ -14,7 +14,7 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Site } from '@/lib/types';
 import { buildingLabel, completedStages, downloadFile, emptyProgress, ProgressDocument, progressId, progressRows, validDate } from '@/lib/pouring-progress';
-import { EntryDraft, entryFromDraft, parsePourDateList, pourDates, pourDatesLabel, PROGRESS_COLUMNS, progressSheetRows, removeProgressEntry, setPourDates, upsertProgressEntry } from '@/lib/progress-entries';
+import { EntryDraft, entryFromDraft, parsePourDateList, pourDates, pourDatesLabel, PROGRESS_COLUMNS, progressSheetOptions, progressSheetRows, removeProgressEntry, setPourDates, upsertProgressEntry } from '@/lib/progress-entries';
 import { loadProgress, ProgressSnapshot, saveProgress } from '@/lib/progress-storage';
 import { describeError, logEvent, tracked } from '@/lib/event-log';
 import { cloudStorageEnabled } from '@/lib/cloud-storage';
@@ -388,7 +388,8 @@ export function PouringProgress({ site, readOnly = false, onWorkPending, onPrint
   }
   function exportExcel() {
     if (!snapshot) { setError('타설현황을 불러온 뒤 엑셀로 내보내주세요.'); return; }
-    downloadFile(`${site.name}_타설현황.xlsx`, xlsxFile('타설현황', PROGRESS_COLUMNS, progressSheetRows(document, filter)), XLSX_TYPE);
+    const rows = progressSheetRows(document, filter);
+    downloadFile(`${site.name}_타설현황.xlsx`, xlsxFile('타설현황', PROGRESS_COLUMNS, rows, progressSheetOptions(site.name, document, filter, rows)), XLSX_TYPE);
   }
 
   // Each extra pour date shown on one line widens that building's actual-date column.

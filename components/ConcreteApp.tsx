@@ -23,7 +23,7 @@ import { BackupManager } from './BackupManager';
 import { askConfirm, ConfirmHost } from '@/components/ConfirmDialog';
 import { nextSiteCode } from '@/lib/site-code';
 import { loadCloudLogData } from '@/lib/cloud-log-data';
-import { LOG_COLUMNS, logRows } from '@/lib/log-export';
+import { LOG_COLUMNS, logRows, logSheetOptions } from '@/lib/log-export';
 import { XLSX_TYPE, xlsxFile } from '@/lib/xlsx';
 import { normalizeWatering } from '@/lib/watering';
 import { normalizeStrength } from '@/lib/strength';
@@ -374,7 +374,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       alert('내보낼 현장을 선택해주세요.');
       return;
     }
-    downloadFile(`${currentSite.name || '현장'}_콘크리트_타설_양생_일지.xlsx`, xlsxFile('타설일지', LOG_COLUMNS, logRows(outputLogs)), XLSX_TYPE);
+    downloadFile(`${currentSite.name || '현장'}_콘크리트_타설_양생_일지.xlsx`, xlsxFile('타설일지', LOG_COLUMNS, logRows(outputLogs), logSheetOptions(currentSite.name || '현장', outputLogs)), XLSX_TYPE);
   };
 
   // 일지 opens the 인쇄/보고서 서식 view; 타설현황 prints its own table.

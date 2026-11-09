@@ -122,5 +122,21 @@ function cloud({cap=500,fail=false,duplicate=false}={}){
   assert(files['xl/workbook.xml'].includes("'타설일지'!$1:$1"));assert(files['xl/styles.xml'].includes('[$-412]yy.mm.dd(aaa)'));
   assert.equal(x.excelDate('2026-10-02'),46297);assert.equal(x.excelDate('26-10-02'),null);
  });
+ await check('Excel title lines push the table down and the total row re-adds only filtered rows',()=>{
+  const x=load('lib/xlsx.ts',{},{TextEncoder});
+  const files=b=>{const out={};let at=0;while(b.readUInt32LE(at)===0x04034b50){const size=b.readUInt32LE(at+18),n=b.readUInt16LE(at+26);out[b.subarray(at+30,at+30+n).toString()]=b.subarray(at+30+n,at+30+n+size).toString('utf8');at+=30+n+size;}return out;};
+  const cols=[{header:'구분',kind:'number'},{header:'일자',kind:'date'},{header:'동'},{header:'물량',kind:'number'}];
+  const f=files(Buffer.from(x.xlsxFile('타설일지',cols,[[1,'2026-10-01','101동',10.5],[2,'2026-10-02','102동','4'],[3,'2026-10-03','103동',null]],{title:'현장 <A> 일지',subtitle:'기간 26.10.01(목) ~ 26.10.03(토) · 3건',total:{label:'합계',columns:[3]}})));
+  const sheet=f['xl/worksheets/sheet1.xml'];
+  assert(sheet.includes('<row r="1" ht="26" customHeight="1"><c r="A1" s="5" t="inlineStr"><is><t xml:space="preserve">현장 &lt;A&gt; 일지</t>'));
+  assert(sheet.includes('<c r="A2" s="6" t="inlineStr">'));assert(sheet.includes('<c r="A3" s="1" t="inlineStr"><is><t xml:space="preserve">구분</t>'));
+  assert(sheet.includes('<pane ySplit="3" topLeftCell="A4"'));assert(sheet.includes('<autoFilter ref="A3:D6"/>'));assert(sheet.includes('<dimension ref="A1:D7"/>'));
+  assert(sheet.includes('<c r="A7" s="7" t="inlineStr"><is><t xml:space="preserve">합계</t></is></c><c r="B7" s="7"/><c r="C7" s="7"/><c r="D7" s="8"><f>SUBTOTAL(109,D4:D6)</f><v>14.5</v></c>'));
+  assert(sheet.includes('<mergeCells count="3"><mergeCell ref="A1:D1"/><mergeCell ref="A2:D2"/><mergeCell ref="A7:C7"/></mergeCells>'));
+  assert(sheet.indexOf('<autoFilter')<sheet.indexOf('<mergeCells'));
+  assert(f['xl/workbook.xml'].includes("'타설일지'!$A$3:$D$6"));assert(f['xl/workbook.xml'].includes("'타설일지'!$3:$3"));assert(f['xl/workbook.xml'].includes('<calcPr fullCalcOnLoad="1"/>'));
+  const empty=files(Buffer.from(x.xlsxFile('빈 일지',cols,[],{title:'현장',total:{label:'합계',columns:[3]}})))['xl/worksheets/sheet1.xml'];
+  assert(!empty.includes('SUBTOTAL'));assert(empty.includes('<autoFilter ref="A2:D2"/>'));
+ });
  console.log(count+' data safety checks passed; no network calls.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

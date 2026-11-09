@@ -1,7 +1,8 @@
 import { buildingLabel, ProgressDocument, ProgressEntry, ProgressRecord, validateProgressEntry, validateProgressRecord, validDate } from './pouring-progress';
 import { scheduleMetrics } from './progress-schedule';
 import { progressColor } from './progress-color';
-import type { XlsxColumn, XlsxValue } from './xlsx';
+import type { XlsxColumn, XlsxOptions, XlsxValue } from './xlsx';
+import { datePeriod } from './log-export';
 import { normalizeShortDate } from './date-only';
 
 export interface EntryDraft { id?: string; member: string; zone: string; volume: string; remarks: string }
@@ -51,6 +52,14 @@ export function progressSheetRows(document: ProgressDocument, filter: string) {
     }
   }
   return lines;
+}
+
+// Site name, pour-date period and shown buildings above the table; the 물량 total adds recorded areas only
+// and is left out while no area has a volume (a row of 0 would read as nothing poured).
+export function progressSheetOptions(siteName: string, document: ProgressDocument, filter: string, rows: XlsxValue[][]): XlsxOptions {
+  const range = datePeriod(rows.flatMap(row => String(row[3] || '').split(', ')));
+  const shown = filter === 'all' ? '전체 동' : buildingLabel(document.buildings.find(b => b.id === filter)?.name || '');
+  return { title: `${siteName} 타설현황`, subtitle: `${range ? `타설일 ${range} · ` : ''}${shown}`, total: rows.some(row => row[7] !== '' && row[7] != null) ? { label: '합계 (입력된 구역 물량)', columns: [7] } : undefined };
 }
 
 export const pourDates = (record: ProgressRecord | undefined) => record?.dates || (record?.date ? [record.date] : []);
