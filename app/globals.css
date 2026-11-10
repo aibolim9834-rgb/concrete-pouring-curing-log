@@ -646,7 +646,8 @@ body {
 .concrete-app .weather-radar-link:hover { background: var(--b-soft, #334155); }
 .concrete-app .weather-radar-link:focus-visible { outline: 2px solid var(--b-brand, #22c55e); outline-offset: 2px; }
 .concrete-app .weather-radar-link svg { inline-size: 13px; block-size: 13px; flex: none; }
-.concrete-app .weather-radar-link.is-compact { justify-self: start; margin-top: 4px; padding: 2px 7px; }
+/* Phone: 34px tall so it can be tapped on site (was 24px). */
+.concrete-app .weather-radar-link.is-compact { justify-self: start; margin-top: 4px; min-block-size: 34px; padding: 4px 10px; font-size: 13px; }
 @media print { .concrete-app .weather-radar-link { display: none; } }
 .concrete-app .summary-compact-alert { font-weight: 700; }
 .concrete-app .summary-compact-alert.is-warning { color: var(--b-danger, #f87171); }

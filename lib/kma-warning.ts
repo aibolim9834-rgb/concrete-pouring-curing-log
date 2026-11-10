@@ -11,7 +11,7 @@ export type WarningZone = [string, string, string, string];
 export type WarningLevel = '주의보' | '경보' | '중대경보';
 export interface SiteWarning { kind: string; level: WarningLevel; zones: string[] }   // e.g. 한파 경보 [서울서남권]
 export interface SitePreview { kind: string; when: string; zones: string[] }           // e.g. 강풍 예비특보, 11/6 새벽(00시~06시)
-export interface SiteWarnings { issuedAt: string; warnings: SiteWarning[]; previews: SitePreview[] } // issuedAt: HH:MM (KST)
+export interface SiteWarnings { issuedAt: string; warnings: SiteWarning[]; previews: SitePreview[] } // issuedAt: HH:MM (KST), or MM.DD HH:MM when not today
 
 const NATION = 'L1000000';
 // The 특보구역 of each 시·도 in the region table. 전남광주통합특별시 keeps two: 광주광역시 for its five 구, 전라남도 for the rest.
@@ -134,5 +134,10 @@ export function previewsFor(t7: string, site: Set<string>, zones: WarningZone[])
   return out;
 }
 
-// tmFc 202611050700 → "07:00"
-export const issuedClock = (tmFc: string | number) => { const s = String(tmFc); return /^\d{12}$/.test(s) ? `${s.slice(8, 10)}:${s.slice(10, 12)}` : ''; };
+// tmFc 202611050700 → "07:00" when that is today in KST, "11.05 07:00" on any other day, so an older 발표 is not read as today's.
+export const issuedClock = (tmFc: string | number, now = Date.now()) => {
+  const s = String(tmFc);
+  if (!/^\d{12}$/.test(s)) return '';
+  const today = new Date(now + 9 * 3600 * 1000).toISOString().slice(0, 10).replace(/-/g, '');
+  return `${s.slice(0, 8) === today ? '' : `${s.slice(4, 6)}.${s.slice(6, 8)} `}${s.slice(8, 10)}:${s.slice(10, 12)}`;
+};

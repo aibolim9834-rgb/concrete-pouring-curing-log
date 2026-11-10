@@ -20,7 +20,12 @@ export async function GET(request: Request) {
   if (!key) return reply({ error: '기상청 연결 키가 아직 설정되지 않았습니다.' }, 503);
 
   try {
-    const response = await fetch(`${URL_STATUS}?serviceKey=${serviceKeyParam(key)}&pageNo=1&numOfRows=1&dataType=JSON`, { next: { revalidate: CACHE_SECONDS }, signal: AbortSignal.timeout(8000) });
+    const url = `${URL_STATUS}?serviceKey=${serviceKeyParam(key)}&pageNo=1&numOfRows=1&dataType=JSON`;
+    let response = await fetch(url, { next: { revalidate: CACHE_SECONDS }, signal: AbortSignal.timeout(8000) });
+    // Past the 10 minutes Next.js answers once more with the kept copy while it refetches behind (stale-while-revalidate), so the
+    // first viewer after a quiet night would get yesterday's 특보. The kept copy carries 기상청's Date header: over 20 minutes old → ask again, uncached.
+    const receivedAt = Date.parse(response.headers.get('date') ?? '');
+    if (Date.now() - receivedAt > 2 * CACHE_SECONDS * 1000) response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
     if (!response.ok) throw new Error(`기상청 서버가 응답하지 않습니다 (${response.status}).`);
     const [status] = readKmaBody<{ t6?: string; t7?: string; tmFc?: string | number }>(await response.text());
     const site = siteZones(region, zones);

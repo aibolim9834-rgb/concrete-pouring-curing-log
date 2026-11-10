@@ -78,7 +78,11 @@ const T7 = '(1) 풍랑 예비특보\r\no 11월 05일 오전(06시~12시) : 서�
     same(warning.previewsFor(T7, site('인천광역시', '연수구'), zones), [{ kind: '강풍', when: '11/6 새벽(00시~06시)', zones: ['옹진', '인천영종'] }]);
     same(warning.previewsFor(T7, site('전남광주통합특별시', '신안군'), zones), [{ kind: '강풍', when: '11/6 오전(06시~12시)', zones: ['신안(흑산면제외)'] }]);
     same(warning.previewsFor(T7, site('서울특별시', '동작구'), zones), []);
-    assert.equal(warning.issuedClock(202611050700), '07:00');
+    // Today (KST) shows the time alone; any other day carries its date. 2026-11-05 00:30 KST is still 11-04 in UTC.
+    assert.equal(warning.issuedClock(202611050700, Date.UTC(2026, 10, 5, 3)), '07:00');
+    assert.equal(warning.issuedClock(202611050000, Date.UTC(2026, 10, 4, 15, 30)), '00:00');
+    assert.equal(warning.issuedClock(202611041500, Date.UTC(2026, 10, 4, 23, 20)), '11.04 15:00');
+    assert.equal(warning.issuedClock('x'), '');
   });
 
   // /api/weather-warning with a fake 기상청.
@@ -89,7 +93,7 @@ const T7 = '(1) 풍랑 예비특보\r\no 11월 05일 오전(06시~12시) : 서�
     }, {
       URL, Promise, process: { env: key ? { KMA_SERVICE_KEY: key } : {} }, AbortSignal: { timeout: () => undefined },
       Response: { json: (body, init) => ({ body, status: init?.status ?? 200, headers: init?.headers }) },
-      fetch: async (url, init) => { calls.push({ url: new URL(url), init }); const out = reply(new URL(url)); return { ok: (out.status ?? 200) < 400, status: out.status ?? 200, text: async () => out.text }; },
+      fetch: async (url, init) => { calls.push({ url: new URL(url), init }); const out = reply(new URL(url), init); return { ok: (out.status ?? 200) < 400, status: out.status ?? 200, headers: { get: name => name === 'date' ? out.date ?? null : null }, text: async () => out.text }; },
     });
     return { calls, get: query => mod.GET({ url: `https://app.test/api/weather-warning?${query}` }) };
   };
@@ -108,11 +112,22 @@ const T7 = '(1) 풍랑 예비특보\r\no 11월 05일 오전(06시~12시) : 서�
     const r = route('raw+key==', () => status({ t6: T6, t7: T7, tmFc: 202611050700 }));
     const res = await r.get(`code=${jejuCode}`);
     assert.equal(res.status, 200);
-    same(res.body, { issuedAt: '07:00', warnings: [{ kind: '강풍', level: '주의보', zones: ['제주도'] }], previews: [] });
+    same(res.body, { issuedAt: '11.05 07:00', warnings: [{ kind: '강풍', level: '주의보', zones: ['제주도'] }], previews: [] });
     assert.equal(r.calls.length, 1); assert(r.calls[0].url.pathname.endsWith('/WthrWrnInfoService/getPwnStatus'));
     assert.equal(r.calls[0].init.next.revalidate, 600);
     assert.equal(r.calls[0].url.searchParams.get('serviceKey'), 'raw+key==');
     assert(!JSON.stringify(res.body).includes('raw'));
+  });
+
+  await check('a kept copy over 20 minutes old is asked for again uncached; a recent one is used as it is', async () => {
+    const ago = minutes => new Date(Date.now() - minutes * 60000).toUTCString();
+    const old = route('k', (url, init) => init.cache === 'no-store' ? status({ t6: T6, tmFc: 202611050700 }) : { ...status({ tmFc: 202611041500 }), date: ago(900) });
+    const res = await old.get(`code=${jejuCode}`);
+    assert.equal(old.calls.length, 2); assert.equal(old.calls[1].init.cache, 'no-store');
+    assert.equal(res.body.issuedAt, '11.05 07:00'); assert.equal(res.body.warnings.length, 1);
+    const recent = route('k', () => ({ ...status({ tmFc: 202611050700 }), date: ago(15) }));
+    await recent.get(`code=${jejuCode}`);
+    assert.equal(recent.calls.length, 1);
   });
 
   await check('a key 기상청 has not registered for 특보 comes back as a readable error', async () => {
