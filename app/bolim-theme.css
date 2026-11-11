@@ -124,7 +124,7 @@
   .concrete-app .progress-page .progress-cell:is(.is-selected,:focus-visible) { outline-color:currentColor; outline-offset:-2px; }
   .concrete-app .progress-comparison-table .comparison-gap .is-late { color:var(--b-danger); }
   .concrete-app .progress-comparison-table .comparison-gap .is-early { color:var(--b-action); }
-  .concrete-app .progress-page .progress-panel, .concrete-app .progress-page .progress-add-building { background:var(--b-soft); }
+  .concrete-app .progress-page .progress-panel { background:var(--b-soft); }
   .concrete-app .progress-error { background:var(--b-danger-soft); color:var(--b-danger); border-color:var(--b-danger); }
   /* PC text is 12px (9pt): tables, fields, buttons and body notes. Phones keep their larger sizes below. */
   .concrete-app table { color:var(--b-ink); font-size:12px; }

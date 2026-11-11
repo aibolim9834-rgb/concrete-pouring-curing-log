@@ -16,7 +16,6 @@ const model = load('lib/pouring-progress.ts');
 const requestTimeout = load('lib/request-timeout.ts');
 const persistence = load('lib/progress-storage.ts', { './supabase': { supabase: { from() { throw new Error('Network must not be used'); } } }, './pouring-progress': model, './request-timeout': requestTimeout, './cloud-storage': load('lib/cloud-storage.ts') });
 const editor = load('lib/progress-editor.ts');
-const backup = load('lib/progress-backup.ts', { './pouring-progress': model });
 const remicon = load('lib/remicon.ts');
 const logData = load('lib/log-data.ts', { './pouring-progress': model, './remicon': remicon, './daily-report': load('lib/daily-report.ts', { './remicon': remicon }) });
 const archive = load('lib/site-archive.ts', { './pouring-progress': model, './log-data': logData });
@@ -39,15 +38,6 @@ const document = () => ({ version: 1, buildings: [{ id: 'b1', name: '101동', st
   await check('storage quota failure keeps the previous saved document', async () => { const before = entries.get('cp_pouring_progress_v1:site-a'); const state = await persistence.loadProgress('site-a', false); const setter = storage.setItem; storage.setItem = () => { throw new Error('QuotaExceeded'); }; try { await assert.rejects(() => persistence.saveProgress('site-a', state, model.emptyProgress()), /QuotaExceeded/); } finally { storage.setItem = setter; } assert.equal(entries.get('cp_pouring_progress_v1:site-a'), before); });
   await check('corrupt storage blocks load rather than resetting data', async () => { entries.set('cp_pouring_progress_v1:broken', '{'); await assert.rejects(() => persistence.loadProgress('broken', false)); assert.equal(entries.get('cp_pouring_progress_v1:broken'), '{'); });
   await check('cloud load failure preserves local data and does not silently fall back', async () => { const before=entries.get('cp_pouring_progress_v1:site-a'); await assert.rejects(()=>persistence.loadProgress('site-a',true),/Network must not be used/); assert.equal(entries.get('cp_pouring_progress_v1:site-a'),before); });
-  await check('backup roundtrip preserves names, custom stages, dates, colors and blank cells', () => {
-    const d = document(); d.buildings[0].stages.push({ id: 'custom', name: '피트층', order: 0 });
-    d.buildings[0].records.custom = { date: '', status: 'none', color: '#ffffff' };
-    d.buildings.push({ id: 'b2', name: '102동', stages: model.presetStages(1, 0), records: {} });
-    const result = backup.parseProgressBackup('\uFEFF' + backup.serializeProgressBackup('복원 현장', d));
-    assert.equal(JSON.stringify(result.document), JSON.stringify(d));
-    assert.throws(() => backup.parseProgressBackup('{'));
-    assert.throws(() => backup.parseProgressBackup(JSON.stringify({ document: { version: 2 } })));
-  });
   await check('filter excludes hidden and removed targets from writes', () => {
     const d = document(); d.buildings.push({ id: 'b2', name: '102동', stages: model.presetStages(1, 0), records: {} });
     assert.equal(JSON.stringify(editor.visibleSelection(d, ['b1:f2', 'b2:f1', 'b1:missing', 'missing:f1'], 'b1')), JSON.stringify(['b1:f2']));

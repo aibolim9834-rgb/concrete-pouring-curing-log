@@ -186,7 +186,6 @@ body {
 .progress-page .progress-entry-form { display: grid; gap: 10px; margin-top: 14px; }
 .progress-page .progress-entry-form textarea { width: 100%; resize: vertical; }
 .progress-page .progress-entry-count { font-size: .75rem; }
-.progress-page .progress-editor-note { padding-top: 12px; border-top: 1px solid var(--progress-line); }
 .progress-entry-report { display: none; }
 @media(max-width:760px) { .progress-page { padding: 16px 14px; } .progress-page .progress-work.has-panel { grid-template-columns: minmax(0,1fr); } }
 @media print {
@@ -263,14 +262,12 @@ body {
 .progress-panel fieldset > *, .progress-panel form > * { margin-bottom: .875rem; }
 .progress-panel input, .progress-panel select { width: 100%; }
 .progress-panel hr { border-color: #334155; margin: 1rem 0; }
-.progress-floor-inputs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .5rem; }
 .progress-swatches { display: flex; flex-wrap: wrap; gap: .5rem; }
 .progress-swatches button { width: 2.25rem; height: 2.25rem; border: 1px solid #64748b; border-radius: .375rem; }
 .progress-swatches button[aria-pressed=true] { outline: 2px solid #f59e0b; outline-offset: 2px; }
 .progress-error { padding: .75rem; color: #fecaca; background: #450a0a; border: 1px solid #7f1d1d; border-radius: .5rem; margin-bottom: 1rem; }
 .progress-empty { padding: 2rem 1rem; border: 1px solid #334155; border-radius: .75rem; text-align: center; }
 .progress-empty p { margin: 1rem auto; max-width: 65ch; }
-.progress-footnote { margin-top: .75rem; }
 .app-modal { padding: 1rem; border: 0; background: transparent; color: inherit; width: 100%; max-width: none; max-height: 100dvh; }
 .app-modal[open] { display: flex; justify-content: center; align-items: center; }
 .app-modal::backdrop { background: rgb(2 6 23 / .8); backdrop-filter: blur(4px); }
@@ -313,7 +310,7 @@ body {
 @media(pointer: coarse) { .concrete-app :is(input:not([type=checkbox]),select,textarea) { font-size: 1rem; } .ui-button, .progress-cell { min-height: 2.75rem; } }
 @media print {
   .progress-page { color: black; }
-  .progress-heading .progress-actions, .progress-storage, .progress-controls, .progress-panel, .progress-error, .progress-footnote, .concrete-app:has(.progress-page) > header { display: none !important; }
+  .progress-heading .progress-actions, .progress-storage, .progress-controls, .progress-panel, .progress-error, .concrete-app:has(.progress-page) > header { display: none !important; }
   .progress-work.has-panel { display: block; }
   .progress-table-wrap { overflow: visible; max-height: none; border-color: #94a3b8; }
   .progress-table { background: white; table-layout: fixed; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
@@ -396,25 +393,6 @@ body {
   .progress-page .progress-comparison-table thead tr:nth-child(2) th { background:white; }
   .progress-comparison-table .comparison-gap :is(.is-late,.is-early) { color:black; }
 }
-/* Quick addition is next to the table, with the existing control sizes and colors. */
-.progress-page .progress-add-building { margin:0 0 16px; padding:12px; border:1px solid var(--progress-line); border-radius:6px; background:var(--progress-surface); }
-.progress-page .progress-add-building fieldset { min-inline-size:0; margin:0; padding:0; border:0; }
-.progress-page .progress-add-building legend { padding:0; margin-block-end:10px; color:var(--progress-text); font-size:14px; font-weight:600; line-height:20px; }
-.quick-building-fields { display:flex; flex-wrap:wrap; align-items:end; gap:12px; }
-.progress-page .quick-building-fields > label { display:flex; flex-direction:column; align-items:stretch; gap:6px; margin:0; flex:0 1 120px; min-inline-size:0; }
-.progress-page .quick-building-fields > label:first-child { display:block; flex:1 1 220px; max-inline-size:420px; }
-.progress-page .quick-building-fields > label:first-child input { display:block; margin-block-start:6px; }
-.progress-page .quick-building-fields input { inline-size:100%; min-block-size:36px; font-variant-numeric:tabular-nums; }
-.quick-building-actions { display:flex; align-items:center; gap:8px; }
-.progress-page .progress-add-building #quick-building-help { margin:10px 0 0; }
-.quick-building-error { margin:8px 0 0; color:#fecaca; font-size:12px; line-height:18px; }
-@media(max-width:640px) {
-  .progress-page .quick-building-fields > label:first-child { flex-basis:100%; max-inline-size:none; }
-  .progress-page .quick-building-fields > label { flex:1 1 100px; }
-  .quick-building-actions { inline-size:100%; }
-  .quick-building-actions > button { flex:1; }
-}
-@media(pointer:coarse) { .progress-page .quick-building-fields input,.quick-building-actions > button { min-block-size:48px; } }
 .inline-work-results {border-block:1px solid var(--progress-line);padding:8px 0;margin:12px 0}
 .inline-work-results>div {display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0}
 .inline-work-results strong {font-size:12px;font-weight:600;color:var(--progress-text)}
