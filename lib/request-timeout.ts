@@ -1,5 +1,5 @@
 // Server requests carry a deadline, so a stalled connection releases the screen's locks instead of leaving "저장 중" up.
-export const REQUEST_TIMEOUT_MS = 20_000;
+const REQUEST_TIMEOUT_MS = 20_000;
 export const READ_TIMEOUT_MESSAGE = '서버 응답이 늦어 자료를 불러오지 못했습니다. 연결 상태를 확인한 뒤 새로고침해주세요.';
 // A write cut off by the deadline may still have reached the server, so it is never resent automatically.
 export const WRITE_TIMEOUT_MESSAGE = '서버 응답이 없어 저장 여부를 확인하지 못했습니다. 새로고침해 확인해주세요. 입력 내용은 유지됩니다.';

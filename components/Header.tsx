@@ -4,7 +4,7 @@ import React from 'react';
 import { Site } from '@/lib/types';
 import { Building2, Database } from 'lucide-react';
 
-export type AppPage = 'logs' | 'progress' | 'photos';
+type AppPage = 'logs' | 'progress' | 'photos';
 // One tab per page, in the same place on every page; the current one is marked with aria-current.
 const PAGES: [AppPage, string, string][] = [['logs', '타설일지', '/'], ['progress', '타설현황', '/progress'], ['photos', '알폼핀 사진', '/photos']];
 

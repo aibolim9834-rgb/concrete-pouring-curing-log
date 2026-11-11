@@ -7,7 +7,7 @@ export type KmaRegion = [string, string, string, string, number, number];
 // What a site stores: the region picked for its weather and that region's grid.
 export interface WeatherArea { code: string; label: string; nx: number; ny: number }
 
-export type AreaMatch =
+type AreaMatch =
   | { status: 'ok'; area: WeatherArea }
   // Found the 시·군·구 only; its own grid is used until a 읍·면·동 is picked from choices.
   | { status: 'sgg'; area: WeatherArea; choices: KmaRegion[] }
@@ -24,7 +24,7 @@ const SIDO_ALIASES: Record<string, string[]> = {
   제주특별자치도: ['제주', '제주도'],
 };
 
-export const regionLabel = (r: KmaRegion) => [r[1], r[2] === r[1] ? '' : r[2], r[3]].filter(Boolean).join(' ');
+const regionLabel = (r: KmaRegion) => [r[1], r[2] === r[1] ? '' : r[2], r[3]].filter(Boolean).join(' ');
 export const toArea = (r: KmaRegion, label = regionLabel(r)): WeatherArea => ({ code: r[0], label, nx: r[4], ny: r[5] });
 // What the card shows: the last two parts, such as 서초구 반포동.
 export const shortAreaLabel = (area: WeatherArea) => area.label.split(' ').slice(-2).join(' ');

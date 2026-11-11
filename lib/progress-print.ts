@@ -3,7 +3,7 @@ import { ProgressBuilding, ProgressStage } from './pouring-progress';
 // The printed sheet is A4 portrait with 10mm margins: 190 x 277mm, which is 718 x 1047 CSS px.
 export const PRINT_PAGE = { width: 718, height: 1047, title: 50, rowGap: 12, columnGap: 10 };
 
-export interface PrintBlock { building: ProgressBuilding; stages: ProgressStage[] }
+interface PrintBlock { building: ProgressBuilding; stages: ProgressStage[] }
 
 // Each building is its own block of floors and 타설일. Blocks fill a row left to right and wrap to the next row;
 // the number per row is the one that leaves the largest readable text with everything on one sheet.

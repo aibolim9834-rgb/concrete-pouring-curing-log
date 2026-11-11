@@ -26,7 +26,7 @@ async function downloadPhotoFiles(targets:SitePhoto[],onProgress:(index:number)=
   }
   return failed;
 }
-export function PhotoImage({photo,original=false}:{photo:SitePhoto;original?:boolean}) {
+function PhotoImage({photo,original=false}:{photo:SitePhoto;original?:boolean}) {
   const [url,setUrl]=useState(''),[failed,setFailed]=useState(false);
   useEffect(()=>{let active=true,objectUrl='';setUrl('');setFailed(false);photoBlob(photo,original).then(blob=>{if(active){objectUrl=URL.createObjectURL(blob);setUrl(objectUrl);}}).catch(()=>{if(active)setFailed(true);});return()=>{active=false;if(objectUrl)URL.revokeObjectURL(objectUrl);};},[photo.id,photo.siteId,original]);
   return failed?<span role="alert">사진을 불러오지 못했습니다.</span>:url?<img src={url} alt={photo.name} loading={original?'eager':'lazy'} decoding="async"/>:<span>불러오는 중…</span>;

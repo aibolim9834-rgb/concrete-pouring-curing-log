@@ -3,7 +3,7 @@
 // real dates shown as 26.10.02(목) and a landscape page that fits A4 width.
 export const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-export type XlsxKind = 'text' | 'number' | 'date';
+type XlsxKind = 'text' | 'number' | 'date';
 export interface XlsxColumn { header: string; kind?: XlsxKind }
 export type XlsxValue = string | number | null | undefined;
 

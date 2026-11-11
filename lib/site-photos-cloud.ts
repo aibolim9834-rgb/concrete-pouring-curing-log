@@ -13,7 +13,7 @@ export function photoPurgeLabel(deletedAt:number){const d=photoPurgeTime(deleted
 
 // 저장 공간: every site's photos share the one site-photos bucket, and the Supabase Free plan allows 1GB of storage
 // (measured as the month's average). Change both values if the plan changes.
-export const PHOTO_STORAGE_LIMIT=1024**3, PHOTO_STORAGE_LIMIT_LABEL='1GB';
+const PHOTO_STORAGE_LIMIT=1024**3, PHOTO_STORAGE_LIMIT_LABEL='1GB';
 export type StorageUsage={bytes:number;files:number};
 // Bucket total from the photo_storage_usage() DB function; null when photos stay in this browser.
 export async function photoStorageUsage():Promise<StorageUsage|null>{
@@ -122,7 +122,7 @@ export async function pendingArchive():Promise<PendingArchive|null>{
 }
 // The archive runs every evening at 19:00 and at sign-in, so a wait past 48 hours means the office PC or its SSD needs a look.
 // days counts whole days waited (49h → 2, "2일째").
-export const ARCHIVE_LATE_MS=48*3600000;
+const ARCHIVE_LATE_MS=48*3600000;
 export function archiveDelay(pending:PendingArchive|null,now:number):{days:number;count:number;oldest:number}|null{
  if(!pending?.count)return null;
  const waited=now-pending.oldest;

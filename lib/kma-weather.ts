@@ -16,7 +16,7 @@ export interface TodayWeather {
   rainTomorrow: RainSpell | null;
 }
 // e.g. { hours: '14~17시', kind: '비', amount: '약 6mm' }; amount is '' when the issue carries no 강수량 (PCP).
-export interface RainSpell { hours: string; kind: string; amount: string }
+interface RainSpell { hours: string; kind: string; amount: string }
 
 const HOUR = 3600_000;
 // Clock parts in KST whatever the server's time zone is.

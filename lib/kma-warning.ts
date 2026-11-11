@@ -8,9 +8,9 @@ import type { KmaRegion } from './kma-area';
 // [구역코드, 특보문 구역명 (REG_KO), 정식 이름 (REG_NAME), 상위 구역코드 or '']
 export type WarningZone = [string, string, string, string];
 
-export type WarningLevel = '주의보' | '경보' | '중대경보';
-export interface SiteWarning { kind: string; level: WarningLevel; zones: string[] }   // e.g. 한파 경보 [서울서남권]
-export interface SitePreview { kind: string; when: string; zones: string[] }           // e.g. 강풍 예비특보, 11/6 새벽(00시~06시)
+type WarningLevel = '주의보' | '경보' | '중대경보';
+interface SiteWarning { kind: string; level: WarningLevel; zones: string[] }   // e.g. 한파 경보 [서울서남권]
+interface SitePreview { kind: string; when: string; zones: string[] }           // e.g. 강풍 예비특보, 11/6 새벽(00시~06시)
 export interface SiteWarnings { issuedAt: string; warnings: SiteWarning[]; previews: SitePreview[] } // issuedAt: HH:MM (KST), or MM.DD HH:MM when not today
 
 const NATION = 'L1000000';
@@ -103,7 +103,7 @@ const label = (codes: string[], zones: WarningZone[]) => {
 
 // Kinds left off the site screen (2026-11-05 사용자 결정): they do not change the day's 타설 or 양생.
 // 풍랑 is only issued for sea zones anyway.
-export const HIDDEN_KINDS: ReadonlySet<string> = new Set(['건조', '황사', '폭풍해일', '풍랑']);
+const HIDDEN_KINDS: ReadonlySet<string> = new Set(['건조', '황사', '폭풍해일', '풍랑']);
 
 export function warningsFor(t6: string, site: Set<string>, zones: WarningZone[]): SiteWarning[] {
   const out: SiteWarning[] = [];

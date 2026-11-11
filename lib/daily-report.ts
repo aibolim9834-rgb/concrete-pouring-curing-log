@@ -9,8 +9,8 @@ export const REPORT_ITEMS = [
   ['strength', '타설강도', true], ['volume', '타설물량', true], ['trucks', '레미콘 대수', false], ['watering', '살수', false],
   ['protection', '보양', false], ['remarks', '비고', false],
 ] as const;
-export type ReportItem = typeof REPORT_ITEMS[number][0];
-export type ReportFormat = 'A' | 'B'; // A 간단 (한 줄씩), B 항목형 (■ 항목)
+type ReportItem = typeof REPORT_ITEMS[number][0];
+type ReportFormat = 'A' | 'B'; // A 간단 (한 줄씩), B 항목형 (■ 항목)
 // What sites.report_options holds. Items missing from a stored value (added to the app later) use their default.
 export interface ReportOptions { format: ReportFormat; items: Partial<Record<ReportItem, boolean>> }
 
@@ -27,7 +27,7 @@ export function reportOptions(stored: ReportOptions | null | undefined): { forma
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const weekday = (date: string) => { const [y, m, d] = date.split('-').map(Number); return DAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]; };
 export const reportDayLabel = (date: string) => `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}(${weekday(date)})`;
-export const reportFullDay = (date: string) => `${date}(${weekday(date)})`;
+const reportFullDay = (date: string) => `${date}(${weekday(date)})`;
 
 // Dates that have logs, newest first, with how many logs each has.
 export function reportDates(logs: PouringLog[]) {

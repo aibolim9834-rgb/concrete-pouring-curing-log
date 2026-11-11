@@ -7,12 +7,12 @@ import { RequestTimeoutError } from './request-timeout';
 // Rows carry identifiers (log ID, 일자, 동·층) but never the values typed in. They wait in this browser while offline
 // (up to 50) and are sent once the connection is back or the app is opened again. Nothing is kept or sent in QA/local mode.
 
-export type EventOutcome = 'ok' | 'warn' | 'error';
-export interface EventInput {
+type EventOutcome = 'ok' | 'warn' | 'error';
+interface EventInput {
   page: string; action: string; outcome: EventOutcome;
   siteId?: string; target?: string; message?: string; code?: string; detail?: string; durationMs?: number;
 }
-export interface EventRow {
+interface EventRow {
   happened_at: string; device: string; site_id: string | null; page: string; action: string; outcome: EventOutcome;
   target: string | null; message: string | null; code: string | null; detail: string | null; duration_ms: number | null;
   online: boolean | null; app_version: string | null; client: string | null; trail: { a: string; t: string }[] | null;
@@ -21,13 +21,13 @@ type Queued = EventRow & { _k: string };
 type Store = Pick<Storage, 'getItem' | 'setItem'>;
 
 const QUEUE_KEY = 'cp_event_queue', DEVICE_KEY = 'cp_device_id';
-export const QUEUE_MAX = 50, SESSION_MAX = 300, PROBLEM_MAX = 20, REPEAT_MS = 60_000, TRAIL_MAX = 10;
+const QUEUE_MAX = 50, SESSION_MAX = 300, PROBLEM_MAX = 20, REPEAT_MS = 60_000, TRAIL_MAX = 10;
 
 const cut = (value: unknown, max: number) => value == null || value === '' ? null : String(value).slice(0, max);
 const store = (): Store | null => { try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; } };
 
 // A random number per browser, so one device's events can be read in order. Nothing in it identifies the person.
-export function deviceId(s = store()): string {
+function deviceId(s = store()): string {
   let id = '';
   try { id = s?.getItem(DEVICE_KEY) || ''; } catch { /* storage blocked: a per-load number below */ }
   if (!/^[a-z0-9-]{8,40}$/.test(id)) {
@@ -129,7 +129,7 @@ export async function tracked<T>(info: Omit<EventInput, 'outcome' | 'message' | 
   }
 }
 
-export const pageName = (path = typeof location === 'undefined' ? '/' : location.pathname) => path.startsWith('/progress') ? '타설현황' : path.startsWith('/photos') ? '사진' : '일지';
+const pageName = (path = typeof location === 'undefined' ? '/' : location.pathname) => path.startsWith('/progress') ? '타설현황' : path.startsWith('/photos') ? '사진' : '일지';
 
 // Once per app load: send what earlier visits left, send again when the connection returns, and record unexpected script errors.
 let started = false;
