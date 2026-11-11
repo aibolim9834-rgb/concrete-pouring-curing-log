@@ -138,7 +138,7 @@ export function SitePhotos({site,blocked=false,onWorkPending}:{site:Site;blocked
         </div><p className="ui-note">JPG · PNG · WebP / 한 장당 20MB 이하</p>
       </div>
 
-      <p className="photo-status ui-note" role="status">{message||(cloudStorageEnabled()?'원본은 사무실 PC가 매일 저녁 7시와 켤 때 보관 폴더로 옮기고, 서버에는 2048px 사진을 남깁니다.':'사진은 이 브라우저에 저장됩니다. 기존 자료 백업에는 사진이 포함되지 않습니다.')}</p>
+      <p className="photo-status ui-note" role="status">{message||(cloudStorageEnabled()?'':'사진은 이 브라우저에 저장됩니다. 기존 자료 백업에는 사진이 포함되지 않습니다.')}</p>
       {!ready&&!busy&&<button type="button" className="ui-button" onClick={()=>window.location.reload()}>다시 불러오기</button>}
     </section>
     <section className="photo-panel"><div className="photo-list-header"><div className="photo-list-summary"><div className="photo-heading"><h2 className="ui-section-title">등록한 사진 <span className="ui-note font-normal">{live.length}장</span></h2>{usage&&(()=>{const u=storageUsageLabel(usage.bytes);return <span className={`photo-storage is-${u.level}`} title="모든 현장 사진을 합친 값입니다. Supabase Free 요금제 저장소 한도 1GB 기준이며, 한도는 한 달 평균 사용량으로 계산됩니다."><span>{u.text}</span><span className="photo-storage-bar" aria-hidden="true"><i style={{width:`${u.percent}%`}}/></span><span>{u.percent}%</span></span>;})()}</div>
