@@ -368,11 +368,13 @@
   .log-print-toolbar button:focus-visible { outline:3px solid var(--b-action); outline-offset:3px; }
 }
 
-/* PC 기상 필터: as tall as the 보고 문구·인쇄 buttons beside it (38px, was about 27px), and the whole box opens the list,
-   not only the text inside it. Phones keep their own full-width select above. */
+/* PC 타설일지 도구 줄: 기상 필터, 보고 문구, 인쇄, 엑셀 all 30px, the height of the search box beside them and of the
+   타설현황·사진 buttons (2026-11-11, were 38px). The whole 기상 필터 box opens the list, not only the text inside it.
+   Phones keep their own full-width controls above. */
 @media screen and (min-width:761px) {
+  .concrete-app .log-toolbar :is(.log-report-button, .page-output-button) { min-block-size:30px; min-height:30px; padding-block:2px; padding-inline:10px; }
   .concrete-app .log-weather { position:relative; padding:0; border:0; background:none!important; }
   .concrete-app .log-weather > svg { position:absolute; inset-inline-start:10px; inset-block-start:50%; translate:0 -50%; inline-size:14px; block-size:14px; pointer-events:none; }
-  .concrete-app .log-weather select { min-block-size:38px; min-inline-size:120px; padding-inline:30px 8px; border:1px solid var(--b-control); border-radius:5px; background:var(--b-surface); font-size:13px; font-weight:600; }
+  .concrete-app .log-weather select { min-block-size:30px; min-inline-size:108px; padding-inline:30px 8px; border:1px solid var(--b-control); border-radius:5px; background:var(--b-surface); font-size:12px; font-weight:600; }
   .concrete-app .log-weather select:focus-visible { outline:2px solid var(--b-brand); outline-offset:2px; }
 }
