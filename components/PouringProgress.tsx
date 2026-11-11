@@ -24,16 +24,12 @@ import { progressEditor, visibleSelection } from '@/lib/progress-editor';
 
 const cn = (...values: (string | false | null | undefined)[]) => twMerge(clsx(values));
 const defaultColor = '#ffffff';
+// The five standard colors the sites actually use (2026-11-11 count); any other color shows among the recent ones.
 const standardColors = [
-  { name: '진한 빨강', value: '#C00000' },
-  { name: '빨강', value: '#FF0000' },
   { name: '주황', value: '#FFC000' },
   { name: '노랑', value: '#FFFF00' },
   { name: '연두', value: '#92D050' },
-  { name: '초록', value: '#00B050' },
-  { name: '하늘색', value: '#00B0F0' },
   { name: '파랑', value: '#0070C0' },
-  { name: '진한 파랑', value: '#002060' },
   { name: '보라', value: '#7030A0' },
 ];
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };

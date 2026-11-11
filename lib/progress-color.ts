@@ -14,7 +14,7 @@ export function setProgressColor(record: ProgressRecord | undefined, color: stri
 }
 
 // Colors come from the site's own records, so the recent list follows the site across browsers.
-export function recentProgressColors(document: ProgressDocument, exclude: string[], limit = 5) {
+export function recentProgressColors(document: ProgressDocument, exclude: string[], limit = 10) {
   const skip = new Set(['#FFFFFF', ...exclude.map(c => c.toUpperCase())]), latest = new Map<string, string>();
   for (const b of document.buildings) for (const r of Object.values(b.records)) {
     const color = progressColor(r)?.toUpperCase();
