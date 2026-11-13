@@ -3,7 +3,8 @@ export interface ProgressEntry { id: string; member: string; zone: string; volum
 // `colorAuto` marks a fill set from the pour month; it follows date changes until someone picks a color by hand.
 export interface ProgressRecord { date: string; status: 'none' | 'partial' | 'done'; color: string; colorCleared?: boolean; colorAuto?: boolean; plannedDate?: string; comparisonStage?: string; entries?: ProgressEntry[]; dates?: string[] }
 export interface ProgressBuilding { id: string; name: string; stages: ProgressStage[]; records: Record<string, ProgressRecord> }
-export interface ProgressDocument { version: 1; buildings: ProgressBuilding[] }
+// `colorStart` (YYYY-MM) is the month that took the first automatic month color; later months follow it in turn.
+export interface ProgressDocument { version: 1; buildings: ProgressBuilding[]; colorStart?: string }
 export const emptyProgress = (): ProgressDocument => ({ version: 1, buildings: [] });
 export const buildingLabel = (name: string) => /^\d+$/.test(name.trim()) ? `${name.trim()}동` : name;
 export const progressId = () => globalThis.crypto?.randomUUID?.() || `progress-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -52,6 +53,7 @@ export function validateProgress(value: unknown): asserts value is ProgressDocum
   const d = value as ProgressDocument;
   const safeId = (id: unknown): id is string => typeof id === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,100}$/.test(id) && !['__proto__', 'prototype', 'constructor'].includes(id);
   if (!d || d.version !== 1 || !Array.isArray(d.buildings) || d.buildings.length > 100) throw new Error('지원하지 않는 타설현황 파일입니다.');
+  if (d.colorStart !== undefined && (typeof d.colorStart !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(d.colorStart))) throw new Error('월별 색 시작 달이 올바르지 않습니다.');
   const ids = new Set<string>(), names = new Set<string>();
   for (const b of d.buildings) {
     if (!b || !safeId(b.id) || ids.has(b.id) || typeof b.name !== 'string' || !b.name.trim() || b.name.length > 80 || names.has(b.name.trim()) || !Array.isArray(b.stages) || b.stages.length > 500 || !b.records || typeof b.records !== 'object' || Array.isArray(b.records)) throw new Error('동 정보가 올바르지 않습니다.');
