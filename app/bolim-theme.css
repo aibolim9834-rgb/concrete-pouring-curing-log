@@ -221,6 +221,8 @@
   .concrete-app .progress-selection-row > .progress-color-tools .progress-swatches { flex-wrap:nowrap; }
   .concrete-app .progress-selection-row > .progress-color-tools > * { flex:none; }
   .concrete-app .progress-selection-row > .ui-button { min-inline-size:0; padding-inline:6px; white-space:normal; }
+  /* The caption spans the whole sliding table, so on a phone it is cut at both ends; the page title above already says it. */
+  .concrete-app .progress-page .progress-comparison-table caption { position:absolute; inline-size:1px; block-size:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 
   /* Phone text: buttons and notes 14px and labels 13px, one step above PC; data tables keep 13px and fields 16px. */
   .concrete-app { --ui-body:.875rem; }
