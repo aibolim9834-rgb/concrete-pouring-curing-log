@@ -201,7 +201,8 @@ body {
 /* Shared typography and controls for the existing log and progress pages. */
 .concrete-app { --ui-body: .75rem; --ui-line: 1.125rem; font-family: var(--app-font); font-variant-numeric: tabular-nums; color-scheme: only dark; }
 .concrete-app .text-xs, .concrete-app [class*="text-[11px]"], .concrete-app [class*="text-[10px]"] { font-size: var(--ui-body); line-height: var(--ui-line); }
-.concrete-app button { white-space: nowrap; flex-shrink: 0; font-size: var(--ui-body); line-height: var(--ui-line); font-weight: 500; }
+/* Chrome's button default resets font-variant-numeric, so dates inside buttons lose the app's fixed-width digits. */
+.concrete-app button { white-space: nowrap; flex-shrink: 0; font-size: var(--ui-body); line-height: var(--ui-line); font-weight: 500; font-variant-numeric: inherit; }
 .concrete-app button svg { flex-shrink: 0; }
 .concrete-app button[class*="bg-amber-500"] { font-weight: 600; }
 .concrete-app input:not([type=checkbox]):not([type=radio]), .concrete-app select, .concrete-app textarea { min-width: 0; font-size: var(--ui-body); line-height: var(--ui-line); }
