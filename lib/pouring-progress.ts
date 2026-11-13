@@ -1,6 +1,7 @@
 export interface ProgressStage { id: string; name: string; order: number }
 export interface ProgressEntry { id: string; member: string; zone: string; volume: number | null; remarks: string }
-export interface ProgressRecord { date: string; status: 'none' | 'partial' | 'done'; color: string; colorCleared?: boolean; plannedDate?: string; comparisonStage?: string; entries?: ProgressEntry[]; dates?: string[] }
+// `colorAuto` marks a fill set from the pour month; it follows date changes until someone picks a color by hand.
+export interface ProgressRecord { date: string; status: 'none' | 'partial' | 'done'; color: string; colorCleared?: boolean; colorAuto?: boolean; plannedDate?: string; comparisonStage?: string; entries?: ProgressEntry[]; dates?: string[] }
 export interface ProgressBuilding { id: string; name: string; stages: ProgressStage[]; records: Record<string, ProgressRecord> }
 export interface ProgressDocument { version: 1; buildings: ProgressBuilding[] }
 export const emptyProgress = (): ProgressDocument => ({ version: 1, buildings: [] });
@@ -29,7 +30,7 @@ export function validateProgressEntry(entry: ProgressEntry) {
 export function validateProgressRecord(record: ProgressRecord) {
   if (!record || !(record.status === 'none' ? record.date === '' : ['partial', 'done'].includes(record.status) && validDate(record.date))
     || !/^#[\da-f]{6}$/i.test(record.color)) throw new Error('타설 날짜 또는 색상이 올바르지 않습니다.');
-  if (record.colorCleared !== undefined && typeof record.colorCleared !== 'boolean') throw new Error('배경색 설정이 올바르지 않습니다.');
+  if ((record.colorCleared !== undefined && typeof record.colorCleared !== 'boolean') || (record.colorAuto !== undefined && typeof record.colorAuto !== 'boolean')) throw new Error('배경색 설정이 올바르지 않습니다.');
   if (record.plannedDate !== undefined && (typeof record.plannedDate !== 'string' || (record.plannedDate !== '' && (!validDate(record.plannedDate) || record.plannedDate.startsWith('0000-'))))) throw new Error('예정 타설일이 올바르지 않습니다.');
   if (record.comparisonStage !== undefined && (typeof record.comparisonStage !== 'string' || record.comparisonStage.length > 101)) throw new Error('작업일 비교 단계를 확인해주세요.');
   // Multi-day pours keep every pour date; `date` stays the last one so completion and variance use it.
