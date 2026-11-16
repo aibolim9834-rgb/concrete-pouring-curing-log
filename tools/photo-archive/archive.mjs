@@ -6,7 +6,9 @@
 //     the photo at that copy and remove the original. The function refuses anything that changed in between.
 // Settings and the secret live in %LOCALAPPDATA%\con1-photo-archive\config.json (never in the repository);
 // the log is archive.log in the same folder.
-// Options: --dry-run lists what would be archived without changing anything; --limit N handles at most N photos.
+// Each run first saves the 현장 자료 백업 (site-backup.mjs) next to the photo folder: <SSD>\이도형\con1 현장 자료 백업.
+// Options: --dry-run lists what would be archived without changing anything (no backup either); --limit N handles at most
+// N photos; --backup-only saves the 현장 자료 백업 and stops.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -14,10 +16,11 @@ import sharp from 'sharp';
 import { createClient } from '@supabase/supabase-js';
 import { archiveParts, numbered } from './naming.mjs';
 import { findVolume, serialLabel } from './drive.mjs';
+import { BACKUP_FOLDER, buildSiteBackups, readTables, writeSiteBackups } from './site-backup.mjs';
 
 const HOME = path.join(process.env.LOCALAPPDATA ?? '', 'con1-photo-archive');
 const LOG = path.join(HOME, 'archive.log'), LOCK = path.join(HOME, 'archive.lock');
-const args = process.argv.slice(2), dryRun = args.includes('--dry-run');
+const args = process.argv.slice(2), dryRun = args.includes('--dry-run'), backupOnly = args.includes('--backup-only');
 const limitAt = args.indexOf('--limit'), limit = limitAt >= 0 ? Number(args[limitAt + 1]) : Infinity;
 const sha = buf => crypto.createHash('sha256').update(buf).digest('hex');
 const mb = n => (n / 1048576).toFixed(2);
@@ -55,6 +58,19 @@ async function main() {
     return 0;
   }
   const sb = createClient(c.supabaseUrl, c.anonKey, { auth: { persistSession: false } });
+
+  // 현장 자료 백업 first: it is small, and a photo failure later must not cost the day's backup (nor the reverse).
+  let backupFailed = false;
+  if (!dryRun) {
+    const backupRoot = path.join(path.dirname(c.root), BACKUP_FOLDER);
+    try {
+      const at = new Date();
+      const results = writeSiteBackups(backupRoot, buildSiteBackups(await readTables(sb), at.toISOString(), new URL(c.supabaseUrl).host), at, fs);
+      const saved = results.filter(r => r.saved);
+      log(`현장 자료 백업: 현장 ${results.length}곳 확인, 바뀐 현장 ${saved.length}곳 저장${saved.length ? ` (${saved.map(r => `${r.site} 일지 ${r.counts.logs}건·현황 ${r.counts.progress}·사진 ${r.counts.photos}장`).join(', ')})` : ''} → ${backupRoot}`);
+    } catch (e) { backupFailed = true; log(`현장 자료 백업 실패: ${e?.message ?? e}. 다음 실행 때 다시 시도합니다.`); }
+  }
+  if (backupOnly) return backupFailed ? 1 : 0;
   const bucket = sb.storage.from('site-photos');
   const callArchive = async body => {
     const res = await fetch(`${c.supabaseUrl}/functions/v1/archive-site-photo`, {
@@ -125,7 +141,7 @@ async function main() {
     }
   }
   if (!dryRun) log(`끝: 보관 ${done}장, 실패 ${failed}장, 서버 사용량 약 ${(saved / 1048576).toFixed(1)}MB 줄어듦`);
-  return failed ? 1 : 0;
+  return failed || backupFailed ? 1 : 0;
 }
 
 fs.mkdirSync(HOME, { recursive: true });

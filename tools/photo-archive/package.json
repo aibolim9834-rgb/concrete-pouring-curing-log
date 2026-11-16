@@ -5,7 +5,8 @@
   "description": "알폼핀 원본을 사무실 PC의 보관 폴더로 옮기고 서버에는 2048px 사진만 남깁니다. 이 PC에서만 실행합니다.",
   "scripts": {
     "archive": "node archive.mjs",
-    "preview": "node archive.mjs --dry-run"
+    "preview": "node archive.mjs --dry-run",
+    "backup": "node archive.mjs --backup-only"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.111.0",
