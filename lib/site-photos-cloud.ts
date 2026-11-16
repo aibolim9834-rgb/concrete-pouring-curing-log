@@ -3,6 +3,7 @@ import { normalizePhotoBuilding, normalizePhotoFloor } from './floor';
 import { supabase } from './supabase';
 import { blobHash, canonical, cloudStorageEnabled } from './cloud-storage';
 import { READ_TIMEOUT_MESSAGE, timed, WRITE_TIMEOUT_MESSAGE } from './request-timeout';
+import { dbError } from './db-error';
 import type { SitePhoto } from './site-photos';
 export type { SitePhoto } from './site-photos';
 export { makePhotoThumbnail, latestDeletedBatch } from './site-photos';
@@ -49,19 +50,19 @@ async function serverRows(site:string):Promise<PhotoRow[]> {
 }
 async function download(path:string){
  const {data,error}=await timed(signal=>bucket().download(path,undefined,{signal}),READ_TIMEOUT_MESSAGE);
- if(error||!data)throw Error('서버 사진을 불러오지 못했습니다. '+(error?.message||''));
+ if(error||!data)throw dbError('서버 사진을 불러오지 못했습니다.',error);
  return data;
 }
 async function uploadVerified(path:string,blob:Blob,hash:string){
  const {error}=await bucket().upload(path,blob,{upsert:false,contentType:blob.type});
- if(error && !['409','400'].includes(String(error.statusCode)))throw Error('사진 업로드 실패: '+error.message);
+ if(error && !['409','400'].includes(String(error.statusCode)))throw dbError('사진 업로드에 실패했습니다.',error);
  // Verifies retries where the immutable object already exists too.
  if(await blobHash(await download(path))!==hash)throw Error('서버 사진과 원본이 일치하지 않습니다. 원본을 유지했습니다.');
 }
 async function cloudSave(photo:SitePhoto,original:Blob,thumbnail:Blob):Promise<void>{
  const hash=await blobHash(original),thumbHash=await blobHash(thumbnail);
  const {data:existing,error:readError}=await timed(signal=>supabase.from('site_photos').select('*').eq('id',photo.id).abortSignal(signal).maybeSingle(),WRITE_TIMEOUT_MESSAGE);
- if(readError)throw Error(readError.message);
+ if(readError)throw dbError('서버의 사진 정보를 확인하지 못했습니다.',readError);
  if(existing){
   if(existing.site_id!==photo.siteId || existing.original_hash!==hash || canonical(existing.metadata)!==canonical(photo))throw Error('같은 사진 ID의 서버 정보가 다릅니다. 덮어쓰지 않았습니다.');
   // An archived photo's server file is the 2048px copy, so only an unarchived one can be compared byte for byte.
@@ -73,7 +74,7 @@ async function cloudSave(photo:SitePhoto,original:Blob,thumbnail:Blob):Promise<v
  await uploadVerified(row.original_path,original,hash);
  await uploadVerified(row.thumbnail_path,thumbnail,thumbHash);
  const {error}=await timed(signal=>supabase.from('site_photos').insert(row).abortSignal(signal),WRITE_TIMEOUT_MESSAGE);
- if(error){if(error.code==='23505')return cloudSave(photo,original,thumbnail);throw Error('사진 정보 저장 실패: '+error.message);}
+ if(error){if(error.code==='23505')return cloudSave(photo,original,thumbnail);throw dbError('사진 정보 저장에 실패했습니다.',error);}
  rows.set(photo.id,row);
 }
 async function migrate(site:string){
@@ -99,7 +100,7 @@ export async function savePhoto(photo:SitePhoto,original:Blob,thumbnail:Blob){
 export async function photoBlob(photo:SitePhoto,original=false){
  if(!cloudStorageEnabled())return local.photoBlob(photo,original);
  let row=rows.get(photo.id);
- if(!row){const {data,error}=await timed(signal=>supabase.from('site_photos').select('*').eq('id',photo.id).eq('site_id',photo.siteId).abortSignal(signal).single(),READ_TIMEOUT_MESSAGE);if(error)throw Error(error.message);row=data as PhotoRow;rows.set(photo.id,row);}
+ if(!row){const {data,error}=await timed(signal=>supabase.from('site_photos').select('*').eq('id',photo.id).eq('site_id',photo.siteId).abortSignal(signal).single(),READ_TIMEOUT_MESSAGE);if(error)throw dbError('서버의 사진 정보를 확인하지 못했습니다.',error);row=data as PhotoRow;rows.set(photo.id,row);}
  if(row.site_id!==photo.siteId)throw Error('사진 현장 정보가 일치하지 않습니다.');
  try{return await download(original?row.original_path:row.thumbnail_path);}
  catch(e){
@@ -138,7 +139,9 @@ async function changePhotos(photos:SitePhoto[],transform:(photo:SitePhoto)=>Site
  if(!photos.length||photos.length>1000||photos.some(p=>p.siteId!==photos[0].siteId))throw Error('같은 현장 사진을 1~1000장 선택해주세요.');
  const changes=photos.map(photo=>({id:photo.id,site_id:photo.siteId,expected:photo,next:transform(photo)}));
  const {error}=await timed(signal=>supabase.rpc('update_site_photo_metadata',{changes}).abortSignal(signal),WRITE_TIMEOUT_MESSAGE);
- if(error)throw Error('사진 정보를 저장하지 못했습니다. 다른 화면에서 변경했는지 확인 후 새로고침해주세요. '+error.message);
+ // The function stops the whole batch when a photo no longer matches what this page showed: a 막힘, not a fault.
+ if(error&&/changed elsewhere/i.test(error.message))throw Error('사진 정보를 저장하지 못했습니다. 다른 화면에서 변경했는지 확인 후 새로고침해주세요.');
+ if(error)throw dbError('사진 정보를 저장하지 못했습니다. 선택은 그대로입니다.',error);
  for(const c of changes){const row=rows.get(c.id);if(row)rows.set(c.id,{...row,metadata:c.next});}
 }
 export async function markPhotosDeleted(photos:SitePhoto[],deleted:boolean){

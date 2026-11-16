@@ -7,14 +7,14 @@ const ts = require('typescript');
 function load(file, dependencies = {}) {
   const code = ts.transpileModule(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
   const module = { exports: {} };
-  vm.runInNewContext(code, { module, exports: module.exports, require(id) { if (id in dependencies) return dependencies[id]; throw new Error(`Unexpected dependency: ${id}`); }, process: { env: {} }, localStorage: storage, TextEncoder, crypto: require('node:crypto').webcrypto, AbortSignal, AbortController, setTimeout, clearTimeout });
+  vm.runInNewContext(code, { module, exports: module.exports, require(id) { if (id in dependencies) return dependencies[id]; throw new Error(`Unexpected dependency: ${id}`); }, process: { env: {} }, console: { error() {} }, localStorage: storage, TextEncoder, crypto: require('node:crypto').webcrypto, AbortSignal, AbortController, setTimeout, clearTimeout });
   return module.exports;
 }
 const entries = new Map();
 const storage = { getItem: key => entries.get(key) || null, setItem(key, value) { entries.set(key, value); }, removeItem(key) { entries.delete(key); }, key(index) { return [...entries.keys()][index] ?? null; }, get length() { return entries.size; } };
 const model = load('lib/pouring-progress.ts');
 const requestTimeout = load('lib/request-timeout.ts');
-const persistence = load('lib/progress-storage.ts', { './supabase': { supabase: { from() { throw new Error('Network must not be used'); } } }, './pouring-progress': model, './request-timeout': requestTimeout, './cloud-storage': load('lib/cloud-storage.ts') });
+const persistence = load('lib/progress-storage.ts', { './supabase': { supabase: { from() { throw new Error('Network must not be used'); } } }, './pouring-progress': model, './request-timeout': requestTimeout, './cloud-storage': load('lib/cloud-storage.ts'), './db-error': load('lib/db-error.ts') });
 const editor = load('lib/progress-editor.ts');
 const remicon = load('lib/remicon.ts');
 const logData = load('lib/log-data.ts', { './pouring-progress': model, './remicon': remicon, './daily-report': load('lib/daily-report.ts', { './remicon': remicon }) });
@@ -129,10 +129,14 @@ const document = () => ({ version: 1, buildings: [{ id: 'b1', name: '101동', st
     assert.deepEqual([...entries], before);
   });
   await check('cloud save tells a network failure apart from a newer revision elsewhere', async () => {
-    const withResult = result => load('lib/progress-storage.ts', { './supabase': { supabase: { from() { const q = { update() { return q; }, eq() { return q; }, select() { return q; }, abortSignal() { return q; }, maybeSingle: async () => result }; return q; } } }, './pouring-progress': model, './request-timeout': requestTimeout, './cloud-storage': load('lib/cloud-storage.ts') });
+    const withResult = result => load('lib/progress-storage.ts', { './supabase': { supabase: { from() { const q = { update() { return q; }, eq() { return q; }, select() { return q; }, abortSignal() { return q; }, maybeSingle: async () => result }; return q; } } }, './pouring-progress': model, './request-timeout': requestTimeout, './cloud-storage': load('lib/cloud-storage.ts'), './db-error': load('lib/db-error.ts') });
     const current = { document: document(), revision: 3, mode: 'cloud' };
     await assert.rejects(withResult({ data: null, error: { message: 'TypeError: Failed to fetch', code: '' } }).saveProgress('site-a', current, document()), /DB 저장에 실패/);
     await assert.rejects(withResult({ data: null, error: null }).saveProgress('site-a', current, document()), /다른 화면에서 변경/);
+    await assert.rejects(withResult({ data: null, error: { code: '23505', message: 'duplicate key' } }).saveProgress('site-a', current, document()), e => /다른 화면에서 변경/.test(e.message) && e.dbCode === undefined);
+    // A failed save keeps the server's code and wording, so the 작업 기록 shows it as an error with its cause.
+    await assert.rejects(withResult({ data: null, error: { message: 'TypeError: Failed to fetch', code: '' } }).saveProgress('site-a', current, document()), e => /연결 상태/.test(e.message) && e.dbCode === 'DB' && /Failed to fetch/.test(e.dbDetail));
+    await assert.rejects(withResult({ data: null, error: { code: '42501', message: 'new row violates row-level security policy' } }).saveProgress('site-a', current, document()), e => /서버가 이 저장을 받지 않았습니다.*\(오류 코드 42501\)/.test(e.message) && !/연결 상태/.test(e.message) && e.dbCode === '42501' && /row-level security/.test(e.dbDetail));
     assert.equal((await withResult({ data: { revision: 4 }, error: null }).saveProgress('site-a', current, document())).revision, 4);
   });
   console.log(`${count} checks passed; no network calls.`);

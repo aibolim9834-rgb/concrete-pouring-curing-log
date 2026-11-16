@@ -247,7 +247,7 @@ function uiHarness(file, name, props, extra = {}) {
     react.default=react;react.Fragment='Fragment';
     const jsx=(type,props)=>({type,props});
     // The real delay rule, with the network parts stubbed out.
-    const {archiveDelay}=load('lib/site-photos-cloud.ts',{'./site-photos':{},'./supabase':{supabase:{}},'./cloud-storage':{cloudStorageEnabled:()=>true},'./request-timeout':{},'./floor':load('lib/floor.ts')});
+    const {archiveDelay}=load('lib/site-photos-cloud.ts',{'./site-photos':{},'./supabase':{supabase:{}},'./cloud-storage':{cloudStorageEnabled:()=>true},'./request-timeout':{},'./db-error':{},'./floor':load('lib/floor.ts')});
     const api=load('components/SitePhotos.tsx',{react,'@/lib/event-log':eventLogStub,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/date-only':load('lib/date-only.ts'),'@/lib/floor':load('lib/floor.ts'),'@/lib/cloud-storage':{cloudStorageEnabled:()=>true},'./ConfirmDialog':{askConfirm:async()=>true},'@/lib/site-photos-cloud':{photoArchive:()=>null,pendingArchive:async()=>null,archiveDelay,latestDeletedBatch:()=>[]}},{Date});
     const render=wait=>{const states=[[],true];states[21]=wait;bucket={states,refs:[]};cursor=0;refCursor=0;return JSON.stringify(api.SitePhotos({site,onWorkPending(){}}));};
     const h=3600000;

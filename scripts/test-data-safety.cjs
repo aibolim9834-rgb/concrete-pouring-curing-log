@@ -32,7 +32,7 @@ function cloud({cap=500,fail=false,duplicate=false}={}){
  function photosCloud(fail=false,usage={data:[{bytes:'108159008',files:'52'}],error:null},cloudOn=true){
   const source=records.map(r=>({id:r.id,metadata:{id:r.id,siteId:site.id,name:'original.png'}}));
   const supabase={rpc(name){assert.equal(name,'photo_storage_usage');const q={async abortSignal(){return usage;}};return q;},from(){const q={abortSignal(){return q;},select(){return q;},eq(){return q;},order(){return q;},async range(start){if(fail&&start>0)return {data:null,error:{message:'offline'}};return {data:source.slice(start,start+73),error:null};}};return q;}};
-  return load('lib/site-photos-cloud.ts',{'./site-photos':{listPhotos:async()=>[]},'./supabase':{supabase},'./cloud-storage':{cloudStorageEnabled:()=>cloudOn},'./request-timeout':requestTimeout,'./floor':load('lib/floor.ts',{})});
+  return load('lib/site-photos-cloud.ts',{'./site-photos':{listPhotos:async()=>[]},'./supabase':{supabase},'./cloud-storage':{cloudStorageEnabled:()=>cloudOn},'./request-timeout':requestTimeout,'./db-error':dbError,'./floor':load('lib/floor.ts',{})});
  }
  await check('the photo storage total reads the shared bucket and is labelled against the 1GB plan limit',async()=>{
   const usage=await photosCloud().photoStorageUsage();assert.equal(usage.bytes,108159008);assert.equal(usage.files,52);
@@ -43,6 +43,13 @@ function cloud({cap=500,fail=false,duplicate=false}={}){
   const over=storageUsageLabel(1.2*1024**3);assert.equal(over.text,'저장 공간 1.20GB / 1GB');assert.equal(over.percent,100);
   assert.equal(await photosCloud(false,undefined,false).photoStorageUsage(),null); // photos kept in this browser: no figure
   await assert.rejects(photosCloud(false,{data:null,error:{message:'permission denied'}}).photoStorageUsage(),/저장 공간을 불러오지 못했습니다/);
+ });
+ await check('a photo edit refused by the server keeps its code for the 작업 기록, while a photo changed elsewhere stays a plain 막힘',async()=>{
+  const photo={id:'p1',siteId:site.id,date:'2026-11-16',building:'101동',floor:'3F',name:'a.jpg',size:1,createdAt:1};
+  const api=answer=>load('lib/site-photos-cloud.ts',{'./site-photos':{},'./supabase':{supabase:{rpc(){return {abortSignal:async()=>({data:null,error:answer})};}}},'./cloud-storage':{cloudStorageEnabled:()=>true},'./request-timeout':requestTimeout,'./db-error':dbError,'./floor':load('lib/floor.ts',{})},{crypto:require('node:crypto').webcrypto});
+  await assert.rejects(api({code:'P0001',message:'Photo changed elsewhere. Reload before editing.'}).updatePhotoLocations([photo],'101동','4F'),e=>/다른 화면에서 변경/.test(e.message)&&e.dbCode===undefined);
+  await assert.rejects(api({code:'42501',message:'permission denied for function'}).updatePhotoLocations([photo],'101동','4F'),e=>/\(오류 코드 42501\)/.test(e.message)&&e.dbCode==='42501'&&/permission denied/.test(e.dbDetail));
+  await assert.rejects(api({code:'42501',message:'permission denied'}).markPhotosDeleted([photo],true),e=>e.dbCode==='42501');
  });
  await check('photo listing handles a lower server cap without omitting original metadata',async()=>{const photos=await photosCloud().listPhotos(site.id);assert.equal(photos.length,1205);assert.equal(new Set(photos.map(p=>p.id)).size,1205);assert.equal(photos[1204].name,'original.png');});
  await check('a deleted photo is purged at the first hourly run once two full days have passed',()=>{
@@ -57,7 +64,7 @@ function cloud({cap=500,fail=false,duplicate=false}={}){
   const files=new Set([rows.a.original_path,rows.a.thumbnail_path,rows.b.original_path,rows.b.thumbnail_path]);
   const supabase={from(){let id;const q={select(){return q;},abortSignal(){return q;},order(){return q;},eq(k,v){if(k==='id')id=v;return q;},async range(start){return {data:start?[]:Object.values(rows).map(r=>({...r})),error:null};},async single(){return {data:{...rows[id]},error:null};}};return q;},
    storage:{from(){return {async download(path){return files.has(path)?{data:new Blob([path]),error:null}:{data:null,error:{message:'Object not found'}};}};}}};
-  const api=load('lib/site-photos-cloud.ts',{'./site-photos':{listPhotos:async()=>[]},'./supabase':{supabase},'./cloud-storage':{cloudStorageEnabled:()=>true},'./request-timeout':requestTimeout,'./floor':load('lib/floor.ts',{})});
+  const api=load('lib/site-photos-cloud.ts',{'./site-photos':{listPhotos:async()=>[]},'./supabase':{supabase},'./cloud-storage':{cloudStorageEnabled:()=>true},'./request-timeout':requestTimeout,'./db-error':dbError,'./floor':load('lib/floor.ts',{})});
   const [a,b]=await api.listPhotos(sid);
   assert.equal(api.photoArchive(a),null);assert.equal(api.photoArchive(b).path,rows.b.archive_name);
   // The PC archives "a" while the page is open: its original file is gone and the row now points at the copy.
@@ -66,7 +73,7 @@ function cloud({cap=500,fail=false,duplicate=false}={}){
   assert.equal(api.photoArchive(a).path,'D:\\x\\a.jpg');
   // A thumbnail that fails stays a failure; only the original re-reads the row.
   files.delete(rows.b.thumbnail_path);await assert.rejects(api.photoBlob(b),/서버 사진을 불러오지 못했습니다/);
-  const browserOnly=load('lib/site-photos-cloud.ts',{'./site-photos':{listPhotos:async()=>[]},'./supabase':{supabase},'./cloud-storage':{cloudStorageEnabled:()=>false},'./request-timeout':requestTimeout,'./floor':load('lib/floor.ts',{})});
+  const browserOnly=load('lib/site-photos-cloud.ts',{'./site-photos':{listPhotos:async()=>[]},'./supabase':{supabase},'./cloud-storage':{cloudStorageEnabled:()=>false},'./request-timeout':requestTimeout,'./db-error':dbError,'./floor':load('lib/floor.ts',{})});
   assert.equal(browserOnly.photoArchive(a),undefined);
  });
  await check('archive delay counts every site\'s waiting originals, skips deleted ones, and shows only past 48 hours',async()=>{
@@ -74,7 +81,7 @@ function cloud({cap=500,fail=false,duplicate=false}={}){
   const waiting=[{created:now-49*h,deleted:null},{created:now-5*h,deleted:null},{created:now-80*h,deleted:now-70*h},{created:null,deleted:null}];
   let filter=null;
   const supabase={from(table){assert.equal(table,'site_photos');const q={select(cols){assert.match(cols,/metadata->createdAt/);return q;},is(col,v){filter=[col,v];return q;},abortSignal(){return q;},async limit(){return {data:waiting,error:null};}};return q;}};
-  const make=on=>load('lib/site-photos-cloud.ts',{'./site-photos':{listPhotos:async()=>[]},'./supabase':{supabase},'./cloud-storage':{cloudStorageEnabled:()=>on},'./request-timeout':requestTimeout,'./floor':load('lib/floor.ts',{})});
+  const make=on=>load('lib/site-photos-cloud.ts',{'./site-photos':{listPhotos:async()=>[]},'./supabase':{supabase},'./cloud-storage':{cloudStorageEnabled:()=>on},'./request-timeout':requestTimeout,'./db-error':dbError,'./floor':load('lib/floor.ts',{})});
   const api=make(true),pending=await api.pendingArchive();
   assert.equal(JSON.stringify(filter),JSON.stringify(['archived_at',null]));
   assert.equal(JSON.stringify(pending),JSON.stringify({count:2,oldest:now-49*h}));

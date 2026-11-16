@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { emptyProgress, ProgressDocument, validateProgress } from './pouring-progress';
 import { canonical } from './cloud-storage';
 import { READ_TIMEOUT_MESSAGE, timed, WRITE_TIMEOUT_MESSAGE } from './request-timeout';
+import { dbError } from './db-error';
 export interface ProgressSnapshot { document: ProgressDocument; revision: number; mode: 'local' | 'cloud' }
 const storageKey = (site: string) => `cp_pouring_progress_v1:${site}`;
 export async function loadProgress(site: string, connected: boolean): Promise<ProgressSnapshot> {
@@ -11,11 +12,11 @@ export async function loadProgress(site: string, connected: boolean): Promise<Pr
     const marker = localStorage.getItem(markerKey);
     if (marker && marker !== source) throw new Error('서버 이전 후 브라우저 자료가 변경되었습니다. 원본을 보존했으니 두 자료를 비교해주세요.');
     let { data, error } = await timed(signal => supabase.from('pouring_progress').select('document,revision').eq('site_id', site).abortSignal(signal).maybeSingle(), READ_TIMEOUT_MESSAGE);
-    if (error) throw new Error('타설현황 서버를 불러오지 못했습니다. 브라우저 원본은 유지됩니다.');
+    if (error) throw dbError('타설현황 서버를 불러오지 못했습니다. 브라우저 원본은 유지됩니다.', error);
     if (!data && local.revision > 0) {
       const result = await timed(signal => supabase.from('pouring_progress').insert({site_id:site,document:local.document,revision:1}).abortSignal(signal).select('document,revision').single(), WRITE_TIMEOUT_MESSAGE);
       if (result.error?.code === '23505') return loadProgress(site, true);
-      if (result.error) throw new Error('기존 타설현황을 서버로 옮기지 못했습니다. 원본은 유지됩니다.');
+      if (result.error) throw dbError('기존 타설현황을 서버로 옮기지 못했습니다. 원본은 유지됩니다.', result.error);
       data=result.data;
     }
     if (data) {
@@ -38,8 +39,12 @@ export async function saveProgress(site: string, current: ProgressSnapshot, docu
     const result = current.revision === 0
       ? await timed(signal => supabase.from('pouring_progress').insert({ site_id: site, document, revision }).abortSignal(signal).select('revision').single(), WRITE_TIMEOUT_MESSAGE)
       : await timed(signal => supabase.from('pouring_progress').update({ document, revision }).eq('site_id', site).eq('revision', current.revision).abortSignal(signal).select('revision').maybeSingle(), WRITE_TIMEOUT_MESSAGE);
-    // No row back without an error means the revision moved on elsewhere; any other error (network included) is a failed save.
-    if (result.error || !result.data) throw new Error(result.error && result.error.code !== '23505' ? 'DB 저장에 실패했습니다. 연결 상태를 확인해주세요. 입력 내용은 유지됩니다.' : '다른 화면에서 변경되었습니다. 새로 불러온 뒤 다시 입력해주세요.');
+    // No row back without an error, or 23505, means the revision moved on elsewhere (a plain 막힘). Any other error is a failed
+    // save, kept with the server's code and wording for the 작업 기록: no code is a network failure, a code means the server refused it.
+    if (result.error && result.error.code !== '23505') throw dbError(result.error.code
+      ? 'DB 저장에 실패했습니다. 서버가 이 저장을 받지 않았습니다. 입력 내용은 유지됩니다.'
+      : 'DB 저장에 실패했습니다. 연결 상태를 확인해주세요. 입력 내용은 유지됩니다.', result.error);
+    if (result.error || !result.data) throw new Error('다른 화면에서 변경되었습니다. 새로 불러온 뒤 다시 입력해주세요.');
   } else {
     const saved = localStorage.getItem(storageKey(site));
     if ((saved ? JSON.parse(saved).revision : 0) !== current.revision) throw new Error('다른 탭에서 변경되었습니다. 새로 불러온 뒤 다시 입력해주세요.');
