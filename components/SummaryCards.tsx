@@ -113,14 +113,6 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
   const firstAlert = alerts.data?.warnings[0];
   const totalCount = logs.length;
   const totalVolume = logs.reduce((sum, log) => sum + Number(log.volume || 0), 0);
-  
-  // Calculate temp statistics
-  const validMinTemps = logs.map(l => l.min_temp).filter((t): t is number => t !== null);
-  const validMaxTemps = logs.map(l => l.max_temp).filter((t): t is number => t !== null);
-  
-  const minTemp = validMinTemps.length > 0 ? Math.min(...validMinTemps) : null;
-  const maxTemp = validMaxTemps.length > 0 ? Math.max(...validMaxTemps) : null;
-  const missingTemperatureCount = logs.filter(log => log.min_temp === null || log.max_temp === null).length;
 
   // Member types breakdown
   const memberCounts = logs.reduce((acc, log) => {
@@ -146,12 +138,10 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
             <span className="text-xl font-extrabold text-slate-100">{totalCount} <span className="text-xs font-normal text-slate-400">건</span></span>
           </div>
           <div className="mt-1 flex items-center justify-between text-xs"><span className="text-slate-400">타설물량 합계</span><span className="summary-card-value font-bold text-slate-100">{totalVolume.toLocaleString('ko-KR')} m³</span></div>
-          <div className="mt-1 flex items-center justify-between text-xs"><span className="text-slate-400">기록 온도</span><span className="summary-card-value font-bold">{minTemp === null && maxTemp === null ? <span className="text-slate-100">-</span> : <><span className="text-blue-400">{`${minTemp ?? '-'}°C`}</span><span className="text-slate-400"> ~ </span><span className="text-red-400">{`${maxTemp ?? '-'}°C`}</span></>}</span></div>
-          {missingTemperatureCount > 0 && <p className="ui-note mt-1">온도 미입력 {missingTemperatureCount}건 포함</p>}
         </div>
       </div>
 
-      {/* 2. 오늘 날씨 at the site (기상청 초단기실황 + 단기예보); the 일지 temperatures moved to the first card. */}
+      {/* 2. 오늘 날씨 at the site (기상청 초단기실황 + 단기예보). */}
       <div className="summary-card-full today-weather-card bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-400">{`오늘 날씨${area ? ` · ${shortAreaLabel(area)}` : ''}`}</span>
@@ -165,12 +155,13 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
             <div className="flex items-center justify-between text-xs"><span className="text-slate-400">현재 기온</span><span className="font-bold text-slate-100">-</span></div>
             <p className="ui-note mt-2">{site?.address ? '현장 관리에서 ⋯ › 주소 수정으로 기상 위치를 고르면 표시됩니다.' : '현장 관리에서 현장 주소를 넣으면 표시됩니다.'}</p>
           </> : !weather ? <p className="ui-note">{today.error || '오늘 날씨를 불러오는 중입니다.'}</p> : <>
-            {/* Temperatures on the left, 강수 on the right when the card is wide enough (stacked otherwise), so the row keeps its height.
+            {/* Temperatures and the 기상특보 line on the left, 강수 on the right when the card is wide enough (stacked otherwise), so the row keeps its height.
                 Each line is its own cell numbered by --row, so 현재 기온 and 오늘 강수확률 share a text line, as do 최저/최고 and the next 강수 line. */}
             {(() => {
               const left = [
                 <div key="now" className="flex items-baseline justify-between text-xs"><span className="text-slate-400">{`현재 기온${weather.observedAt ? ` (${weather.observedAt} 관측)` : ''}`}</span><span className="today-weather-now font-extrabold text-slate-100">{degrees(weather.temp)}</span></div>,
                 <div key="range" className="flex items-center justify-between text-xs"><span className="text-slate-400">오늘 최저 / 최고 (예보)</span><span className="summary-card-value font-bold"><span className="text-blue-400">{degrees(weather.min)}</span><span className="text-slate-400"> / </span><span className="text-red-400">{degrees(weather.max)}</span></span></div>,
+                <div key="alerts">{warningLine(alerts.data, alerts.error)}</div>,
               ];
               // 강수 for the rest of today and for tomorrow, from the newest 단기예보 issue; wet hours get their own warning line.
               const right = [
@@ -188,7 +179,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
             })()}
             {today.error && <p className="ui-note today-weather-stale mt-2">{`${clock(today.at)} 값 · 새로 불러오지 못해 이전 값을 보여 줍니다. ${today.error}`}</p>}
           </>}
-          {area && <div className="mt-2">{warningLine(alerts.data, alerts.error)}</div>}
+          {area && !weather && <div className="mt-2">{warningLine(alerts.data, alerts.error)}</div>}
         </div>
       </div>
 
@@ -218,7 +209,6 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ logs, site }) => {
         <span className="text-slate-400">타설 기록</span>
         <strong className="text-slate-100">{totalCount}건</strong>
         <span className="text-slate-400">{totalVolume.toLocaleString('ko-KR')} m³</span>
-        {(minTemp !== null || maxTemp !== null) && <span className="text-slate-400">{`기록 ${minTemp ?? '-'}~${maxTemp ?? '-'}°`}</span>}
       </div>
       <div className="summary-card-compact bg-slate-900 border border-slate-800 rounded-xl">
         {/* The big figure is the current temperature, as on the PC card; the forecast range sits below it. */}

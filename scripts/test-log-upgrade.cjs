@@ -408,10 +408,11 @@ function uiHarness(file, name, props, extra = {}) {
     await find(h.render(),'RecordTable').props.onDeleteLog(log.id);
     same(JSON.parse(storage.getItem('cp_logs')),[]);
   });
-  await check('the record card shows the logged temperature range without hot or cold alerts',()=>{
+  await check('the record card shows count and volume only, without the logged temperature range',()=>{
     const show=(min,max)=>JSON.stringify(uiHarness('components/SummaryCards.tsx','SummaryCards',{logs:[{...log,min_temp:min,max_temp:max}],site}).render());
-    const both=show(-1,36);assert(both.includes('-1°C'));assert(both.includes('36°C'));assert(both.includes('기록 온도'));assert(both.includes('기록 -1~36°'));
-    for(const text of [show(21,30),show(21,30.1),show(0,20),both])assert(!text.includes('확인 필요'));
+    const both=show(-1,36);assert(both.includes('조회된 타설/양생 기록'));assert(both.includes('타설물량 합계'));
+    for(const gone of ['기록 온도','-1°C','36°C','기록 -1~36°','온도 미입력'])assert(!both.includes(gone),gone);
+    assert(!show(null,null).includes('온도 미입력'));
   });
   await check('the weather card asks for an address, shows today and keeps the last values when a refresh fails',()=>{
     const text=(state,weatherArea)=>{const h=uiHarness('components/SummaryCards.tsx','SummaryCards',{logs:[log],site:{...site,weather_area:weatherArea}});if(state)h.states[0]=state;return JSON.stringify(h.render());};
@@ -439,7 +440,9 @@ function uiHarness(file, name, props, extra = {}) {
     const data={issuedAt:'07:00',warnings:[{kind:'한파',level:'경보',zones:['서울동남권']},{kind:'건조',level:'주의보',zones:['서울']}],previews:[{kind:'강풍',when:'11/6 새벽(00시~06시)',zones:['서울']}]};
     const shown=text({code:'1165056000',data,error:''});
     for(const part of ['한파경보','서울동남권','건조주의보','강풍 예비특보','11/6 새벽(00시~06시) · 서울','기상청 07:00 발표','한파경보 외 1','is-warning','is-advisory','is-preview'])assert(shown.includes(part),part);
-    assert(text({code:'1165056000',data:{issuedAt:'07:00',warnings:[],previews:[]},error:''}).includes('기상특보 없음 · 기상청 07:00 발표 기준'));
+    const quiet=text({code:'1165056000',data:{issuedAt:'07:00',warnings:[],previews:[]},error:''});assert(quiet.includes('기상특보 없음 · 기상청 07:00 발표 기준'));
+    // The 특보 line is the third left-hand cell, level with the third 강수 line, not a separate line under the grid.
+    assert(/today-weather-cell is-left","style":\{"--row":3\}[^]*?기상특보 없음/.test(quiet),'특보 in left row 3');
     assert(text({code:'1165056000',data,error:'기상청 서버가 응답하지 않습니다 (502).'}).includes('새로 불러오지 못해 이전 특보입니다'));
     assert(text({code:'1165056000',data:null,error:'기상청 연결 키가 아직 설정되지 않았습니다.'}).includes('기상청 연결 키가 아직 설정되지 않았습니다.'));
     // 특보 of another site's 위치 are not shown while the new site loads.
