@@ -318,6 +318,17 @@ function uiHarness(file, name, props, extra = {}) {
     assert.equal(inserted.length,2);assert.equal(inserted[0],inserted[1]);assert.match(inserted[0],/^[0-9a-f-]{36}$/);
     assert.equal(h.states[2].length,2);assert.equal(h.states[2].filter(row=>row.id===inserted[0]).length,1);
   });
+  await check('a blank 타설물량 is sent to the numeric column as null on add and edit, so the save is not refused with 22P02',async()=>{
+    const sent=[];const supabase={from(){const q={insert(row){q.row=row;sent.push(row);return q;},update(row){q.row=row;sent.push(row);return q;},select(){return q;},eq(){return q;},abortSignal(){return q;},
+      async single(){return {data:{...log,...q.row},error:null};},async maybeSingle(){return {data:{...log,...q.row},error:null};}};return q;}};
+    const h=appHarness(null,false,{'@/lib/supabase':{supabase,checkSupabaseHealth:async()=>true}});
+    const draft={...log,floor:'7F',volume:''};delete draft.id;
+    await find(h.render(),'RecordTable').props.onQuickAddLog(draft);
+    await find(h.render(),'RecordTable').props.onQuickUpdateLog(log.id,{...log,volume:'  '});
+    assert.equal(sent.length,2);for(const row of sent)assert.strictEqual(row.volume,null);
+    assert.strictEqual(h.states[2].find(row=>row.floor==='7F').volume,null);
+  });
+  await check('a value the DB cannot read (22P02) points at the input instead of the connection',async()=>{const h=appHarness({data:null,error:{code:'22P02',message:'invalid input syntax for type numeric: ""'}});await assert.rejects(find(h.render(),'RecordTable').props.onQuickAddLog({...log,floor:'2층'}),e=>/숫자 칸/.test(e.message)&&!/연결·권한/.test(e.message)&&/22P02/.test(e.message));same(h.states[2],[log]);});
   await check('successful DB response commits saved row',async()=>{const h=appHarness({data:{...log,floor:'saved'},error:null}),tree=h.render();await find(tree,'RecordTable').props.onQuickUpdateLog(log.id,{...log,floor:'2층'});assert.equal(h.states[2][0].floor,'saved');});
   await check('saving a log records the outcome with its ID, 일자, 동·층 and 부위, never the values typed in',async()=>{
     storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site]));storage.setItem('cp_logs',JSON.stringify([log]));events.length=0;

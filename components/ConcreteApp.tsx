@@ -160,7 +160,8 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
     const activeSiteId = selectedSiteId;
     if (!sites.some(site => site.id === activeSiteId)) throw new Error('등록할 현장을 선택해주세요.');
     const trimmed = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v])) as PouringLogInput;
-    const input = { ...trimmed, site_id: activeSiteId, building: trimmed.building.toUpperCase(), floor: normalizeFloor(trimmed.floor), strength: normalizeStrength(trimmed.strength), curing_watering: normalizeWatering(trimmed.curing_watering) };
+    // A blank 타설물량 is allowed ("물량 미입력"); the DB column is numeric, so it is stored as null, not ''.
+    const input = { ...trimmed, site_id: activeSiteId, building: trimmed.building.toUpperCase(), floor: normalizeFloor(trimmed.floor), strength: normalizeStrength(trimmed.strength), curing_watering: normalizeWatering(trimmed.curing_watering), volume: trimmed.volume === '' || trimmed.volume === undefined ? null : trimmed.volume };
     validateLogInput(input);
     if (id && !siteLogs.some(log => log.id === id)) throw new Error('수정할 일지를 다시 선택해주세요.');
     siteLock.current = true; setLogBusy(true); setOperationError(''); setNotice('');
@@ -170,7 +171,9 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
         const result = id
           ? await timed(signal => supabase.from('pouring_logs').update(input).eq('id', id).eq('site_id', activeSiteId).abortSignal(signal).select('*').maybeSingle(), WRITE_TIMEOUT_MESSAGE)
           : await insertOnce(`log:${JSON.stringify(input)}`, 'pouring_logs', input);
-        if (result.error || !result.data) throw dbError('일지 저장에 실패했습니다. 입력은 유지됩니다. 연결·권한 또는 다른 화면의 변경을 확인해주세요.', result.error);
+        if (result.error || !result.data) throw dbError(result.error?.code === '22P02'
+          ? '일지 저장에 실패했습니다. 입력은 유지됩니다. 서버가 읽지 못하는 값이 있으니 온도·물량 같은 숫자 칸을 확인해주세요.'
+          : '일지 저장에 실패했습니다. 입력은 유지됩니다. 연결·권한 또는 다른 화면의 변경을 확인해주세요.', result.error);
         saved = { ...result.data, remicon_company: result.data.remicon_company ?? '', curing_watering: result.data.curing_watering ?? '', curing_protection: result.data.curing_protection ?? '' };
       }
       const nextLogs = id ? logs.map(log => log.id === id ? saved : log) : [saved, ...logs];
