@@ -44,6 +44,14 @@ function cloud({cap=500,fail=false,duplicate=false}={}){
   assert.equal(await photosCloud(false,undefined,false).photoStorageUsage(),null); // photos kept in this browser: no figure
   await assert.rejects(photosCloud(false,{data:null,error:{message:'permission denied'}}).photoStorageUsage(),/저장 공간을 불러오지 못했습니다/);
  });
+ await check('a refused save records the kind of each field, never the value typed in',()=>{
+  const e=dbError.dbError('저장 실패',{code:'22P02',message:'invalid input syntax for type numeric: ""'},{volume:'',min_temp:null,max_temp:12.5,building:'101동',remarks:'  ',weather_area:{code:'x'},changes:[1,2],missing:undefined});
+  assert.equal(e.dbCode,'22P02');
+  assert.match(e.dbDetail,/^invalid input syntax.* \|\| 보낸 값: volume=빈 글자, min_temp=null, max_temp=숫자, building=글자 4자, remarks=공백 2자, weather_area=묶음, changes=목록 2개, missing=없음$/);
+  assert(!e.dbDetail.includes('101동')&&!e.dbDetail.includes('12.5'));
+  assert.match(dbError.dbError('없음',null,{name:'현장'}).dbDetail,/보낸 값: name=글자 2자/);
+  assert(!dbError.dbError('코드만',{code:'X',message:'m'}).dbDetail.includes('보낸 값'));
+ });
  await check('a photo edit refused by the server keeps its code for the 작업 기록, while a photo changed elsewhere stays a plain 막힘',async()=>{
   const photo={id:'p1',siteId:site.id,date:'2026-11-16',building:'101동',floor:'3F',name:'a.jpg',size:1,createdAt:1};
   const api=answer=>load('lib/site-photos-cloud.ts',{'./site-photos':{},'./supabase':{supabase:{rpc(){return {abortSignal:async()=>({data:null,error:answer})};}}},'./cloud-storage':{cloudStorageEnabled:()=>true},'./request-timeout':requestTimeout,'./db-error':dbError,'./floor':load('lib/floor.ts',{})},{crypto:require('node:crypto').webcrypto});

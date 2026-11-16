@@ -173,7 +173,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
           : await insertOnce(`log:${JSON.stringify(input)}`, 'pouring_logs', input);
         if (result.error || !result.data) throw dbError(result.error?.code === '22P02'
           ? '일지 저장에 실패했습니다. 입력은 유지됩니다. 서버가 읽지 못하는 값이 있으니 온도·물량 같은 숫자 칸을 확인해주세요.'
-          : '일지 저장에 실패했습니다. 입력은 유지됩니다. 연결·권한 또는 다른 화면의 변경을 확인해주세요.', result.error);
+          : '일지 저장에 실패했습니다. 입력은 유지됩니다. 연결·권한 또는 다른 화면의 변경을 확인해주세요.', result.error, input);
         saved = { ...result.data, remicon_company: result.data.remicon_company ?? '', curing_watering: result.data.curing_watering ?? '', curing_protection: result.data.curing_protection ?? '' };
       }
       const nextLogs = id ? logs.map(log => log.id === id ? saved : log) : [saved, ...logs];
@@ -231,8 +231,9 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       if (!code) throw new Error('현장 코드 A0001~A9999를 모두 사용했습니다.');
       const newSite: Site = { id: `site-${progressId()}`, name: name.trim(), code, ...(address ? { address, weather_area } : {}) };
       if (isSupabase && supabase) {
-        const { data: inserted, error } = await insertOnce(`site:${newSite.name}:${code}`, 'sites', { name: newSite.name, code, ...(address ? { address, weather_area } : {}) });
-        if (error || !inserted) throw dbError('현장 등록에 실패했습니다. 입력 내용은 유지됩니다. 연결과 권한을 확인해주세요.', error);
+        const row = { name: newSite.name, code, ...(address ? { address, weather_area } : {}) };
+        const { data: inserted, error } = await insertOnce(`site:${newSite.name}:${code}`, 'sites', row);
+        if (error || !inserted) throw dbError('현장 등록에 실패했습니다. 입력 내용은 유지됩니다. 연결과 권한을 확인해주세요.', error, row);
         newSite.id = inserted.id;
       } else {
         writeLocalData(localStorage, { sites, logs }, { sites: [...sites, newSite], logs });
@@ -255,7 +256,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       const renamed = sites.map(site => site.id === id ? { ...site, name: nextName } : site);
       if (isSupabase && supabase) {
         const { data, error } = await timed(signal => supabase.from('sites').update({ name: nextName }).eq('id', id).abortSignal(signal).select('id').maybeSingle(), WRITE_TIMEOUT_MESSAGE);
-        if (error || !data) throw dbError('현장명 변경에 실패했습니다. 입력 내용은 유지됩니다. 연결과 권한을 확인해주세요.', error);
+        if (error || !data) throw dbError('현장명 변경에 실패했습니다. 입력 내용은 유지됩니다. 연결과 권한을 확인해주세요.', error, { name: nextName });
       } else {
         writeLocalData(localStorage, { sites, logs }, { sites: renamed, logs });
       }
@@ -276,7 +277,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       const updated = sites.map(site => site.id === id ? { ...site, ...change } : site);
       if (isSupabase && supabase) {
         const { data, error } = await timed(signal => supabase.from('sites').update(change).eq('id', id).abortSignal(signal).select('id').maybeSingle(), WRITE_TIMEOUT_MESSAGE);
-        if (error || !data) throw dbError('현장 주소 저장에 실패했습니다. 입력 내용은 유지됩니다. 연결과 권한을 확인해주세요.', error);
+        if (error || !data) throw dbError('현장 주소 저장에 실패했습니다. 입력 내용은 유지됩니다. 연결과 권한을 확인해주세요.', error, change);
       } else {
         writeLocalData(localStorage, { sites, logs }, { sites: updated, logs });
       }
@@ -298,7 +299,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
       const updated = sites.map(site => site.id === id ? { ...site, ...change } : site);
       if (isSupabase && supabase) {
         const { data, error } = await timed(signal => supabase.from('sites').update(change).eq('id', id).abortSignal(signal).select('id').maybeSingle(), WRITE_TIMEOUT_MESSAGE);
-        if (error || !data) throw dbError(`현장 ${closedAt ? '종료' : '다시 진행'} 처리에 실패했습니다. 연결과 권한을 확인해주세요.`, error);
+        if (error || !data) throw dbError(`현장 ${closedAt ? '종료' : '다시 진행'} 처리에 실패했습니다. 연결과 권한을 확인해주세요.`, error, change);
       } else {
         writeLocalData(localStorage, { sites, logs }, { sites: updated, logs });
       }
@@ -317,7 +318,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
     if (!target || isClosedSite(target)) throw new Error('진행 중인 현장에서만 보고 문구 항목을 저장합니다.');
     if (isSupabase) {
       const { data, error } = await timed(signal => supabase.from('sites').update({ report_options }).eq('id', id).abortSignal(signal).select('id').maybeSingle(), WRITE_TIMEOUT_MESSAGE);
-      if (error || !data) throw dbError('보고 문구 항목을 저장하지 못했습니다. 이번 문구에는 그대로 쓸 수 있습니다.', error);
+      if (error || !data) throw dbError('보고 문구 항목을 저장하지 못했습니다. 이번 문구에는 그대로 쓸 수 있습니다.', error, { report_options });
     } else {
       const stored = readLocalData(localStorage);
       writeLocalData(localStorage, stored, { sites: stored.sites.map(site => site.id === id ? { ...site, report_options } : site), logs: stored.logs });

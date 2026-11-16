@@ -328,7 +328,7 @@ function uiHarness(file, name, props, extra = {}) {
     assert.equal(sent.length,2);for(const row of sent)assert.strictEqual(row.volume,null);
     assert.strictEqual(h.states[2].find(row=>row.floor==='7F').volume,null);
   });
-  await check('a value the DB cannot read (22P02) points at the input instead of the connection',async()=>{const h=appHarness({data:null,error:{code:'22P02',message:'invalid input syntax for type numeric: ""'}});await assert.rejects(find(h.render(),'RecordTable').props.onQuickAddLog({...log,floor:'2층'}),e=>/숫자 칸/.test(e.message)&&!/연결·권한/.test(e.message)&&/22P02/.test(e.message));same(h.states[2],[log]);});
+  await check('a value the DB cannot read (22P02) points at the input instead of the connection',async()=>{const h=appHarness({data:null,error:{code:'22P02',message:'invalid input syntax for type numeric: ""'}});await assert.rejects(find(h.render(),'RecordTable').props.onQuickAddLog({...log,floor:'2층'}),e=>/숫자 칸/.test(e.message)&&!/연결·권한/.test(e.message)&&/22P02/.test(e.message)&&/보낸 값: .*floor=글자 2자/.test(e.dbDetail)&&!e.dbDetail.includes('2층'));same(h.states[2],[log]);});
   await check('successful DB response commits saved row',async()=>{const h=appHarness({data:{...log,floor:'saved'},error:null}),tree=h.render();await find(tree,'RecordTable').props.onQuickUpdateLog(log.id,{...log,floor:'2층'});assert.equal(h.states[2][0].floor,'saved');});
   await check('saving a log records the outcome with its ID, 일자, 동·층 and 부위, never the values typed in',async()=>{
     storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site]));storage.setItem('cp_logs',JSON.stringify([log]));events.length=0;

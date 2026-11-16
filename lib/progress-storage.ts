@@ -43,7 +43,7 @@ export async function saveProgress(site: string, current: ProgressSnapshot, docu
     // save, kept with the server's code and wording for the 작업 기록: no code is a network failure, a code means the server refused it.
     if (result.error && result.error.code !== '23505') throw dbError(result.error.code
       ? 'DB 저장에 실패했습니다. 서버가 이 저장을 받지 않았습니다. 입력 내용은 유지됩니다.'
-      : 'DB 저장에 실패했습니다. 연결 상태를 확인해주세요. 입력 내용은 유지됩니다.', result.error);
+      : 'DB 저장에 실패했습니다. 연결 상태를 확인해주세요. 입력 내용은 유지됩니다.', result.error, { document, revision });
     if (result.error || !result.data) throw new Error('다른 화면에서 변경되었습니다. 새로 불러온 뒤 다시 입력해주세요.');
   } else {
     const saved = localStorage.getItem(storageKey(site));

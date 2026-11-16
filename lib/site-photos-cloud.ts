@@ -55,7 +55,7 @@ async function download(path:string){
 }
 async function uploadVerified(path:string,blob:Blob,hash:string){
  const {error}=await bucket().upload(path,blob,{upsert:false,contentType:blob.type});
- if(error && !['409','400'].includes(String(error.statusCode)))throw dbError('사진 업로드에 실패했습니다.',error);
+ if(error && !['409','400'].includes(String(error.statusCode)))throw dbError('사진 업로드에 실패했습니다.',error,{path,size:blob.size,type:blob.type});
  // Verifies retries where the immutable object already exists too.
  if(await blobHash(await download(path))!==hash)throw Error('서버 사진과 원본이 일치하지 않습니다. 원본을 유지했습니다.');
 }
@@ -74,7 +74,7 @@ async function cloudSave(photo:SitePhoto,original:Blob,thumbnail:Blob):Promise<v
  await uploadVerified(row.original_path,original,hash);
  await uploadVerified(row.thumbnail_path,thumbnail,thumbHash);
  const {error}=await timed(signal=>supabase.from('site_photos').insert(row).abortSignal(signal),WRITE_TIMEOUT_MESSAGE);
- if(error){if(error.code==='23505')return cloudSave(photo,original,thumbnail);throw dbError('사진 정보 저장에 실패했습니다.',error);}
+ if(error){if(error.code==='23505')return cloudSave(photo,original,thumbnail);throw dbError('사진 정보 저장에 실패했습니다.',error,row);}
  rows.set(photo.id,row);
 }
 async function migrate(site:string){
@@ -141,7 +141,7 @@ async function changePhotos(photos:SitePhoto[],transform:(photo:SitePhoto)=>Site
  const {error}=await timed(signal=>supabase.rpc('update_site_photo_metadata',{changes}).abortSignal(signal),WRITE_TIMEOUT_MESSAGE);
  // The function stops the whole batch when a photo no longer matches what this page showed: a 막힘, not a fault.
  if(error&&/changed elsewhere/i.test(error.message))throw Error('사진 정보를 저장하지 못했습니다. 다른 화면에서 변경했는지 확인 후 새로고침해주세요.');
- if(error)throw dbError('사진 정보를 저장하지 못했습니다. 선택은 그대로입니다.',error);
+ if(error)throw dbError('사진 정보를 저장하지 못했습니다. 선택은 그대로입니다.',error,{changes});
  for(const c of changes){const row=rows.get(c.id);if(row)rows.set(c.id,{...row,metadata:c.next});}
 }
 export async function markPhotosDeleted(photos:SitePhoto[],deleted:boolean){
