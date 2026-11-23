@@ -7,6 +7,7 @@ import { ShortDateInput } from './ShortDateInput';
 import { askConfirm } from './ConfirmDialog';
 import { ProgressPrint } from './ProgressPrint';
 import { ProgressStructure } from './ProgressStructure';
+import { ExportMenu } from './ExportMenu';
 import { NavBuilding, ProgressBuildingNav, ProgressFloatingHeader } from './ProgressBuildingNav';
 import { inlineDateRecord } from '@/lib/inline-date';
 import { applyMonthColor, clearProgressColor, fillMonthColors, progressColor, recentProgressColors, setProgressColor } from '@/lib/progress-color';
@@ -485,10 +486,13 @@ export function PouringProgress({ site, readOnly = false, onWorkPending, onPrint
     <div ref={stickyRef} className="progress-sticky">
     <div className="progress-heading"><div><div className="progress-title-row"><h2 className="ui-page-title">동별 타설현황</h2><span className="ui-note progress-site-name">{site.name}</span><p className="progress-floor-note print:hidden">※ 타설일은 각 층 바닥 슬래브를 타설한 날로 입력합니다(예: 5F = 5층 바닥 타설일).</p></div></div>
       <div className="progress-actions progress-heading-actions print:hidden">
-        {onPrint && <button type="button" className="ui-button page-output-button" onClick={onPrint}>인쇄</button>}
-        {/* Unlike 인쇄 and 엑셀 this stays on phones, where the picture is sent on from the site. */}
-        <button type="button" className="ui-button" disabled={!snapshot || !visible.length || imaging} title="인쇄 양식 그대로 JPG 이미지로 저장합니다." onClick={() => { void saveImage(); }}>{imaging ? '이미지 만드는 중…' : '이미지'}</button>
-        <button type="button" className="ui-button page-output-button" onClick={exportExcel}>엑셀</button>
+        <ExportMenu className="page-output-button" busy={imaging ? '이미지 만드는 중…' : undefined} items={[
+          ...(onPrint ? [{ text: '인쇄', run: onPrint }] : []),
+          { text: '이미지', run: () => { void saveImage(); }, disabled: !snapshot || !visible.length, title: '인쇄 양식 그대로 JPG 이미지로 저장합니다.' },
+          { text: '엑셀', run: exportExcel },
+        ]} />
+        {/* Phones hide 인쇄 and 엑셀, so 이미지 (sent on from the site) stays a button of its own there. */}
+        <button type="button" className="ui-button phone-output-button" disabled={!snapshot || !visible.length || imaging} title="인쇄 양식 그대로 JPG 이미지로 저장합니다." onClick={() => { void saveImage(); }}>{imaging ? '이미지 만드는 중…' : '이미지'}</button>
         <button className="ui-button" disabled={!history.length || saving || readOnly || !!inlineEdit} onClick={undo}>실행 취소</button>
         <button className="ui-button" disabled={!snapshot || saving || !!inlineEdit} onClick={() => { setPanel('structure'); setAddingBuilding(false); showPanel(); }}>동·층 관리</button>
         <button type="button" className="ui-button ui-primary progress-add-trigger" disabled={!snapshot || saving || stale || readOnly || !!inlineEdit} aria-expanded={addingBuilding} aria-controls="structure-panel" onClick={openBuildingForm}>+ 동 추가</button>

@@ -590,6 +590,14 @@ body {
 .concrete-app .site-actions-menu button { border: 0; border-radius: 6px; background: transparent; padding: 8px 10px; text-align: start; font: inherit; font-size: 12px; color: inherit; cursor: pointer; }
 .concrete-app .site-actions-menu button:hover { background: var(--b-selected, #334155); }
 .concrete-app .site-actions-menu button:last-child { color: var(--b-danger, #ef4444); }
+.concrete-app .export-menu-caret { margin-inline-start: 6px; font-size: 9px; }
+.concrete-app .export-menu-trigger[aria-expanded="true"] { background: var(--b-soft, #334155); }
+.concrete-app .export-menu { position: fixed; inset: auto; margin: 0; min-inline-size: 128px; padding: 4px; border: 1px solid var(--b-control, #475569); border-radius: 6px; background: var(--b-surface, #1e293b); color: var(--b-ink, #e2e8f0); box-shadow: 0 6px 18px rgb(0 0 0 / .14); }
+.concrete-app .export-menu:popover-open { display: grid; }
+.concrete-app .export-menu button { border: 0; border-radius: 4px; background: transparent; padding: 7px 10px; text-align: start; font: inherit; font-size: 13px; color: inherit; cursor: pointer; }
+.concrete-app .export-menu button:hover:not(:disabled) { background: var(--b-soft, #334155); }
+.concrete-app .export-menu button:disabled { opacity: .45; cursor: default; }
+.concrete-app .export-menu button:focus-visible { outline: 2px solid var(--b-action, #f59e0b); outline-offset: -2px; }
 .concrete-app .site-actions-inline { display: inline-flex; gap: 4px; }
 .concrete-app .site-actions-inline button { border: 1px solid var(--b-line, #475569); border-radius: 6px; background: var(--b-surface, #1e293b); color: inherit; padding: 4px 8px; font: inherit; font-size: 11px; }
 .concrete-app .today-weather-now { font-size: 20px; line-height: 1.2; font-variant-numeric: tabular-nums; }

@@ -357,6 +357,7 @@
   /* 인쇄 and 엑셀 are PC tasks; on phones the toolbars keep their room for entering and finding logs. */
   .concrete-app .page-output-button { display:none; }
 }
+@media screen and (min-width:761px) { .concrete-app .phone-output-button { display:none; } }
 
 /* 인쇄/보고서 서식 screen (2026-11-09): the toolbar above the sheet uses the app's colors instead of the old navy and orange.
    The sheet itself and the printed page are unchanged. */
