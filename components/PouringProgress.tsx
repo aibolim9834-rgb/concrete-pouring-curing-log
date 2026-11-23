@@ -19,6 +19,7 @@ import { loadProgress, ProgressSnapshot, saveProgress } from '@/lib/progress-sto
 import { describeError, logEvent, tracked } from '@/lib/event-log';
 import { cloudStorageEnabled } from '@/lib/cloud-storage';
 import { XLSX_TYPE, xlsxFile } from '@/lib/xlsx';
+import { progressImage } from '@/lib/progress-image';
 
 import { progressEditor, visibleSelection } from '@/lib/progress-editor';
 
@@ -47,6 +48,7 @@ export function PouringProgress({ site, readOnly = false, onWorkPending, onPrint
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [saving, setSaving] = useState(false);
+  const [imaging, setImaging] = useState(false);
   const [stale, setStale] = useState(false);
   const [entryDraft, setEntryDraft] = useState<EntryDraft>(blankEntry);
   const lock = useRef(false);
@@ -395,6 +397,14 @@ export function PouringProgress({ site, readOnly = false, onWorkPending, onPrint
     const rows = progressSheetRows(document, filter);
     downloadFile(`${site.name}_타설현황.xlsx`, xlsxFile('타설현황', PROGRESS_COLUMNS, rows, progressSheetOptions(site.name, document, filter, rows)), XLSX_TYPE);
   }
+  // The printed sheet (same buildings, 기준일 and colors) saved as a JPG instead of going through the print dialog.
+  async function saveImage() {
+    if (!snapshot || !visible.length) { setError('타설현황을 불러온 뒤 JPG로 저장해주세요.'); return; }
+    setImaging(true);
+    try { downloadFile(`${site.name}_타설현황_${shortDate(basis)}.jpg`, await progressImage(visible, site.name, basis, ink), 'image/jpeg'); }
+    catch (e) { setError(e instanceof Error ? e.message : 'JPG 이미지를 만들지 못했습니다.'); }
+    finally { setImaging(false); }
+  }
 
   // Each extra pour date shown on one line widens that building's actual-date column.
   function extraDateWidth(b: ProgressDocument['buildings'][number]) {
@@ -476,6 +486,8 @@ export function PouringProgress({ site, readOnly = false, onWorkPending, onPrint
     <div className="progress-heading"><div><div className="progress-title-row"><h2 className="ui-page-title">동별 타설현황</h2><span className="ui-note progress-site-name">{site.name}</span><p className="progress-floor-note print:hidden">※ 타설일은 각 층 바닥 슬래브를 타설한 날로 입력합니다(예: 5F = 5층 바닥 타설일).</p></div></div>
       <div className="progress-actions progress-heading-actions print:hidden">
         {onPrint && <button type="button" className="ui-button page-output-button" onClick={onPrint}>인쇄</button>}
+        {/* Unlike 인쇄 and 엑셀 this stays on phones, where the picture is sent on from the site. */}
+        <button type="button" className="ui-button" disabled={!snapshot || !visible.length || imaging} title="인쇄 양식 그대로 JPG 이미지로 저장합니다." onClick={() => { void saveImage(); }}>{imaging ? '이미지 만드는 중…' : '이미지'}</button>
         <button type="button" className="ui-button page-output-button" onClick={exportExcel}>엑셀</button>
         <button className="ui-button" disabled={!history.length || saving || readOnly || !!inlineEdit} onClick={undo}>실행 취소</button>
         <button className="ui-button" disabled={!snapshot || saving || !!inlineEdit} onClick={() => { setPanel('structure'); setAddingBuilding(false); showPanel(); }}>동·층 관리</button>
