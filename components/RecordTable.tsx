@@ -36,7 +36,6 @@ interface RecordTableProps {
   onQuickAddLog?: (data: PouringLogInput) => Promise<void>;
   onQuickUpdateLog?: (id: string, data: PouringLogInput) => Promise<void>;
   filters: LogFilters; onFiltersChange: (filters: LogFilters) => void;
-  outputScope: 'filtered' | 'all'; onOutputScopeChange: (scope: 'filtered' | 'all') => void;
   sort: LogSort; onSortChange: (sort: LogSort) => void;
   busy?: boolean; blocked?: boolean;
   // A 종료 site: the table, search and filters still work; adding, editing and deleting do not.
@@ -44,7 +43,7 @@ interface RecordTableProps {
   onWorkPending?: (pending: boolean) => void;
   // Keeps the 일일 보고 문구 format and items on the site.
   onSaveReportOptions?: (options: ReportOptions | null) => Promise<void>;
-  // 인쇄/보고서 서식 and Excel file of the 출력·엑셀 범위 below; shown on the PC toolbar only.
+  // 인쇄/보고서 서식 and Excel file of the logs the table shows; shown on the PC toolbar only.
   onPrint?: () => void;
   onExportExcel?: () => void;
 }
@@ -75,7 +74,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
   site,
   onDeleteLog,
   onQuickAddLog,
-  onQuickUpdateLog, filters, onFiltersChange, outputScope, onOutputScopeChange, sort, onSortChange, busy = false, blocked = false, readOnly = false, onWorkPending, onSaveReportOptions, onPrint, onExportExcel,
+  onQuickUpdateLog, filters, onFiltersChange, sort, onSortChange, busy = false, blocked = false, readOnly = false, onWorkPending, onSaveReportOptions, onPrint, onExportExcel,
 }) => {
   const searchQuery = filters.search, weatherFilter = filters.weather;
   const setSearchQuery = (search: string) => onFiltersChange({ ...filters, search });
@@ -278,8 +277,6 @@ export const RecordTable: React.FC<RecordTableProps> = ({
         <label htmlFor="logs-from">시작일<ShortDateInput id="logs-from" separator="." label="시작일" value={filters.from} onChange={v => { if (!v || validDate(v)) onFiltersChange({ ...filters, from: v }); }} /></label>
         <label htmlFor="logs-to">종료일<ShortDateInput id="logs-to" separator="." label="종료일" value={filters.to} onChange={v => { if (!v || validDate(v)) onFiltersChange({ ...filters, to: v }); }} /></label>
         {(['building','floor','member'] as const).map((key, i) => <label key={key} htmlFor={`logs-${key}`}>{['동(구역)','층','구조부위'][i]}<select id={`logs-${key}`} value={filters[key]} onChange={e => onFiltersChange({ ...filters, [key]: e.target.value })}><option value="">전체</option>{Array.from(new Set(logs.map(log => log[key === 'member' ? 'member_type' : key]))).filter(Boolean).sort((a,b) => a.localeCompare(b, 'ko', { numeric: true })).map(value => <option key={value}>{value}</option>)}</select></label>)}
-        <button className="ui-button" onClick={() => onFiltersChange({ search: '', weather: 'ALL', from: '', to: '', building: '', floor: '', member: '' })}>조회 초기화</button>
-        <label htmlFor="logs-output">출력·엑셀 범위<select id="logs-output" value={outputScope} onChange={e => onOutputScopeChange(e.target.value as 'filtered' | 'all')}><option value="filtered">현재 조회 결과 {filteredLogs.length}건</option><option value="all">현장 전체 {logs.length}건</option></select></label>
         {filters.from && filters.to && filters.from > filters.to && <p className="progress-error" role="alert">시작일이 종료일보다 늦습니다.</p>}
       </div>
       {/* Main Excel-styled Responsive Table */}

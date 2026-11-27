@@ -49,8 +49,8 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
   const [logBusy, setLogBusy] = useState(false);
   const [operationError, setOperationError] = useState('');
   const [notice, setNotice] = useState('');
+  // Filters live only in this page's state, so a reload always starts from the whole site.
   const [filters, setFilters] = useState<LogFilters>(emptyLogFilters);
-  const [outputScope, setOutputScope] = useState<'filtered' | 'all'>('filtered');
 
   const siteLock = useRef(false);
   const photoWorkPending = useRef(false);
@@ -151,8 +151,8 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
   const siteLogs = sortLogs(selectedSiteId ? logs.filter((log) => log.site_id === selectedSiteId) : [], logSort);
 
   const viewedLogs = filterLogs(siteLogs, filters);
-  const outputLogs = outputScope === 'all' ? siteLogs : viewedLogs;
-  const outputDescription = outputScope === 'all' ? '현장 전체' : `조회 결과 · ${filters.from || '처음'} ~ ${filters.to || '마지막'}`;
+  // 인쇄 and 엑셀 always take what the table shows.
+  const outputDescription = `조회 결과 · ${filters.from || '처음'} ~ ${filters.to || '마지막'}`;
 
   const saveLog = async (data: PouringLogInput, id?: string): Promise<string> => {
     assertWritable(); assertOpenSite();
@@ -371,14 +371,14 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
     } finally { siteLock.current = false; }
   };
 
-  // Excel file of the logs in the 출력·엑셀 범위, with widths and real dates (CSV could not keep either).
+  // Excel file of the logs the table shows, with widths and real dates (CSV could not keep either).
   const handleExportExcel = () => {
     if (!ready || dataIssue) { setOperationError('자료 읽기 오류를 해결한 뒤 내보내주세요.'); return; }
     if (!currentSite) {
       alert('내보낼 현장을 선택해주세요.');
       return;
     }
-    downloadFile(`${currentSite.name || '현장'}_콘크리트_타설_양생_일지.xlsx`, xlsxFile('타설일지', LOG_COLUMNS, logRows(outputLogs), logSheetOptions(currentSite.name || '현장', outputLogs)), XLSX_TYPE);
+    downloadFile(`${currentSite.name || '현장'}_콘크리트_타설_양생_일지.xlsx`, xlsxFile('타설일지', LOG_COLUMNS, logRows(viewedLogs), logSheetOptions(currentSite.name || '현장', viewedLogs)), XLSX_TYPE);
   };
 
   // 일지 opens the 인쇄/보고서 서식 view; 타설현황 prints its own table.
@@ -391,7 +391,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
   if (isPrintViewOpen) {
     return (
       <PrintView
-        logs={outputLogs}
+        logs={viewedLogs}
         sites={currentSite ? [currentSite] : []}
         description={outputDescription}
         currentSite={currentSite}
@@ -437,8 +437,6 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
           logs={siteLogs}
           filters={filters}
           onFiltersChange={setFilters}
-          outputScope={outputScope}
-          onOutputScopeChange={setOutputScope}
           sort={logSort}
           onSortChange={setLogSort}
           busy={logBusy}
