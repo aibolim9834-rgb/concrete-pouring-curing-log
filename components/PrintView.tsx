@@ -99,22 +99,22 @@ export const PrintView: React.FC<PrintViewProps> = ({
               <th colSpan={3} className="border border-black px-2 py-1.5">
                 타설위치
               </th>
-              <th rowSpan={2} className="border border-black px-1 py-2.5 w-16">
+              <th rowSpan={2} className="log-print-num border border-black px-1 py-2.5 w-16">
                 최저온도
               </th>
-              <th rowSpan={2} className="border border-black px-1 py-2.5 w-16">
+              <th rowSpan={2} className="log-print-num border border-black px-1 py-2.5 w-16">
                 최고온도
               </th>
-              <th rowSpan={2} className="border border-black px-2 py-2.5 w-28">
+              <th rowSpan={2} className="log-print-text border border-black px-2 py-2.5 w-28">
                 기상(눈/비/맑음)
               </th>
-              <th rowSpan={2} className="border border-black px-2 py-2.5 w-24">
+              <th rowSpan={2} className="log-print-text border border-black px-2 py-2.5 w-24">
                 레미콘사
               </th>
-              <th rowSpan={2} className="border border-black px-2 py-2.5 w-20">
+              <th rowSpan={2} className="log-print-num border border-black px-2 py-2.5 w-20">
                 타설강도
               </th>
-              <th rowSpan={2} className="border border-black px-2 py-2.5 w-20">
+              <th rowSpan={2} className="log-print-num border border-black px-2 py-2.5 w-20">
                 타설물량
               </th>
               <th colSpan={2} className="border border-black px-2 py-1.5">
@@ -128,8 +128,8 @@ export const PrintView: React.FC<PrintViewProps> = ({
               <th className="border border-black px-2 py-1.5">동(구역)</th>
               <th className="border border-black px-1 py-1.5">층</th>
               <th className="border border-black px-2 py-1.5">벽/슬라브</th>
-              <th className="border border-black px-2 py-1.5">살수</th>
-              <th className="border border-black px-2 py-1.5">보양</th>
+              <th className="log-print-text border border-black px-2 py-1.5">살수</th>
+              <th className="log-print-text border border-black px-2 py-1.5">보양</th>
             </tr>
           </thead>
 
@@ -151,28 +151,28 @@ export const PrintView: React.FC<PrintViewProps> = ({
                 <td className="border border-black px-2 py-1 text-center">
                   {log.member_type}
                 </td>
-                <td className="border border-black px-1 py-1 text-center">
+                <td className="border border-black px-1 py-1 log-print-num">
                   {log.min_temp !== null && log.min_temp !== undefined ? `${log.min_temp}°C` : ''}
                 </td>
-                <td className="border border-black px-1 py-1 text-center">
+                <td className="border border-black px-1 py-1 log-print-num">
                   {log.max_temp !== null && log.max_temp !== undefined ? `${log.max_temp}°C` : ''}
                 </td>
-                <td className="border border-black px-2 py-1 text-center">
+                <td className="border border-black px-2 py-1 log-print-text">
                   {log.weather}
                 </td>
-                <td className="border border-black px-2 py-1 text-center">
+                <td className="border border-black px-2 py-1 log-print-text">
                   {log.remicon_company}
                 </td>
-                <td className="border border-black px-1 py-1 text-center font-medium">
+                <td className="border border-black px-1 py-1 font-medium log-print-num">
                   {normalizeStrength(log.strength)}
                 </td>
-                <td className="border border-black px-1 py-1 text-center font-medium">
+                <td className="border border-black px-1 py-1 font-medium log-print-num">
                   {log.volume !== null && log.volume !== undefined && log.volume !== '' ? `${log.volume} m³` : ''}
                 </td>
-                <td className="border border-black px-2 py-1 text-center">
+                <td className="border border-black px-2 py-1 log-print-text">
                   {normalizeWatering(log.curing_watering)}
                 </td>
-                <td className="border border-black px-2 py-1 text-center">
+                <td className="border border-black px-2 py-1 log-print-text">
                   {log.curing_protection}
                 </td>
                 <td className="border border-black px-2 py-1 text-left break-words">{log.remarks || ''}</td>

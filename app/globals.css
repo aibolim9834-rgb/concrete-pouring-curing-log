@@ -112,6 +112,10 @@ body {
 .log-print-table { table-layout: fixed; }
 .log-print-table :is(th,td) { padding-inline: 2px; white-space: normal; overflow-wrap: anywhere; }
 .log-print-table thead { display: table-header-group; }
+/* Same columns as the screen table: numbers (온도·강도·물량) on the right, text (기상·레미콘사·살수·보양) on the left, headers with them. */
+.log-print-table { font-variant-numeric: tabular-nums; }
+.log-print-table .log-print-num { text-align: right; padding-inline-end: 5px; }
+.log-print-table .log-print-text { text-align: left; padding-inline-start: 5px; }
 .log-print-table tr { break-inside: avoid; }
 @media print {
   @page log-report { size: A4 landscape; margin: 10mm; }
