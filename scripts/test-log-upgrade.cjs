@@ -44,6 +44,7 @@ function appHarness(result, local = false, overrides = {}) {
   deps['@/lib/xlsx']=load('lib/xlsx.ts',{},{TextEncoder});deps['@/lib/log-export']=load('lib/log-export.ts',{'./xlsx':deps['@/lib/xlsx'],'./strength':load('lib/strength.ts'),'./watering':load('lib/watering.ts')});deps['@/lib/pouring-progress']={...model,downloadFile:(name,content)=>{assert(name.endsWith('.xlsx'));csv=Buffer.from(content).toString('utf8');}};
   deps['@/lib/watering']=load('lib/watering.ts');
   deps['@/lib/strength']=load('lib/strength.ts');
+  deps['@/lib/remicon']=load('lib/remicon.ts');
   deps['@/lib/floor']=load('lib/floor.ts');
   deps['@/lib/date-only']=load('lib/date-only.ts');
   deps['@/lib/site-photos-cloud']={listPhotos:async()=>[],markPhotosDeleted:async()=>{}};
@@ -107,6 +108,15 @@ function uiHarness(file, name, props, extra = {}) {
     await find(h.render(),'RecordTable').props.onQuickUpdateLog(log.id,input);
     const saved=JSON.parse(storage.getItem('cp_logs'))[0];
     same(saved,{...input,curing_watering:'1일 2회 살수'});
+  });
+  await check('레미콘사 saves without the word 레미콘, each company in a list too',async()=>{
+    const {normalizeRemicon}=load('lib/remicon.ts');
+    for(const [input,expected] of [['영빈레미콘','영빈'],['영빈 레미콘','영빈'],['국민레미콘, 삼표레미콘','국민, 삼표'],['제일레미콘,KM','제일,KM'],['아주','아주'],['국민, 쌍용','국민, 쌍용'],['레미콘','레미콘'],['레미콘사 미정','레미콘사 미정'],['','']])assert.equal(normalizeRemicon(input),expected);
+    const h=appHarness(null,true);storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site]));storage.setItem('cp_logs',JSON.stringify([log]));
+    await find(h.render(),'RecordTable').props.onQuickAddLog({...data.newLog(site.id,'2'),date:'2026-08-02',building:'101동',floor:'3F',member_type:'슬라브',remicon_company:' 영빈레미콘 '});
+    assert.equal(JSON.parse(storage.getItem('cp_logs')).find(l=>l.id!==log.id).remicon_company,'영빈');
+    await find(h.render(),'RecordTable').props.onQuickUpdateLog(log.id,{...log,remicon_company:'국민레미콘, 삼표 레미콘'});
+    assert.equal(JSON.parse(storage.getItem('cp_logs')).find(l=>l.id===log.id).remicon_company,'국민, 삼표');
   });
   await check('inline row saves only on leaving row, prevents duplicate saves and retains failed draft',async()=>{
     const all=(node,type)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,type)):[...(node.type===type?[node]:[]),...all(node.props?.children,type)];

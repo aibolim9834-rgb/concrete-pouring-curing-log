@@ -27,6 +27,7 @@ import { LOG_COLUMNS, logRows, logSheetOptions } from '@/lib/log-export';
 import { XLSX_TYPE, xlsxFile } from '@/lib/xlsx';
 import { normalizeWatering } from '@/lib/watering';
 import { normalizeStrength } from '@/lib/strength';
+import { normalizeRemicon } from '@/lib/remicon';
 import { normalizeFloor } from '@/lib/floor';
 import { ReportOptions } from '@/lib/daily-report';
 
@@ -161,7 +162,7 @@ export function ConcreteApp({ initialView = 'logs' }: { initialView?: 'logs' | '
     if (!sites.some(site => site.id === activeSiteId)) throw new Error('등록할 현장을 선택해주세요.');
     const trimmed = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v])) as PouringLogInput;
     // A blank 타설물량 is allowed ("물량 미입력"); the DB column is numeric, so it is stored as null, not ''.
-    const input = { ...trimmed, site_id: activeSiteId, building: trimmed.building.toUpperCase(), floor: normalizeFloor(trimmed.floor), strength: normalizeStrength(trimmed.strength), curing_watering: normalizeWatering(trimmed.curing_watering), volume: trimmed.volume === '' || trimmed.volume === undefined ? null : trimmed.volume };
+    const input = { ...trimmed, site_id: activeSiteId, building: trimmed.building.toUpperCase(), floor: normalizeFloor(trimmed.floor), strength: normalizeStrength(trimmed.strength), remicon_company: normalizeRemicon(trimmed.remicon_company), curing_watering: normalizeWatering(trimmed.curing_watering), volume: trimmed.volume === '' || trimmed.volume === undefined ? null : trimmed.volume };
     validateLogInput(input);
     if (id && !siteLogs.some(log => log.id === id)) throw new Error('수정할 일지를 다시 선택해주세요.');
     siteLock.current = true; setLogBusy(true); setOperationError(''); setNotice('');
