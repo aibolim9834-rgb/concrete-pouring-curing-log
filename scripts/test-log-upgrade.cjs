@@ -45,6 +45,7 @@ function appHarness(result, local = false, overrides = {}) {
   deps['@/lib/watering']=load('lib/watering.ts');
   deps['@/lib/strength']=load('lib/strength.ts');
   deps['@/lib/remicon']=load('lib/remicon.ts');
+  deps['@/lib/comma-space']=load('lib/comma-space.ts');
   deps['@/lib/floor']=load('lib/floor.ts');
   deps['@/lib/date-only']=load('lib/date-only.ts');
   deps['@/lib/site-photos-cloud']={listPhotos:async()=>[],markPhotosDeleted:async()=>{}};
@@ -108,6 +109,14 @@ function uiHarness(file, name, props, extra = {}) {
     await find(h.render(),'RecordTable').props.onQuickUpdateLog(log.id,input);
     const saved=JSON.parse(storage.getItem('cp_logs'))[0];
     same(saved,{...input,curing_watering:'1일 2회 살수'});
+  });
+  await check('saved text has exactly one space after every comma',async()=>{
+    const {spaceAfterComma}=load('lib/comma-space.ts');
+    for(const [input,expected] of [['국민,쌍용','국민, 쌍용'],['국민 ,  쌍용','국민, 쌍용'],['국민, 쌍용','국민, 쌍용'],['3,4F','3, 4F'],['(X51~63,Y1~3)','(X51~63, Y1~3)'],['끝,','끝,'],['쉼표 없음','쉼표 없음'],['','']])assert.equal(spaceAfterComma(input),expected);
+    const h=appHarness(null,true);storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site]));storage.setItem('cp_logs',JSON.stringify([log]));
+    await find(h.render(),'RecordTable').props.onQuickUpdateLog(log.id,{...log,building:'T/C 4,5호기',floor:'3,4F',remicon_company:'제일레미콘,KM ,공단',curing_protection:'E/V,계단실 천막보양',remarks:'1,2호 세대'});
+    const saved=JSON.parse(storage.getItem('cp_logs')).find(l=>l.id===log.id);
+    same([saved.building,saved.floor,saved.remicon_company,saved.curing_protection,saved.remarks],['T/C 4, 5호기','3, 4F','제일, KM, 공단','E/V, 계단실 천막보양','1, 2호 세대']);
   });
   await check('레미콘사 saves without the word 레미콘, each company in a list too',async()=>{
     const {normalizeRemicon}=load('lib/remicon.ts');
