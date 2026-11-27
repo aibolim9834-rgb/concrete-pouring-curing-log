@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PouringLog, PouringLogInput, Site } from '@/lib/types';
 import { newLog, filterLogs, LogFilters, LogSort, LogSortKey, volumeText } from '@/lib/log-data';
+import { remiconTrucks } from '@/lib/remicon';
 import { shortDateDay } from '@/lib/date-only';
 import { WateringSelect } from './WateringSelect';
 import { MobileLogSheet } from './MobileLogSheet';
@@ -113,6 +114,8 @@ export const RecordTable: React.FC<RecordTableProps> = ({
     return () => { onWorkPending?.(false); if (workPending) window.removeEventListener('beforeunload', prevent); };
   }, [workPending, onWorkPending]);
   const filteredLogs = filterLogs(logs, filters);
+  // The (N대) part of 타설물량 gets one width for the whole table, so every volume ends at the same place.
+  const truckDigits = Math.max(1, ...filteredLogs.map(log => String(remiconTrucks(Number(log.volume) || 0)).length));
   const sortState = (key: LogSortKey) => sort.key === key ? sort.direction === 'asc' ? 'ascending' as const : 'descending' as const : undefined;
   function sortButton(label: string, key: LogSortKey) {
     const active = sort.key === key, next = active && sort.direction === 'asc' ? 'desc' : 'asc';
@@ -281,7 +284,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
       </div>
       {/* Main Excel-styled Responsive Table */}
       <div className="record-log-wrap overflow-x-auto" role="region" aria-label="타설일지 표" tabIndex={0}>
-        <table ref={tableRef} className="record-log-table w-full text-xs text-left text-slate-300 border-collapse">
+        <table ref={tableRef} style={{ '--log-truck-digits': truckDigits } as React.CSSProperties} className="record-log-table w-full text-xs text-left text-slate-300 border-collapse">
           <caption className="sr-only">타설일지. 열 제목을 누르면 오름차순 또는 내림차순으로 정렬합니다. 구분은 현재 조회 순서의 자동 번호입니다.</caption>
           <colgroup>
             {/* 번호, 일자, 동, 층, 부위, 최저·최고온도, 기상, 업체, 강도, 물량, 살수·보양, 관리.
@@ -302,22 +305,22 @@ export const RecordTable: React.FC<RecordTableProps> = ({
               <th scope="colgroup" colSpan={3} className="px-3 py-2 border-r border-slate-800 bg-slate-950 text-slate-300">
                 타설위치
               </th>
-              <th scope="col" aria-sort={sortState('min_temp')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[65px]">
+              <th scope="col" aria-sort={sortState('min_temp')} rowSpan={2} className="log-col-num px-2 py-3 border-r border-slate-800 min-w-[65px]">
                 {sortButton('최저온도', 'min_temp')}
               </th>
-              <th scope="col" aria-sort={sortState('max_temp')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[65px]">
+              <th scope="col" aria-sort={sortState('max_temp')} rowSpan={2} className="log-col-num px-2 py-3 border-r border-slate-800 min-w-[65px]">
                 {sortButton('최고온도', 'max_temp')}
               </th>
-              <th scope="col" aria-sort={sortState('weather')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[90px]">
+              <th scope="col" aria-sort={sortState('weather')} rowSpan={2} className="log-col-text px-2 py-3 border-r border-slate-800 min-w-[90px]">
                 {sortButton('기상', 'weather')}
               </th>
-              <th scope="col" aria-sort={sortState('remicon_company')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[100px]">
+              <th scope="col" aria-sort={sortState('remicon_company')} rowSpan={2} className="log-col-text px-2 py-3 border-r border-slate-800 min-w-[100px]">
                 {sortButton('레미콘사', 'remicon_company')}
               </th>
-              <th scope="col" aria-sort={sortState('strength')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[85px]">
+              <th scope="col" aria-sort={sortState('strength')} rowSpan={2} className="log-col-num px-2 py-3 border-r border-slate-800 min-w-[85px]">
                 {sortButton('타설강도', 'strength')}
               </th>
-              <th scope="col" aria-sort={sortState('volume')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[85px]">
+              <th scope="col" aria-sort={sortState('volume')} rowSpan={2} className="log-col-num px-2 py-3 border-r border-slate-800 min-w-[85px]">
                 {sortButton('타설물량', 'volume')}
               </th>
               <th scope="colgroup" colSpan={2} className="px-3 py-2 border-r border-slate-800 bg-slate-950 text-slate-300">
@@ -333,8 +336,8 @@ export const RecordTable: React.FC<RecordTableProps> = ({
               <th scope="col" aria-sort={sortState('building')} className="px-2 py-2 border-r border-slate-800 min-w-[85px]">{sortButton('동(구역)', 'building')}</th>
               <th scope="col" aria-sort={sortState('floor')} className="px-2 py-2 border-r border-slate-800 min-w-[60px]">{sortButton('층', 'floor')}</th>
               <th scope="col" aria-sort={sortState('member_type')} className="px-2 py-2 border-r border-slate-800 min-w-[80px]">{sortButton('벽/슬라브', 'member_type')}</th>
-              <th scope="col" aria-sort={sortState('curing_watering')} className="px-2 py-2 border-r border-slate-800 min-w-[120px]">{sortButton('살수', 'curing_watering')}</th>
-              <th scope="col" aria-sort={sortState('curing_protection')} className="px-2 py-2 border-r border-slate-800 min-w-[130px]">{sortButton('보양', 'curing_protection')}</th>
+              <th scope="col" aria-sort={sortState('curing_watering')} className="log-col-text px-2 py-2 border-r border-slate-800 min-w-[120px]">{sortButton('살수', 'curing_watering')}</th>
+              <th scope="col" aria-sort={sortState('curing_protection')} className="log-col-text px-2 py-2 border-r border-slate-800 min-w-[130px]">{sortButton('보양', 'curing_protection')}</th>
             </tr>
           </thead>
 
@@ -721,7 +724,7 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                     {normalizeStrength(log.strength) || '-'}
                   </td>
                   <td className="px-2.5 py-3 border-r border-slate-800/80 text-center font-semibold text-slate-200 whitespace-nowrap">
-                    {volumeText(log.volume) || '-'}
+                    {log.volume === null || log.volume === undefined || log.volume === '' ? '-' : <span className="log-volume"><span>{log.volume} m³</span><span className="log-volume-trucks">{Number(log.volume) > 0 ? `(${remiconTrucks(Number(log.volume))}대)` : ''}</span></span>}
                   </td>
                   <td className="px-2.5 py-3 border-r border-slate-800/80 text-slate-300">
                     {log.curing_watering ? (
