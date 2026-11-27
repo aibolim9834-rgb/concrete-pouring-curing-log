@@ -101,6 +101,8 @@ function uiHarness(file, name, props, extra = {}) {
     assert.equal(show('').props.value,'');
     const watering=load('lib/watering.ts');
     for(const value of ['','살수 없음','1일 4회 살수'])assert.equal(watering.normalizeWatering(value),value);
+    for(const [input,expected] of [['없음','1일 0회 살수'],['1일 0회 살수 실시','1일 0회 살수'],['1일 1회 살수','1일 1회 살수']])assert.equal(watering.normalizeWatering(input),expected);
+    for(const [input,expected] of [['비닐보양','비닐 보양'],['비닐 보양','비닐 보양'],['천막보양','천막 보양'],['기계 미장','기계미장'],['바닥기계미장','바닥기계미장'],['없음','보양 없음'],['보양 없음','보양 없음'],['무근 비닐보양','무근 비닐 보양'],['E/V, 계단실, 인양구 천막보양 실시','E/V, 계단실, 인양구 천막 보양 실시'],['양생시트 보양','양생시트 보양'],['','']])assert.equal(watering.normalizeProtection(input),expected);
     assert.equal(watering.normalizeWatering('\t 1일 3회 살수 실시'),'1일 3회 살수');
   });
   await check('watering save strips only 실시 while other journal fields remain intact',async()=>{
@@ -116,7 +118,7 @@ function uiHarness(file, name, props, extra = {}) {
     const h=appHarness(null,true);storage.entries.clear();storage.setItem('cp_sites',JSON.stringify([site]));storage.setItem('cp_logs',JSON.stringify([log]));
     await find(h.render(),'RecordTable').props.onQuickUpdateLog(log.id,{...log,building:'T/C 4,5호기',floor:'3,4F',remicon_company:'제일레미콘,KM ,공단',curing_protection:'E/V,계단실 천막보양',remarks:'1,2호 세대'});
     const saved=JSON.parse(storage.getItem('cp_logs')).find(l=>l.id===log.id);
-    same([saved.building,saved.floor,saved.remicon_company,saved.curing_protection,saved.remarks],['T/C 4, 5호기','3, 4F','제일, KM, 공단','E/V, 계단실 천막보양','1, 2호 세대']);
+    same([saved.building,saved.floor,saved.remicon_company,saved.curing_protection,saved.remarks],['T/C 4, 5호기','3, 4F','제일, KM, 공단','E/V, 계단실 천막 보양','1, 2호 세대']);
   });
   await check('레미콘사 saves without the word 레미콘, each company in a list too',async()=>{
     const {normalizeRemicon}=load('lib/remicon.ts');
