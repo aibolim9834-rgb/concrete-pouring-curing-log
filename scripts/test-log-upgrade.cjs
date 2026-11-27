@@ -70,7 +70,7 @@ function uiHarness(file, name, props, extra = {}) {
 (async()=>{
   await check('standalone strengths gain one MPa while empty and mixed specifications survive',()=>{
     const {normalizeStrength:format}=load('lib/strength.ts');
-    for(const [input,expected] of [['30','30MPa'],[' 30 ','30MPa'],['30 MPa','30MPa'],['30mpa','30MPa'],['30MPaMPa','30MPa'],['30.5','30.5MPa'],['0','0MPa'],['',''],['  ',''],[null,''],[undefined,''],['40-210','40-210'],['25-24-150','25-24-150'],['27, 30MPa','27, 30MPa'],['27MPa(기둥 40MPa 12M3)','27MPa(기둥 40MPa 12M3)']]){
+    for(const [input,expected] of [['30','30MPa'],[' 30 ','30MPa'],['30 MPa','30MPa'],['30mpa','30MPa'],['30MPaMPa','30MPa'],['30.5','30.5MPa'],['0','0MPa'],['',''],['  ',''],[null,''],[undefined,''],['40-210','40-210'],['25-24-150','25-24-150'],['27, 30MPa','27, 30MPa'],['27MPa(기둥 40MPa 12M3)','27MPa(기둥 40MPa 12M3)'],['30MPA','30MPa'],['27, 30MPA','27, 30MPa'],['27, 30Mpa','27, 30MPa'],['24MPa(기둥 35Mpa 30M3)','24MPa(기둥 35MPa 30M3)'],['27, 30 mpa','27, 30MPa']]){
       assert.equal(format(input),expected);assert.equal(format(format(input)),expected);
     }
   });
