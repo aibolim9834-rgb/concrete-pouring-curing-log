@@ -305,22 +305,22 @@ export const RecordTable: React.FC<RecordTableProps> = ({
               <th scope="colgroup" colSpan={3} className="px-3 py-2 border-r border-slate-800 bg-slate-950 text-slate-300">
                 타설위치
               </th>
-              <th scope="col" aria-sort={sortState('min_temp')} rowSpan={2} className="log-col-num px-2 py-3 border-r border-slate-800 min-w-[65px]">
+              <th scope="col" aria-sort={sortState('min_temp')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[65px]">
                 {sortButton('최저온도', 'min_temp')}
               </th>
-              <th scope="col" aria-sort={sortState('max_temp')} rowSpan={2} className="log-col-num px-2 py-3 border-r border-slate-800 min-w-[65px]">
+              <th scope="col" aria-sort={sortState('max_temp')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[65px]">
                 {sortButton('최고온도', 'max_temp')}
               </th>
-              <th scope="col" aria-sort={sortState('weather')} rowSpan={2} className="log-col-text px-2 py-3 border-r border-slate-800 min-w-[90px]">
+              <th scope="col" aria-sort={sortState('weather')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[90px]">
                 {sortButton('기상', 'weather')}
               </th>
-              <th scope="col" aria-sort={sortState('remicon_company')} rowSpan={2} className="log-col-text px-2 py-3 border-r border-slate-800 min-w-[100px]">
+              <th scope="col" aria-sort={sortState('remicon_company')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[100px]">
                 {sortButton('레미콘사', 'remicon_company')}
               </th>
-              <th scope="col" aria-sort={sortState('strength')} rowSpan={2} className="log-col-num px-2 py-3 border-r border-slate-800 min-w-[85px]">
+              <th scope="col" aria-sort={sortState('strength')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[85px]">
                 {sortButton('타설강도', 'strength')}
               </th>
-              <th scope="col" aria-sort={sortState('volume')} rowSpan={2} className="log-col-num px-2 py-3 border-r border-slate-800 min-w-[85px]">
+              <th scope="col" aria-sort={sortState('volume')} rowSpan={2} className="px-2 py-3 border-r border-slate-800 min-w-[85px]">
                 {sortButton('타설물량', 'volume')}
               </th>
               <th scope="colgroup" colSpan={2} className="px-3 py-2 border-r border-slate-800 bg-slate-950 text-slate-300">
@@ -336,8 +336,8 @@ export const RecordTable: React.FC<RecordTableProps> = ({
               <th scope="col" aria-sort={sortState('building')} className="px-2 py-2 border-r border-slate-800 min-w-[85px]">{sortButton('동(구역)', 'building')}</th>
               <th scope="col" aria-sort={sortState('floor')} className="px-2 py-2 border-r border-slate-800 min-w-[60px]">{sortButton('층', 'floor')}</th>
               <th scope="col" aria-sort={sortState('member_type')} className="px-2 py-2 border-r border-slate-800 min-w-[80px]">{sortButton('벽/슬라브', 'member_type')}</th>
-              <th scope="col" aria-sort={sortState('curing_watering')} className="log-col-text px-2 py-2 border-r border-slate-800 min-w-[120px]">{sortButton('살수', 'curing_watering')}</th>
-              <th scope="col" aria-sort={sortState('curing_protection')} className="log-col-text px-2 py-2 border-r border-slate-800 min-w-[130px]">{sortButton('보양', 'curing_protection')}</th>
+              <th scope="col" aria-sort={sortState('curing_watering')} className="px-2 py-2 border-r border-slate-800 min-w-[120px]">{sortButton('살수', 'curing_watering')}</th>
+              <th scope="col" aria-sort={sortState('curing_protection')} className="px-2 py-2 border-r border-slate-800 min-w-[130px]">{sortButton('보양', 'curing_protection')}</th>
             </tr>
           </thead>
 

@@ -85,15 +85,12 @@
   .concrete-app .record-log-table tbody :is(td:nth-child(5),td:nth-child(9),td:nth-child(12),td:nth-child(13)),
   .concrete-app .record-log-table tbody :is(td:nth-child(5),td:nth-child(9),td:nth-child(12),td:nth-child(13)) :is(input,select) { text-align:center; }
   .concrete-app .record-log-table tbody :is(td:nth-child(12),td:nth-child(13)) span { padding-inline:4px; white-space:normal; word-break:keep-all; overflow:visible; overflow-wrap:anywhere; text-overflow:clip; }
-  /* Numbers sit on the right so units stand over units (온도·강도·물량), text on the left (기상·레미콘사·살수·보양); each header follows its column. */
+  /* Numbers sit on the right so units stand over units (온도·강도·물량), 기상·레미콘사·살수 centered, 보양 on the left; headers stay centered. */
   /* The wider inner gap keeps a right-aligned number from running into the left-aligned text of the next column. */
   .concrete-app .record-log-table .record-display-row > :is(td:nth-child(6),td:nth-child(7),td:nth-child(10),td:nth-child(11)) { text-align:right; padding-inline-end:10px; }
-  .concrete-app .record-log-table .record-display-row > :is(td:nth-child(8),td:nth-child(9),td:nth-child(12),td:nth-child(13)) { text-align:left; padding-inline-start:10px; }
+  .concrete-app .record-log-table .record-display-row > td:nth-child(13) { text-align:left; padding-inline-start:10px; }
+  .concrete-app .record-log-table .record-display-row > :is(td:nth-child(8),td:nth-child(9),td:nth-child(12)) { text-align:center; }
   .concrete-app .record-log-table .record-display-row > :is(td:nth-child(12),td:nth-child(13)) span { padding-inline:0; }
-  .concrete-app .record-log-table th.log-col-num { padding-inline-end:10px; }
-  .concrete-app .record-log-table th.log-col-text { padding-inline-start:10px; }
-  .concrete-app .record-log-table th.log-col-num .log-sort-button { justify-content:flex-end; padding-inline:0; }
-  .concrete-app .record-log-table th.log-col-text .log-sort-button { justify-content:flex-start; padding-inline:0; }
   /* 물량 and (N대) are two fixed tracks: the (N대) track is as wide as the table's longest count, so every 물량 ends at one line. */
   .concrete-app .log-volume { display:inline-grid; grid-template-columns:auto calc(var(--log-truck-digits, 2) * 1ch + 1.9em); column-gap:4px; }
   .concrete-app .log-volume > :first-child { text-align:right; }
