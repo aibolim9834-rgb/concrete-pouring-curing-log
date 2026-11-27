@@ -12,10 +12,11 @@ export function datePeriod(dates: string[]) {
 }
 
 // Columns of the 타설일지 Excel export, in the order of the paper 일지.
+// Same alignment as the screen and print tables: numbers right, 기상·레미콘사·살수 and short codes centered, 동(구역)·보양·비고 left.
 export const LOG_COLUMNS: XlsxColumn[] = [
-  { header: '구분', kind: 'number' }, { header: '일자', kind: 'date' }, { header: '동(구역)' }, { header: '층' }, { header: '벽/슬라브' },
-  { header: '최저온도(°C)', kind: 'number' }, { header: '최고온도(°C)', kind: 'number' }, { header: '기상' }, { header: '레미콘사' },
-  { header: '타설강도' }, { header: '타설물량(m³)', kind: 'number' }, { header: '양생-살수' }, { header: '양생-보양' }, { header: '비고' },
+  { header: '구분', kind: 'number', align: 'center' }, { header: '일자', kind: 'date' }, { header: '동(구역)' }, { header: '층', align: 'center' }, { header: '벽/슬라브', align: 'center' },
+  { header: '최저온도(°C)', kind: 'number', align: 'right' }, { header: '최고온도(°C)', kind: 'number', align: 'right' }, { header: '기상', align: 'center' }, { header: '레미콘사', align: 'center' },
+  { header: '타설강도', align: 'right' }, { header: '타설물량(m³)', kind: 'number', align: 'right' }, { header: '양생-살수', align: 'center' }, { header: '양생-보양' }, { header: '비고' },
 ];
 
 export const logRows = (logs: PouringLog[]): XlsxValue[][] => logs.map((log, index) => [

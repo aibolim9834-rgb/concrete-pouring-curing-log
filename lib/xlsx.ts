@@ -4,7 +4,13 @@
 export const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 type XlsxKind = 'text' | 'number' | 'date';
-export interface XlsxColumn { header: string; kind?: XlsxKind }
+type XlsxAlign = 'left' | 'center' | 'right';
+// align only changes where the value sits in its cell; without it text is on the left and numbers on the right (Excel's own default).
+export interface XlsxColumn { header: string; kind?: XlsxKind; align?: XlsxAlign }
+
+// Bordered body styles in styles.xml: text left/center/right, number right/center.
+const TEXT_STYLE: Record<XlsxAlign, number> = { left: 2, center: 9, right: 10 };
+const NUMBER_STYLE: Record<XlsxAlign, number> = { left: 3, center: 11, right: 3 };
 export type XlsxValue = string | number | null | undefined;
 
 const DATE_FORMAT = '[$-412]yy.mm.dd(aaa)';
@@ -37,7 +43,7 @@ const numeric = (value: XlsxValue) => typeof value === 'number' ? (Number.isFini
 // Korean and other wide characters take about two Excel width units.
 const displayWidth = (text: string) => Array.from(text).reduce((sum, ch) => sum + (ch.codePointAt(0)! >= 0x1100 ? 2 : 1), 0);
 
-function cellXml(ref: string, value: XlsxValue, kind: XlsxKind): { xml: string; width: number } {
+function cellXml(ref: string, value: XlsxValue, kind: XlsxKind, align: XlsxAlign = 'left'): { xml: string; width: number } {
   if (value === null || value === undefined || value === '') return { xml: `<c r="${ref}" s="2"/>`, width: 0 };
   if (kind === 'date' && typeof value === 'string') {
     const serial = excelDate(value);
@@ -45,11 +51,11 @@ function cellXml(ref: string, value: XlsxValue, kind: XlsxKind): { xml: string; 
   }
   if (kind === 'number') {
     const n = numeric(value);
-    if (n !== null) return { xml: `<c r="${ref}" s="3"><v>${n}</v></c>`, width: String(n).length };
+    if (n !== null) return { xml: `<c r="${ref}" s="${NUMBER_STYLE[align]}"><v>${n}</v></c>`, width: String(n).length };
   }
   // Inline strings are never evaluated, so text such as "=1+1" stays text.
   const text = String(value);
-  return { xml: `<c r="${ref}" s="2" t="inlineStr"><is><t xml:space="preserve">${xmlText(text)}</t></is></c>`, width: Math.max(...text.split('\n').map(displayWidth)) };
+  return { xml: `<c r="${ref}" s="${TEXT_STYLE[align]}" t="inlineStr"><is><t xml:space="preserve">${xmlText(text)}</t></is></c>`, width: Math.max(...text.split('\n').map(displayWidth)) };
 }
 
 // Optional lines around the table: a title and a subtitle above it, and a total row below it.
@@ -76,7 +82,7 @@ function sheetXml(columns: XlsxColumn[], rows: XlsxValue[][], options: XlsxOptio
   }
   lines.push(`<row r="${head}">${columns.map((c, i) => textCell(`${columnName(i)}${head}`, 1, c.header)).join('')}</row>`);
   rows.forEach((row, r) => lines.push(`<row r="${first + r}">${columns.map((c, i) => {
-    const cell = cellXml(`${columnName(i)}${first + r}`, row[i], c.kind || 'text');
+    const cell = cellXml(`${columnName(i)}${first + r}`, row[i], c.kind || 'text', c.align);
     widths[i] = Math.max(widths[i], cell.width + 2);
     return cell.xml;
   }).join('')}</row>`));
@@ -119,7 +125,7 @@ const STYLES = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
   + '<border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right>'
   + '<top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border></borders>'
   + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-  + '<cellXfs count="9"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+  + '<cellXfs count="12"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
   + '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
   + '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>'
   + '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>'
@@ -127,7 +133,10 @@ const STYLES = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
   + '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment vertical="center"/></xf>'
   + '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="center"/></xf>'
   + '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
-  + '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf></cellXfs>'
+  + '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>'
+  + '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+  + '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
+  + '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf></cellXfs>'
   + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
   + '</styleSheet>';
 
