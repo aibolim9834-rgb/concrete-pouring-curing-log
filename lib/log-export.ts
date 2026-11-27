@@ -21,7 +21,7 @@ export const LOG_COLUMNS: XlsxColumn[] = [
 
 export const logRows = (logs: PouringLog[]): XlsxValue[][] => logs.map((log, index) => [
   index + 1, log.date, log.building, log.floor, log.member_type, log.min_temp, log.max_temp, log.weather, log.remicon_company,
-  normalizeStrength(log.strength), log.volume, normalizeWatering(log.curing_watering), log.curing_protection, log.remarks,
+  normalizeStrength(log.strength), log.volume, normalizeWatering(log.curing_watering) || '없음', log.curing_protection || '없음', log.remarks,
 ]);
 
 // Site name and period above the table, and the 타설물량 total below it.

@@ -170,10 +170,10 @@ export const PrintView: React.FC<PrintViewProps> = ({
                   {log.volume !== null && log.volume !== undefined && log.volume !== '' ? `${log.volume} m³` : ''}
                 </td>
                 <td className="border border-black px-2 py-1 text-center">
-                  {normalizeWatering(log.curing_watering)}
+                  {log.date ? normalizeWatering(log.curing_watering) || '없음' : ''}
                 </td>
                 <td className="border border-black px-2 py-1 log-print-text">
-                  {log.curing_protection}
+                  {log.date ? log.curing_protection || '없음' : ''}
                 </td>
                 <td className="border border-black px-2 py-1 text-left break-words">{log.remarks || ''}</td>
               </tr>

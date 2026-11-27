@@ -418,6 +418,18 @@ function uiHarness(file, name, props, extra = {}) {
     same(all(find(table,'tbody'),'tr').slice(1).map(row=>parts(all(row,'td')[10])),[['12 m³','(2대)'],['7 m³','(2대)'],['12.5 m³','(3대)'],['0 m³',''],'-']);
     assert.equal(find(table,'table').props.style['--log-truck-digits'],1);
   });
+  await check('an empty 살수 or 보양 reads 없음 on screen, in print and in Excel, while print filler rows stay blank',()=>{
+    const all=(node,type)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,type)):[...(node.type===type?[node]:[]),...all(node.props?.children,type)];
+    const txt=n=>n==null||n===false?'':typeof n!=='object'?String(n):Array.isArray(n)?n.map(txt).join(''):txt(n.props?.children);
+    const rows=[{...log,id:'c1',curing_watering:'',curing_protection:''},{...log,id:'c2',curing_watering:'1일 2회 살수',curing_protection:'비닐 보양'}];
+    const table=uiHarness('components/RecordTable.tsx','RecordTable',{logs:rows,site,filters:data.emptyLogFilters(),sort:data.defaultLogSort,onSortChange(){},onFiltersChange(){}}).render();
+    same(all(find(table,'tbody'),'tr').slice(1).map(row=>[txt(all(row,'td')[11]).trim(),txt(all(row,'td')[12]).trim()]),[['없음','없음'],['1일 2회 살수','비닐 보양']]);
+    const print=uiHarness('components/PrintView.tsx','PrintView',{logs:rows,sites:[site],currentSite:site,onBack(){}}).render();
+    same(all(find(print,'tbody'),'tr').slice(0,3).map(row=>[txt(all(row,'td')[11]),txt(all(row,'td')[12])]),[['없음','없음'],['1일 2회 살수','비닐 보양'],['','']]);
+    const exp=load('lib/log-export.ts',{'./xlsx':load('lib/xlsx.ts',{},{TextEncoder}),'./strength':load('lib/strength.ts'),'./watering':load('lib/watering.ts')});
+    same(exp.logRows(rows).map(r=>[r[11],r[12]]),[['없음','없음'],['1일 2회 살수','비닐 보양']]);
+    assert.equal(JSON.parse(JSON.stringify(rows))[0].curing_protection,'');
+  });
   await check('an empty weather cell shows - like the other empty cells, and a set one keeps its icon',()=>{
     const all=(node,type)=>!node||typeof node!=='object'?[]:Array.isArray(node)?node.flatMap(n=>all(n,type)):[...(node.type===type?[node]:[]),...all(node.props?.children,type)];
     const rows=[{...log,id:'w1',weather:''},{...log,id:'w2',weather:'흐림'}];

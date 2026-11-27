@@ -727,22 +727,15 @@ export const RecordTable: React.FC<RecordTableProps> = ({
                     {log.volume === null || log.volume === undefined || log.volume === '' ? '-' : <span className="log-volume"><span>{log.volume} m³</span><span className="log-volume-trucks">{Number(log.volume) > 0 ? `(${remiconTrucks(Number(log.volume))}대)` : ''}</span></span>}
                   </td>
                   <td className="px-2.5 py-3 border-r border-slate-800/80 text-slate-300">
-                    {log.curing_watering ? (
-                      <span className="log-curing-text block truncate">
-                        {normalizeWatering(log.curing_watering)}
-                      </span>
-                    ) : (
-                      <span className="text-slate-600">-</span>
-                    )}
+                    {/* An empty 살수·보양 reads 없음 on the screen, in print and in Excel; the saved value stays empty. */}
+                    <span className="log-curing-text block truncate">
+                      {normalizeWatering(log.curing_watering) || '없음'}
+                    </span>
                   </td>
                   <td className="px-2.5 py-3 border-r border-slate-800/80 text-slate-300">
-                    {log.curing_protection ? (
-                      <span className="log-curing-text block truncate">
-                        {log.curing_protection}
-                      </span>
-                    ) : (
-                      <span className="text-slate-600">-</span>
-                    )}
+                    <span className="log-curing-text block truncate">
+                      {log.curing_protection || '없음'}
+                    </span>
                   </td>
                   <td className="px-2 py-3 text-center whitespace-nowrap">
                     <div className="record-row-actions flex items-center justify-center opacity-90 group-hover:opacity-100">
